@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## BACKEND
+
+### Guidelines for DOTNET
+
+#### ASP_NET
+
+- Use minimal APIs for simple endpoints in .NET 6+ applications to reduce boilerplate code
+- Implement the mediator pattern with MediatR for decoupling request handling and simplifying cross-cutting concerns
+- Use API controllers with model binding and validation attributes for {{complex_data_models}}
+- Apply proper response caching with cache profiles and ETags for improved performance on {{high_traffic_endpoints}}
+- Implement proper exception handling with ExceptionFilter or middleware to provide consistent error responses
+- Use dependency injection with scoped lifetime for request-specific services and singleton for stateless services
+

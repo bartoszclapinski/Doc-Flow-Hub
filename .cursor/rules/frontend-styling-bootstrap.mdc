@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## FRONTEND
+
+### Guidelines for STYLING
+
+#### BOOTSTRAP
+
+- Use Bootstrap's grid system for responsive layouts with proper breakpoints
+- Implement custom SCSS variables to override default Bootstrap theme values
+- Use Bootstrap's utility classes for spacing, sizing, and alignment
+- Minimize custom CSS by leveraging Bootstrap components and utilities
+- Implement responsive behavior using Bootstrap's built-in responsive utilities
+- Use Bootstrap's form components with ASP.NET Core TagHelpers for consistent styling 

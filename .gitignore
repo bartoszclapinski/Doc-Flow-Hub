@@ -1,0 +1,70 @@
+
+# DocFlowHub.Web
+src/DocFlowHub.Web/appsettings.json
+src/DocFlowHub.Web/appsettings.Development.json
+src/DocFlowHub.Web/appsettings.Production.json
+src/DocFlowHub.Web/appsettings.json
+src/DocFlowHub.Web/appsettings.Development.json
+src/DocFlowHub.Web/appsettings.Production.json
+src/DocFlowHub.Web/bin
+src/DocFlowHub.Web/obj
+
+# DocFlowHub.Infrastructure
+src/DocFlowHub.Infrastructure/bin
+src/DocFlowHub.Infrastructure/obj
+
+# DocFlowHub.Core
+src/DocFlowHub.Core/bin
+src/DocFlowHub.Core/obj
+
+# wwwroot - ignore third-party libraries and generated files
+src/DocFlowHub.Web/wwwroot/lib/
+src/DocFlowHub.Web/wwwroot/dist/
+src/DocFlowHub.Web/wwwroot/*.min.css
+src/DocFlowHub.Web/wwwroot/*.min.js
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# IDE files
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# User-specific files
+*.rsuser
+*.dtbcache.v2
+*.dtbcache
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+*.nuget.props
+*.nuget.targets
+
+# DocFlowHub specific
+DocFlowHub.sln.DotSettings.user

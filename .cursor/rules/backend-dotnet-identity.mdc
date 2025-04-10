@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## BACKEND
+
+### Guidelines for DOTNET
+
+#### IDENTITY
+
+- Use ASP.NET Core Identity with Entity Framework Core for user management
+- Implement custom user and role classes extending IdentityUser and IdentityRole
+- Apply policy-based authorization for complex permission scenarios
+- Use UserManager and RoleManager for user and role operations
+- Implement secure password policies and account lockout settings
+- Use claims-based authentication for fine-grained access control 
