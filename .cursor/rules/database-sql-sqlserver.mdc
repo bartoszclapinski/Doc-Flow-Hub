@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## DATABASE
+
+### Guidelines for SQL
+
+#### SQLSERVER
+
+- Use parameterized queries to prevent SQL injection
+- Implement proper indexing strategies based on query patterns
+- Use stored procedures for complex business logic that requires database access to {{business_entities}}
+

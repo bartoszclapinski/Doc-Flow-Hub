@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## TESTING
+
+### Guidelines for UNIT_TESTING
+
+#### XUNIT
+
+- Use [Fact] for simple tests and [Theory] with [InlineData] for parameterized tests
+- Organize test classes to mirror the structure of the application code
+- Use FluentAssertions for more readable assertions when appropriate
+- Implement test fixtures with IClassFixture for shared context between tests
+- Use Moq for mocking dependencies in unit tests
+- Apply AAA (Arrange-Act-Assert) pattern for clear test structure 

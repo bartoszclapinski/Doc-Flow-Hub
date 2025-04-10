@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## BACKEND
+
+### Guidelines for DOTNET
+
+#### RAZOR_PAGES
+
+- Organize Razor Pages in feature folders to maintain clean architecture
+- Use PageModel properties with data annotations for form validation
+- Implement partial views for reusable UI components across multiple pages
+- Use route constraints in @page directives to handle different URL patterns
+- Apply proper authorization using the [Authorize] attribute or policy-based authorization
+- Implement handler methods (OnGet, OnPost) with proper return types (IActionResult) 

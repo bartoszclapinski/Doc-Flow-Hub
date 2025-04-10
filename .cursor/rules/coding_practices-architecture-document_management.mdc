@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## CODING_PRACTICES
+
+### Guidelines for ARCHITECTURE
+
+#### DOCUMENT_MANAGEMENT
+
+- Implement versioning using a separate Version entity with sequential numbering
+- Use content-based file storage with database metadata references
+- Implement team-based access control with hierarchical permission model
+- Use background services for document processing and AI analysis
+- Apply the CQRS pattern to separate read and write operations for documents
+- Implement robust file type validation and virus scanning for uploaded documents 

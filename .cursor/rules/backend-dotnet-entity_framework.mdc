@@ -1,0 +1,13 @@
+## BACKEND
+
+### Guidelines for DOTNET
+
+#### ENTITY_FRAMEWORK
+
+- Use the repository and unit of work patterns to abstract data access logic and simplify testing
+- Implement eager loading with Include() to avoid N+1 query problems for {{entity_relationships}}
+- Use migrations for database schema changes and version control with proper naming conventions
+- Apply appropriate tracking behavior (AsNoTracking() for read-only queries) to optimize performance
+- Implement query optimization techniques like compiled queries for frequently executed database operations
+- Use value conversions for complex property transformations and proper handling of {{custom_data_types}}
+
