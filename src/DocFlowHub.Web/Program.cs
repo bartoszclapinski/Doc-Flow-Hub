@@ -2,6 +2,9 @@ using DocFlowHub.Core.Identity;
 using DocFlowHub.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using DocFlowHub.Infrastructure;
+using DocFlowHub.Web.Services;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 
 // Add DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<DocFlowHub.Infrastructure.Data.ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add Identity
@@ -29,8 +32,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     // User settings
     options.User.RequireUniqueEmail = true;
 })
-.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddEntityFrameworkStores<DocFlowHub.Infrastructure.Data.ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Add Email Sender
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 // Configure cookie policy
 builder.Services.ConfigureApplicationCookie(options =>

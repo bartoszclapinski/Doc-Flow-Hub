@@ -34,6 +34,8 @@
 ### ASP.NET Core Identity Implementation ✅
 - Added Identity packages to all projects:
   - Microsoft.AspNetCore.Identity.EntityFrameworkCore
+  - Microsoft.AspNetCore.Identity.UI
+  - Microsoft.VisualStudio.Web.CodeGeneration.Design
 - Created custom ApplicationUser class with additional properties:
   - FirstName
   - LastName
@@ -45,16 +47,21 @@
   - User settings
 - Created and applied Identity migration
 - Database created with all Identity tables
+- Scaffolded Identity pages:
+  - Login page
+  - Register page
+- Implemented development email sender service
+- Fixed Identity configuration to use ApplicationUser consistently
+- Tested login and registration functionality
 
 ## Next Steps
-1. Create login and registration pages
-2. Implement user authentication and authorization
-3. Add user management functionality
-4. Create basic page layout with Bootstrap
-5. Set up GitHub Actions for CI/CD
+1. Add user management functionality
+2. Create basic page layout with Bootstrap
+3. Set up GitHub Actions for CI/CD
 
 ## Notes
 - All core Identity functionality is in place
 - Database is properly configured and migrated
 - Project structure follows clean architecture principles
-- Security settings are configured according to best practices 
+- Security settings are configured according to best practices
+- Email confirmation is currently logged to console (development only) 
