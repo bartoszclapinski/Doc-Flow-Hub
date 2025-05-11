@@ -23,5 +23,6 @@ public class ErrorModel : PageModel
     {
         RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
         _logger.LogInformation("OnGet invoked. RequestId set to {RequestId}", RequestId);
+    }
 }
 

@@ -1,10 +1,32 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 text-center">
+            <h1 class="display-4 mb-4">Welcome to Doc-Flow-Hub</h1>
+            <p class="lead mb-4">A powerful document management system that helps you store, organize, and version your documents efficiently.</p>
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Key Features</h5>
+                    <ul class="list-group list-group-flush text-start">
+                        <li class="list-group-item">📄 Document storage and organization</li>
+                        <li class="list-group-item">🔄 Automatic document versioning</li>
+                        <li class="list-group-item">👥 Team collaboration capabilities</li>
+                        <li class="list-group-item">🔍 Simple search and filtering</li>
+                        <li class="list-group-item">🔒 Secure access control</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <a href="#" class="btn btn-primary btn-lg px-4 gap-3">Get Started</a>
+                <a href="#" class="btn btn-outline-secondary btn-lg px-4">Learn More</a>
+            </div>
+        </div>
+    </div>
 </div>
