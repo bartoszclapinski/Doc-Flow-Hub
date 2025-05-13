@@ -41,7 +41,7 @@ namespace DocFlowHub.Infrastructure.Migrations
                 table: "AspNetUsers",
                 type: "bit",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "ProfilePictureUrl",
