@@ -1,32 +1,186 @@
 ﻿@page
+@using DocFlowHub.Web.Pages
 @model IndexModel
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Dashboard";
 }
 
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-8 offset-md-2 text-center">
-            <h1 class="display-4 mb-4">Welcome to Doc-Flow-Hub</h1>
-            <p class="lead mb-4">A powerful document management system that helps you store, organize, and version your documents efficiently.</p>
-            
-            <div class="card shadow-sm mb-4">
+<div class="container-fluid py-4">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">Welcome, @Model.UserName!</h1>
+            <p class="text-muted">Here's what's happening with your documents today.</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Key Features</h5>
-                    <ul class="list-group list-group-flush text-start">
-                        <li class="list-group-item">📄 Document storage and organization</li>
-                        <li class="list-group-item">🔄 Automatic document versioning</li>
-                        <li class="list-group-item">👥 Team collaboration capabilities</li>
-                        <li class="list-group-item">🔍 Simple search and filtering</li>
-                        <li class="list-group-item">🔒 Secure access control</li>
-                    </ul>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-file-earmark-text text-primary fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title mb-0">Total Documents</h6>
+                            <h2 class="mt-2 mb-0">@Model.TotalDocuments</h2>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                <a href="#" class="btn btn-primary btn-lg px-4 gap-3">Get Started</a>
-                <a href="#" class="btn btn-outline-secondary btn-lg px-4">Learn More</a>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-people text-success fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title mb-0">Teams</h6>
+                            <h2 class="mt-2 mb-0">@Model.TotalTeams</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-clock-history text-warning fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title mb-0">Recent Updates</h6>
+                            <h2 class="mt-2 mb-0">@Model.RecentUpdates</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-share text-info fs-1"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title mb-0">Shared With Me</h6>
+                            <h2 class="mt-2 mb-0">@Model.SharedDocuments</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Documents and Activity -->
+    <div class="row">
+        <!-- Recent Documents -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Recent Documents</h5>
+                        <a href="/Documents" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentDocuments.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var doc in Model.RecentDocuments)
+                            {
+                                <a href="/Documents/Details/@doc.Id" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@doc.Title</h6>
+                                        <small class="text-muted">@doc.LastModified.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                    <p class="mb-1 text-muted">@doc.Description</p>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-file-earmark-text text-muted fs-1"></i>
+                            <p class="text-muted mt-2">No recent documents</p>
+                            <a href="/Documents/Create" class="btn btn-primary">Upload Document</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentActivities.Any())
+                    {
+                        <div class="timeline">
+                            @foreach (var activity in Model.RecentActivities)
+                            {
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-0">@activity.Title</h6>
+                                        <small class="text-muted">@activity.Timestamp.ToString("MMM dd, HH:mm")</small>
+                                        <p class="mb-0">@activity.Description</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-activity text-muted fs-1"></i>
+                            <p class="text-muted mt-2">No recent activity</p>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        .timeline-marker {
+            position: absolute;
+            left: -30px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #0d6efd;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 2px #0d6efd;
+        }
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 15px;
+            height: calc(100% - 15px);
+            width: 2px;
+            background: #e9ecef;
+        }
+    </style>
+}
