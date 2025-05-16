@@ -2,7 +2,6 @@
 
 Document Management System built with ASP.NET Core 8.
 
-[![CI](https://github.com/10xDevs/Doc-Flow-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/10xDevs/Doc-Flow-Hub/actions/workflows/ci.yml)
 
 ## Description
 
@@ -10,11 +9,27 @@ Doc-Flow-Hub is a modern document management system that helps teams organize, t
 
 ## Features
 
+### User Management
 - User Authentication and Authorization
-- Team Management
-- Document Version Control
+- Profile Management
+  - Customizable user profiles
+  - Profile picture support
+  - Bio and personal information
 - Role-based Access Control
+
+### Team Collaboration
+- Team Management
+  - Create and manage teams
+  - Team member roles (Admin, Member)
+  - Team activity tracking
+- Document Version Control
 - Real-time Collaboration
+
+### Security
+- Secure password policies
+- Account lockout protection
+- Email confirmation
+- Session management
 
 ## Getting Started
 
@@ -45,6 +60,14 @@ dotnet restore
 ```bash
 dotnet run --project src/DocFlowHub.Web
 ```
+
+## Project Structure
+
+The solution follows Clean Architecture principles:
+
+- **DocFlowHub.Core**: Domain models, interfaces, and business logic
+- **DocFlowHub.Infrastructure**: Data access, external services, and implementations
+- **DocFlowHub.Web**: ASP.NET Core web application and UI
 
 ## License
 
