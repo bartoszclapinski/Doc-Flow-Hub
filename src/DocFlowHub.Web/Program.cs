@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using DocFlowHub.Web.Services;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Infrastructure.Services.Profile;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +38,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // Add Email Sender
 builder.Services.AddTransient<IEmailSender, EmailSender>();
+
+// Add Profile Service
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 // Configure cookie policy
 builder.Services.ConfigureApplicationCookie(options =>
