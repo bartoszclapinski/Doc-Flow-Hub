@@ -3,10 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Identity;
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Infrastructure.Data;
-using System;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
+
 
 namespace DocFlowHub.Web.Pages
 {
@@ -40,8 +37,6 @@ namespace DocFlowHub.Web.Pages
             }
 
             UserName = user.UserName;
-            
-            // TODO: Replace with actual data from your services
             TotalDocuments = 0;
             TotalTeams = 0;
             RecentUpdates = 0;
