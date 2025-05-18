@@ -1,0 +1,61 @@
+@page
+@model DocFlowHub.Web.Pages.Account.Manage.IndexModel
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["ActivePage"] = "Profile";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <partial name="_ManageNav" />
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            @if (!string.IsNullOrEmpty(Model.Profile.ProfilePictureUrl))
+                            {
+                                <img src="@Model.Profile.ProfilePictureUrl" alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="max-width: 150px;" />
+                            }
+                            else
+                            {
+                                <img src="~/images/default-profile.png" alt="Default Profile Picture" class="img-fluid rounded-circle mb-3" style="max-width: 150px;" />
+                            }
+                            <div class="mt-2">
+                                <a asp-page="UploadProfilePicture" class="btn btn-outline-primary btn-sm">Change Picture</a>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <dl class="row">
+                                <dt class="col-sm-3">Name</dt>
+                                <dd class="col-sm-9">@Model.Profile.FirstName @Model.Profile.LastName</dd>
+
+                                <dt class="col-sm-3">Email</dt>
+                                <dd class="col-sm-9">@Model.Profile.Email</dd>
+
+                                <dt class="col-sm-3">Bio</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Profile.Bio) ? "No bio provided" : Model.Profile.Bio)</dd>
+
+                                <dt class="col-sm-3">Member Since</dt>
+                                <dd class="col-sm-9">@Model.Profile.CreatedAt.ToString("MMMM dd, yyyy")</dd>
+                            </dl>
+                            <div class="mt-3">
+                                <a asp-page="EditProfile" class="btn btn-primary">Edit Profile</a>
+                                <a asp-page="ChangePassword" class="btn btn-outline-secondary">Change Password</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+} 

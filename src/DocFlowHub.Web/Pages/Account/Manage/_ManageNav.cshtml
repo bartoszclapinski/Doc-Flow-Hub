@@ -1,0 +1,18 @@
+@{
+    var activePage = ViewData["ActivePage"]?.ToString() ?? "";
+}
+
+<div class="list-group">
+    <a asp-page="./Index" class="list-group-item list-group-item-action @(activePage == "Profile" ? "active" : "")">
+        <i class="fas fa-user me-2"></i> Profile
+    </a>
+    <a asp-page="./EditProfile" class="list-group-item list-group-item-action @(activePage == "EditProfile" ? "active" : "")">
+        <i class="fas fa-edit me-2"></i> Edit Profile
+    </a>
+    <a asp-page="./ChangePassword" class="list-group-item list-group-item-action @(activePage == "ChangePassword" ? "active" : "")">
+        <i class="fas fa-key me-2"></i> Change Password
+    </a>
+    <a asp-page="./UploadProfilePicture" class="list-group-item list-group-item-action @(activePage == "UploadProfilePicture" ? "active" : "")">
+        <i class="fas fa-camera me-2"></i> Profile Picture
+    </a>
+</div> 

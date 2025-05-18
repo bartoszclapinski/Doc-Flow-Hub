@@ -22,44 +22,30 @@ public class ProfileService : IProfileService
 
     public async Task<ProfileDto> GetProfileAsync(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            throw new KeyNotFoundException($"User with ID {userId} not found.");
-        }
-
+        var user = await _userManager.FindByIdAsync(userId) 
+            ?? throw new KeyNotFoundException($"User with ID {userId} not found.");
         return MapToProfileDto(user);
     }
 
     public async Task<ProfileDto> UpdateProfileAsync(string userId, UpdateProfileRequest request)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            throw new KeyNotFoundException($"User with ID {userId} not found.");
-        }
-
+        var user = await _userManager.FindByIdAsync(userId) 
+            ?? throw new KeyNotFoundException($"User with ID {userId} not found.");
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;
         user.Bio = request.Bio;
 
         var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
+        if (!result.Succeeded)        
             throw new InvalidOperationException($"Failed to update user profile: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-        }
-
+        
         return MapToProfileDto(user);
     }
 
     public async Task<bool> UpdateProfilePictureAsync(string userId, string imageUrl)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            throw new KeyNotFoundException($"User with ID {userId} not found.");
-        }
-
+        var user = await _userManager.FindByIdAsync(userId) 
+            ?? throw new KeyNotFoundException($"User with ID {userId} not found.");
         user.ProfilePictureUrl = imageUrl;
         var result = await _userManager.UpdateAsync(user);
         
@@ -68,12 +54,8 @@ public class ProfileService : IProfileService
 
     public async Task<bool> DeleteProfilePictureAsync(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            throw new KeyNotFoundException($"User with ID {userId} not found.");
-        }
-
+        var user = await _userManager.FindByIdAsync(userId) 
+            ?? throw new KeyNotFoundException($"User with ID {userId} not found.");
         user.ProfilePictureUrl = null;
         var result = await _userManager.UpdateAsync(user);
         
