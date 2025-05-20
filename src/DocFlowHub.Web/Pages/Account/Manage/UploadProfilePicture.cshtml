@@ -1,0 +1,71 @@
+@page
+@model DocFlowHub.Web.Pages.Account.Manage.UploadProfilePictureModel
+@{
+    ViewData["Title"] = "Profile Picture";
+    ViewData["ActivePage"] = "UploadProfilePicture";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <partial name="_ManageNav" />
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.ProfilePicture" class="form-label">Upload New Picture</label>
+                                    <input asp-for="Input.ProfilePicture" class="form-control" type="file" accept="image/*" />
+                                    <span asp-validation-for="Input.ProfilePicture" class="text-danger"></span>
+                                    <div class="form-text">Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.</div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-primary">Upload Picture</button>
+                                    <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <h5>Current Picture</h5>
+                                    @if (!string.IsNullOrEmpty(Model.CurrentPictureUrl))
+                                    {
+                                        <img src="@Model.CurrentPictureUrl" alt="Current Profile Picture" class="img-fluid rounded-circle mb-3" style="max-width: 200px;" />
+                                    }
+                                    else
+                                    {
+                                        <img src="~/images/default-profile.png" alt="Default Profile Picture" class="img-fluid rounded-circle mb-3" style="max-width: 200px;" />
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Preview the selected image before upload
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.querySelector('.img-fluid').src = e.target.result;
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+    </script>
+} 

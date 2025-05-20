@@ -16,7 +16,7 @@ public class IndexModel : PageModel
         _profileService = profileService;
     }
 
-    public ProfileDto Profile { get; set; }
+    public ProfileDto? Profile { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -26,13 +26,12 @@ public class IndexModel : PageModel
             return RedirectToPage("/Account/Login");
         }
 
-        var profile = await _profileService.GetProfileAsync(userId);
-        if (profile == null)
+        Profile = await _profileService.GetProfileAsync(userId);
+        if (Profile == null)
         {
             return RedirectToPage("/Error");
         }
 
-        Profile = profile;
         return Page();
     }
 } 

@@ -36,17 +36,17 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Index" ? "page" : null)">
                                 <i class="bi bi-house"></i> Home
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Documents/Index">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Documents/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Documents/Index" ? "page" : null)">
                                 <i class="bi bi-folder"></i> Documents
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Teams/Index">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Teams/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Teams/Index" ? "page" : null)">
                                 <i class="bi bi-people"></i> Teams
                             </a>
                         </li>

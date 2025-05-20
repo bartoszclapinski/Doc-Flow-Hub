@@ -12,7 +12,7 @@
 @if (SignInManager.IsSignedIn(User))
 {
     <li class="nav-item">
-        <a id="manage" class="nav-link text-dark" asp-page="/Account/Manage/Index" title="Manage">
+        <a id="manage" class="nav-link text-dark" asp-page="/Account/Manage/Index" title="Manage" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Manage/Index" ? "page" : null)">
             <i class="bi bi-person-circle"></i> Hello @UserManager.GetUserName(User)!
         </a>
     </li>
@@ -27,12 +27,12 @@
 else
 {
     <li class="nav-item">
-        <a class="nav-link text-dark" id="register" asp-page="/Account/Register">
+        <a class="nav-link text-dark" id="register" asp-page="/Account/Register" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Register" ? "page" : null)">
             <i class="bi bi-person-plus"></i> Register
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link text-dark" id="login" asp-page="/Account/Login">
+        <a class="nav-link text-dark" id="login" asp-page="/Account/Login" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Login" ? "page" : null)">
             <i class="bi bi-box-arrow-in-right"></i> Login
         </a>
     </li>
