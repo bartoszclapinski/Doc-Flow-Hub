@@ -22,6 +22,7 @@ src/DocFlowHub.Web/wwwroot/lib/
 src/DocFlowHub.Web/wwwroot/dist/
 src/DocFlowHub.Web/wwwroot/*.min.css
 src/DocFlowHub.Web/wwwroot/*.min.js
+src/DocFlowHub.Web/wwwroot/uploads/profile-pictures/*
 
 # Visual Studio files
 .vs/
@@ -68,3 +69,5 @@ artifacts/
 
 # DocFlowHub specific
 DocFlowHub.sln.DotSettings.user
+
+# 

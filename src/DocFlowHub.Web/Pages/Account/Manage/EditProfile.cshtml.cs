@@ -4,53 +4,54 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
+using DocFlowHub.Core.Identity;
 
 namespace DocFlowHub.Web.Pages.Account.Manage;
 
 [Authorize]
 public class EditProfileModel : PageModel
 {
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly IProfileService _profileService;
 
-    public EditProfileModel(IProfileService profileService)
+    public EditProfileModel(
+        UserManager<ApplicationUser> userManager,
+        IProfileService profileService)
     {
+        _userManager = userManager;
         _profileService = profileService;
     }
 
     [BindProperty]
-    public InputModel Input { get; set; }
+    public InputModel Input { get; set; } = new();
 
     public class InputModel
     {
         [Required]
         [StringLength(50, ErrorMessage = "The {0} must be at most {1} characters long.")]
         [Display(Name = "First Name")]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
 
         [Required]
         [StringLength(50, ErrorMessage = "The {0} must be at most {1} characters long.")]
         [Display(Name = "Last Name")]
-        public string LastName { get; set; }
+        public string LastName { get; set; } = string.Empty;
 
         [StringLength(500, ErrorMessage = "The {0} must be at most {1} characters long.")]
         [Display(Name = "Bio")]
-        public string Bio { get; set; }
+        public string? Bio { get; set; }
     }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
         {
-            return RedirectToPage("/Account/Login");
+            return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
         }
 
-        var profile = await _profileService.GetProfileAsync(userId);
-        if (profile == null)
-        {
-            return RedirectToPage("/Error");
-        }
-
+        var profile = await _profileService.GetProfileAsync(user.Id);
         Input = new InputModel
         {
             FirstName = profile.FirstName,
@@ -68,26 +69,29 @@ public class EditProfileModel : PageModel
             return Page();
         }
 
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
         {
-            return RedirectToPage("/Account/Login");
+            return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
         }
 
-        var updateRequest = new UpdateProfileRequest
+        try
         {
-            FirstName = Input.FirstName,
-            LastName = Input.LastName,
-            Bio = Input.Bio
-        };
+            var request = new UpdateProfileRequest
+            {
+                FirstName = Input.FirstName,
+                LastName = Input.LastName,
+                Bio = Input.Bio
+            };
 
-        var updatedProfile = await _profileService.UpdateProfileAsync(userId, updateRequest);
-        if (updatedProfile == null)
+            await _profileService.UpdateProfileAsync(user.Id, request);
+            TempData["StatusMessage"] = "Your profile has been updated.";
+            return RedirectToPage();
+        }
+        catch (Exception ex)
         {
-            ModelState.AddModelError(string.Empty, "Failed to update profile. Please try again.");
+            ModelState.AddModelError(string.Empty, ex.Message);
             return Page();
         }
-
-        return RedirectToPage("./Index");
     }
 } 
