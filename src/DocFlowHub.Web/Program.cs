@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using DocFlowHub.Infrastructure.Data;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Services.Profile;
+using DocFlowHub.Infrastructure.Services.Role;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +43,9 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 // Add Profile Service
 builder.Services.AddScoped<IProfileService, ProfileService>();
 
+// Add Role Service
+builder.Services.AddScoped<IRoleService, RoleService>();
+
 // Configure cookie policy
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -53,6 +57,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 var app = builder.Build();
+
+// Initialize database
+using (var scope = app.Services.CreateScope())
+{
+    await DbInitializer.InitializeAsync(app.Services);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

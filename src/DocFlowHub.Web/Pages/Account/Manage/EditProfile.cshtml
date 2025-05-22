@@ -16,6 +16,8 @@
                     <h4>@ViewData["Title"]</h4>
                 </div>
                 <div class="card-body">
+                    <partial name="_StatusMessage" />
+                    
                     <form method="post">
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                         
@@ -33,8 +35,9 @@
 
                         <div class="mb-3">
                             <label asp-for="Input.Bio" class="form-label"></label>
-                            <textarea asp-for="Input.Bio" class="form-control" rows="3"></textarea>
+                            <textarea asp-for="Input.Bio" class="form-control" rows="3" maxlength="500"></textarea>
                             <span asp-validation-for="Input.Bio" class="text-danger"></span>
+                            <div class="form-text">Maximum 500 characters.</div>
                         </div>
 
                         <div class="mt-4">
@@ -50,4 +53,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Add character counter for Bio field
+        const bioTextarea = document.querySelector('#Input_Bio');
+        const bioCounter = document.createElement('small');
+        bioCounter.className = 'text-muted';
+        bioTextarea.parentNode.insertBefore(bioCounter, bioTextarea.nextSibling);
+        
+        function updateBioCounter() {
+            const remaining = 500 - bioTextarea.value.length;
+            bioCounter.textContent = `${remaining} characters remaining`;
+        }
+        
+        bioTextarea.addEventListener('input', updateBioCounter);
+        updateBioCounter();
+    </script>
 } 

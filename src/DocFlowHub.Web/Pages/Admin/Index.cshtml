@@ -1,0 +1,82 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h2>@ViewData["Title"]</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-people"></i> Users
+                </h5>
+                <p class="card-text">Manage user accounts, roles, and permissions.</p>
+                <a asp-page="/Admin/Users/Index" class="btn btn-primary">Manage Users</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-person-badge"></i> Roles
+                </h5>
+                <p class="card-text">Configure roles and their associated permissions.</p>
+                <a asp-page="/Admin/Roles/Index" class="btn btn-success">Manage Roles</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card border-info h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-gear"></i> Settings
+                </h5>
+                <p class="card-text">Configure application settings and preferences.</p>
+                <a asp-page="/Admin/Settings/Index" class="btn btn-info">Manage Settings</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No recent activity to display.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>System Status:</span>
+                    <span class="badge bg-success">Operational</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Last Updated:</span>
+                    <span>@DateTime.Now.ToString("g")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

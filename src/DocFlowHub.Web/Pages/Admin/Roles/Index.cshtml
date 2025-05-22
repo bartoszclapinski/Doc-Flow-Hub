@@ -1,0 +1,76 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.Roles.IndexModel
+@{
+    ViewData["Title"] = "Role Management";
+    ViewData["ActivePage"] = "Roles";
+    Layout = "../_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h2>@ViewData["Title"]</h2>
+    </div>
+    <div class="col text-end">
+        <a asp-page="./Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New Role
+        </a>
+    </div>
+</div>
+
+<partial name="_StatusMessage" />
+
+<div class="card">
+    <div class="card-body">
+        @if (!Model.Roles.Any())
+        {
+            <div class="alert alert-info">
+                No roles have been created yet.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Users</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <tr>
+                                <td>@role.Name</td>
+                                <td>@(string.IsNullOrEmpty(role.Description) ? "-" : role.Description)</td>
+                                <td>@role.UsersCount</td>
+                                <td>@role.CreatedAt.ToString("g")</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a asp-page="./Edit" asp-route-id="@role.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-page="./Delete" asp-route-id="@role.Id" class="btn btn-sm btn-outline-danger @(role.UsersCount > 0 ? "disabled" : "")"
+                                           title="@(role.UsersCount > 0 ? "Cannot delete role with assigned users" : "Delete role")">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        <a asp-page="./Users" asp-route-id="@role.Id" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-users"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+} 

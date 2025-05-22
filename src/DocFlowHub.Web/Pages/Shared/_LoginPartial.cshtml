@@ -11,6 +11,14 @@
 <ul class="navbar-nav">
 @if (SignInManager.IsSignedIn(User))
 {
+    @if (User.IsInRole("Administrator"))
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-page="/Admin/Index">
+                <i class="bi bi-gear"></i> Admin
+            </a>
+        </li>
+    }
     <li class="nav-item">
         <a id="manage" class="nav-link text-dark" asp-page="/Account/Manage/Index" title="Manage" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Manage/Index" ? "page" : null)">
             <i class="bi bi-person-circle"></i> Hello @UserManager.GetUserName(User)!
