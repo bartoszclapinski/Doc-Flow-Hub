@@ -1,0 +1,10 @@
+@if (TempData["StatusMessage"] != null)
+{
+    var statusMessage = TempData["StatusMessage"].ToString()!;
+    var statusMessageType = statusMessage.ToLower().Contains("error") ? "danger" : "success";
+    
+    <div class="alert alert-@statusMessageType alert-dismissible fade show" role="alert">
+        @statusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+} 
