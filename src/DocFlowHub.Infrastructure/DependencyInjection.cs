@@ -7,13 +7,15 @@ namespace DocFlowHub.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddDocumentServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.Configure<DocumentStorageOptions>(
             configuration.GetSection(DocumentStorageOptions.SectionName));
-            
+
         services.AddScoped<IDocumentStorageService, DocumentStorageService>();
-        
+
         return services;
     }
 } 

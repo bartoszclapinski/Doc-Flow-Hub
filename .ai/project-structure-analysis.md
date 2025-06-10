@@ -38,6 +38,11 @@ Contains core domain models:
 - `Common/ServiceResult.cs`: Generic result wrapper for service operations
 - `Profile/ProfileDto.cs`: Data transfer object for user profiles
 - `Profile/UpdateProfileRequest.cs`: Request model for profile updates
+- `Documents/Document.cs`: Main document entity
+- `Documents/DocumentVersion.cs`: Document version tracking
+- `Documents/DocumentCategory.cs`: Document categorization
+- `Documents/Dto/DocumentDto.cs`: Document data transfer object
+- `Documents/Dto/CreateDocumentRequest.cs`: Document creation request
 
 #### Identity Directory
 Contains identity-related models:
@@ -46,12 +51,16 @@ Contains identity-related models:
 #### Services Directory
 Contains service interfaces:
 - `IProfileService.cs`: Interface for profile management operations
+- `IDocumentService.cs`: Interface for document operations
+- `IDocumentStorageService.cs`: Interface for document storage operations
+- `IDocumentCategoryService.cs`: Interface for category management
 
 ### Dependencies
 - Microsoft.AspNetCore.Identity.EntityFrameworkCore (version 9.0.4)
 - Microsoft.AspNetCore.Http.Features (version 5.0.17) for IFormFile support
 - Entity Framework Core for data access
 - ASP.NET Core Identity for user management
+- Azure.Storage.Blobs (version 12.19.1) for document storage
 
 ### Domain Model Details
 
@@ -163,6 +172,7 @@ DocFlowHub.Infrastructure/
 - Microsoft.Extensions.Configuration.Json (version 9.0.4)
 - FrameworkReference to Microsoft.AspNetCore.App
 - Project reference to DocFlowHub.Core
+- Azure.Storage.Blobs (version 12.19.1) for document storage
 
 ### Key Components
 
@@ -174,6 +184,8 @@ Contains data access implementation:
 #### Services Directory
 Contains service implementations:
 - `ProfileService.cs`: Implementation of IProfileService for profile management
+- `Storage/DocumentStorageService.cs`: Implementation of IDocumentStorageService for document storage
+- `Storage/DocumentStorageOptions.cs`: Configuration options for document storage
 
 #### ApplicationDbContext Details
 ```csharp
@@ -228,6 +240,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 4. Service Implementations
    - Profile management service
    - File handling for profile pictures
+   - Document storage service
 
 ### Architecture Notes
 - Implements the infrastructure layer of Clean Architecture
@@ -412,3 +425,52 @@ public class ActivitySummary
 - Nullable reference types enabled
 - Role-based authorization implemented
 - Admin section properly secured 
+
+### Document Management Features
+1. Document Storage
+   - Azure Blob Storage integration
+   - Hierarchical storage structure (user/date-based)
+   - File type and size validation
+   - Async operations with proper error handling
+
+2. Document Versioning
+   - Automatic version tracking
+   - Version history management
+   - Current version tracking
+   - Version restoration capability
+
+3. Document Categorization
+   - Hierarchical category system
+   - Multiple categories per document
+   - Category-based organization
+
+4. Security and Access Control
+   - Team-based access
+   - Owner-based permissions
+   - Soft delete support
+
+### Infrastructure Implementation
+New components in Infrastructure project:
+```
+DocFlowHub.Infrastructure/
+├── Services/
+│   └── Storage/
+│       ├── DocumentStorageService.cs
+│       └── DocumentStorageOptions.cs
+├── DependencyInjection.cs (updated)
+```
+
+Key features:
+- Async initialization pattern for services
+- Proper error handling with ServiceResult
+- Thread-safe operations
+- Resource cleanup and management
+- Blob storage integration with monitoring
+
+### Next Implementation Steps
+1. Document service implementation
+2. Database configurations for document entities
+3. Document endpoints and controllers
+4. UI implementation for document management
+
+// ... rest of existing content ... 

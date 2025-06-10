@@ -4,9 +4,11 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Threading;
 
@@ -16,13 +18,19 @@ public class DocumentStorageService : IDocumentStorageService
 {
     private readonly BlobContainerClient _containerClient;
     private readonly DocumentStorageOptions _options;
+    private readonly ILogger<DocumentStorageService> _logger;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _isInitialized;
 
-    public DocumentStorageService(IOptions<DocumentStorageOptions> options)
+    public DocumentStorageService(
+        IOptions<DocumentStorageOptions> options,
+        ILogger<DocumentStorageService> logger)
     {
         _options = options.Value;
-        _containerClient = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
+        _logger = logger;
+
+        var blobServiceClient = new BlobServiceClient(_options.ConnectionString);
+        _containerClient = blobServiceClient.GetBlobContainerClient(_options.ContainerName);
     }
 
     private async Task EnsureInitializedAsync()
@@ -44,75 +52,141 @@ public class DocumentStorageService : IDocumentStorageService
         }
     }
 
-    public async Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, string userId)
+    public async Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, string fileName)
     {
         try
         {
             await EnsureInitializedAsync();
 
             if (file == null || file.Length == 0)
-                return ServiceResult<string>.Failure("No file was provided.");
+            {
+                return ServiceResult<string>.Failure("No file was provided");
+            }
 
             if (file.Length > _options.MaxFileSizeBytes)
-                return ServiceResult<string>.Failure($"File size exceeds maximum limit of {_options.MaxFileSizeBytes / 1024 / 1024}MB.");
+            {
+                return ServiceResult<string>.Failure($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / 1024 / 1024}MB");
+            }
 
-            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!Array.Exists(_options.AllowedFileTypes, x => x == fileExtension))
-                return ServiceResult<string>.Failure("File type is not allowed.");
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!_options.AllowedFileTypes.Contains(extension))
+            {
+                return ServiceResult<string>.Failure($"File type {extension} is not allowed");
+            }
 
-            // Create a unique blob name using userId and timestamp
-            var blobName = $"{userId}/{DateTime.UtcNow:yyyy/MM/dd}/{Guid.NewGuid()}{fileExtension}";
-            var blobClient = _containerClient.GetBlobClient(blobName);
+            var blobClient = _containerClient.GetBlobClient(fileName);
 
             await using var stream = file.OpenReadStream();
-            await blobClient.UploadAsync(stream, true);
+            await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = file.ContentType });
 
-            return ServiceResult<string>.Success(blobName);
+            return ServiceResult<string>.Success(blobClient.Uri.ToString());
         }
         catch (Exception ex)
         {
-            return ServiceResult<string>.Failure($"Failed to upload document: {ex.Message}");
+            _logger.LogError(ex, "Error uploading document {FileName}", fileName);
+            return ServiceResult<string>.Failure($"Error uploading document: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<byte[]>> DownloadDocumentAsync(string filePath)
+    public async Task<ServiceResult<Stream>> DownloadDocumentAsync(string fileName)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(filePath);
+            var blobClient = _containerClient.GetBlobClient(fileName);
             
             if (!await blobClient.ExistsAsync())
-                return ServiceResult<byte[]>.Failure("Document not found.");
+            {
+                return ServiceResult<Stream>.Failure("Document not found");
+            }
 
-            using var memoryStream = new MemoryStream();
-            await blobClient.DownloadToAsync(memoryStream);
-            return ServiceResult<byte[]>.Success(memoryStream.ToArray());
+            var download = await blobClient.DownloadStreamingAsync();
+            return ServiceResult<Stream>.Success(download.Value.Content);
         }
         catch (Exception ex)
         {
-            return ServiceResult<byte[]>.Failure($"Failed to download document: {ex.Message}");
+            _logger.LogError(ex, "Error downloading document {FileName}", fileName);
+            return ServiceResult<Stream>.Failure($"Error downloading document: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult> DeleteDocumentAsync(string filePath)
+    public async Task<ServiceResult> DeleteDocumentAsync(string fileName)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(filePath);
+            var blobClient = _containerClient.GetBlobClient(fileName);
             
             if (!await blobClient.ExistsAsync())
-                return ServiceResult.Failure("Document not found.");
+            {
+                return ServiceResult.Failure("Document not found");
+            }
 
             await blobClient.DeleteAsync();
             return ServiceResult.Success();
         }
         catch (Exception ex)
         {
-            return ServiceResult.Failure($"Failed to delete document: {ex.Message}");
+            _logger.LogError(ex, "Error deleting document {FileName}", fileName);
+            return ServiceResult.Failure($"Error deleting document: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<bool>> DocumentExistsAsync(string fileName)
+    {
+        try
+        {
+            await EnsureInitializedAsync();
+            
+            var blobClient = _containerClient.GetBlobClient(fileName);
+            var exists = await blobClient.ExistsAsync();
+            return ServiceResult<bool>.Success(exists.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking document existence {FileName}", fileName);
+            return ServiceResult<bool>.Failure($"Error checking document existence: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<string>> GetDocumentUrlAsync(string fileName, int expiryMinutes = 60)
+    {
+        try
+        {
+            await EnsureInitializedAsync();
+            
+            var blobClient = _containerClient.GetBlobClient(fileName);
+            
+            if (!await blobClient.ExistsAsync())
+            {
+                return ServiceResult<string>.Failure("Document not found");
+            }
+
+            var sasBuilder = new BlobSasBuilder
+            {
+                BlobContainerName = _containerClient.Name,
+                BlobName = fileName,
+                Resource = "b",
+                StartsOn = DateTimeOffset.UtcNow,
+                ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes)
+            };
+
+            sasBuilder.SetPermissions(BlobSasPermissions.Read);
+            var sasToken = sasBuilder.ToSasQueryParameters(
+                new Azure.Storage.StorageSharedKeyCredential(
+                    _containerClient.AccountName,
+                    _options.ConnectionString.Split("AccountKey=")[1].Split(";")[0]
+                )
+            ).ToString();
+
+            return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating SAS URL for document {FileName}", fileName);
+            return ServiceResult<string>.Failure($"Error generating document URL: {ex.Message}");
         }
     }
 
@@ -130,21 +204,6 @@ public class DocumentStorageService : IDocumentStorageService
         catch (Exception ex)
         {
             return ServiceResult<string>.Failure($"Failed to compute file hash: {ex.Message}");
-        }
-    }
-
-    public async Task<bool> FileExistsAsync(string filePath)
-    {
-        try
-        {
-            await EnsureInitializedAsync();
-            
-            var blobClient = _containerClient.GetBlobClient(filePath);
-            return await blobClient.ExistsAsync();
-        }
-        catch
-        {
-            return false;
         }
     }
 
