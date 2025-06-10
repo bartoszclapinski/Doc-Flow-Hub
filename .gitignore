@@ -1,4 +1,3 @@
-
 # DocFlowHub.Web
 src/DocFlowHub.Web/appsettings.json
 src/DocFlowHub.Web/appsettings.Development.json
@@ -69,3 +68,6 @@ artifacts/
 
 # DocFlowHub specific
 DocFlowHub.sln.DotSettings.user
+
+# Project specific
+.ai/next-step-detailed-plan.md
