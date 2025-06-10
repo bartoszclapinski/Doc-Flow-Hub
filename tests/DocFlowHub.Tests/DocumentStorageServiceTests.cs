@@ -25,10 +25,14 @@ public class DocumentStorageServiceTests
         // Load configuration from appsettings.Development.json
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.Development.json")
+            .AddJsonFile("appsettings.Development.json", optional: false)
             .Build();
 
-        _connectionString = configuration.GetSection("Storage:ConnectionString").Value!;
+        // Validate configuration
+        _connectionString = configuration.GetSection("Storage:ConnectionString").Value 
+            ?? throw new InvalidOperationException(
+                "Storage:ConnectionString is required in appsettings.Development.json for tests. " +
+                "Please ensure the configuration file exists and contains a valid connection string.");
         
         _options = new DocumentStorageOptions
         {

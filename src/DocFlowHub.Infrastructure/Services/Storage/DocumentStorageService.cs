@@ -88,6 +88,11 @@ public class DocumentStorageService : IDocumentStorageService
         }
     }
 
+    /// <summary>
+    /// Downloads a document from storage.
+    /// </summary>
+    /// <param name="fileName">The name of the file to download.</param>
+    /// <returns>A ServiceResult containing the document stream. Note: The caller is responsible for disposing the returned Stream.</returns>
     public async Task<ServiceResult<Stream>> DownloadDocumentAsync(string fileName)
     {
         try
@@ -101,8 +106,20 @@ public class DocumentStorageService : IDocumentStorageService
                 return ServiceResult<Stream>.Failure("Document not found");
             }
 
+            // Create a new memory stream that we'll copy the blob content into
+            var memoryStream = new MemoryStream();
+            
+            // Download and copy the blob content
             var download = await blobClient.DownloadStreamingAsync();
-            return ServiceResult<Stream>.Success(download.Value.Content);
+            await using (download.Value)
+            await using (var blobStream = download.Value.Content)
+            {
+                await blobStream.CopyToAsync(memoryStream);
+            }
+            
+            // Reset the position to the beginning for reading
+            memoryStream.Position = 0;
+            return ServiceResult<Stream>.Success(memoryStream);
         }
         catch (Exception ex)
         {
