@@ -38,13 +38,17 @@ Doc-Flow-Hub is a modern document management system that helps teams organize, t
   - Categorization and tagging
   - Folder/project structure
   - Custom metadata
+  - Hierarchical storage in Azure Blob Storage ✅
 - **Version Control**
   - Automatic version tracking
   - Difference visualization
   - Version restoration
+  - Secure file storage with SAS tokens ✅
 - **Search and Filtering**
   - Search by metadata
   - Filter by various criteria
+  - File type validation ✅
+  - Size limit enforcement ✅
 
 ### 🔒 Security
 - Secure password policies
@@ -52,6 +56,8 @@ Doc-Flow-Hub is a modern document management system that helps teams organize, t
 - Email confirmation
 - Session management
 - HTTPS enforcement
+- Secure file access with SAS tokens ✅
+- Resource cleanup and proper disposal ✅
 
 ## 🏁 Getting Started
 
@@ -59,6 +65,7 @@ Doc-Flow-Hub is a modern document management system that helps teams organize, t
 
 - **.NET 9 SDK**
 - **SQL Server**
+- **Azure Storage Account**
 - **Visual Studio 2022** or **VS Code**
 
 ### Installation
@@ -78,12 +85,35 @@ cd Doc-Flow-Hub
 dotnet restore
 ```
 
-4. Update the database
+4. Configure the application
+   
+Create or update `appsettings.Development.json` in the `src/DocFlowHub.Web` directory:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
+  },
+  "Storage": {
+    "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=your_account_name;AccountKey=your_account_key;EndpointSuffix=core.windows.net"
+  }
+}
+```
+
+To get Azure Storage connection string:
+1. Go to Azure Portal
+2. Navigate to your Storage Account
+3. Go to "Access keys" under "Security + networking"
+4. Copy the connection string
+5. Replace the `Storage:ConnectionString` value in `appsettings.Development.json`
+
+⚠️ Never commit the actual connection string to source control!
+
+5. Update the database
 ```bash
 dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
 ```
 
-5. Run the application
+6. Run the application
 ```bash
 dotnet run --project src/DocFlowHub.Web
 ```
@@ -100,6 +130,7 @@ The solution follows Clean Architecture principles:
 - **DocFlowHub.Infrastructure** 🔧: Data access, external services, and implementations
   - Entity Framework Core implementation
   - Service implementations
+  - Azure Blob Storage integration
   - External integrations
   
 - **DocFlowHub.Web** 🌐: ASP.NET Core web application and UI
@@ -113,6 +144,7 @@ The project uses GitHub Actions for continuous integration and deployment:
 - Automated builds
 - Unit tests execution
 - Code quality checks
+- Azure integration tests
 
 ## 📜 License
 
