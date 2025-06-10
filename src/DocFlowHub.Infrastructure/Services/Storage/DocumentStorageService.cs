@@ -10,7 +10,7 @@ using DocFlowHub.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Threading;
+using Azure.Storage;
 
 namespace DocFlowHub.Infrastructure.Services.Storage;
 
@@ -174,19 +174,52 @@ public class DocumentStorageService : IDocumentStorageService
             };
 
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
-            var sasToken = sasBuilder.ToSasQueryParameters(
-                new Azure.Storage.StorageSharedKeyCredential(
-                    _containerClient.AccountName,
-                    _options.ConnectionString.Split("AccountKey=")[1].Split(";")[0]
-                )
-            ).ToString();
 
-            return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
+            try
+            {
+                // Get the account name from the container client
+                var accountName = _containerClient.AccountName;
+                
+                // Extract the account key safely using Azure's built-in parser
+                var credential = new StorageSharedKeyCredential(accountName, GetAccountKeyFromConnectionString(_options.ConnectionString));
+                
+                var sasToken = sasBuilder.ToSasQueryParameters(credential).ToString();
+                return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
+            }
+            catch (FormatException fex)
+            {
+                _logger.LogError(fex, "Invalid connection string format");
+                return ServiceResult<string>.Failure("Invalid storage connection string format");
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating SAS URL for document {FileName}", fileName);
             return ServiceResult<string>.Failure($"Error generating document URL: {ex.Message}");
+        }
+    }
+
+    private static string GetAccountKeyFromConnectionString(string connectionString)
+    {
+        try
+        {
+            var parts = connectionString.Split(';')
+                .Select(part => part.Trim())
+                .Where(part => !string.IsNullOrEmpty(part))
+                .Select(part => part.Split('=', 2))
+                .Where(pair => pair.Length == 2)
+                .ToDictionary(pair => pair[0], pair => pair[1]);
+
+            if (parts.TryGetValue("AccountKey", out var accountKey))
+            {
+                return accountKey;
+            }
+
+            throw new FormatException("AccountKey not found in connection string");
+        }
+        catch (Exception)
+        {
+            throw new FormatException("Invalid connection string format");
         }
     }
 
