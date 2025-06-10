@@ -111,8 +111,8 @@ public class DocumentStorageService : IDocumentStorageService
             
             // Download and copy the blob content
             var download = await blobClient.DownloadStreamingAsync();
-            await using (download.Value)
-            await using (var blobStream = download.Value.Content)
+            using (download.Value)
+            using (var blobStream = download.Value.Content)
             {
                 await blobStream.CopyToAsync(memoryStream);
             }
@@ -220,23 +220,43 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
-            var parts = connectionString.Split(';')
-                .Select(part => part.Trim())
-                .Where(part => !string.IsNullOrEmpty(part))
-                .Select(part => part.Split('=', 2))
-                .Where(pair => pair.Length == 2)
-                .ToDictionary(pair => pair[0], pair => pair[1]);
-
-            if (parts.TryGetValue("AccountKey", out var accountKey))
+            var parts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var part in connectionString.Split(';')
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrEmpty(p)))
             {
-                return accountKey;
+                var keyValue = part.Split('=', 2);
+                if (keyValue.Length != 2)
+                {
+                    throw new FormatException($"Invalid connection string part: {part}");
+                }
+
+                var key = keyValue[0].Trim();
+                var value = keyValue[1].Trim();
+
+                if (parts.ContainsKey(key))
+                {
+                    throw new ArgumentException($"Duplicate key in connection string: {key}", nameof(connectionString));
+                }
+
+                parts.Add(key, value);
             }
 
-            throw new FormatException("AccountKey not found in connection string");
+            if (!parts.TryGetValue("AccountKey", out var accountKey))
+            {
+                throw new ArgumentException("AccountKey not found in connection string", nameof(connectionString));
+            }
+
+            return accountKey;
         }
-        catch (Exception)
+        catch (ArgumentException)
         {
-            throw new FormatException("Invalid connection string format");
+            throw; // Re-throw ArgumentException to preserve the original error
+        }
+        catch (Exception ex)
+        {
+            throw new FormatException("Invalid connection string format", ex);
         }
     }
 

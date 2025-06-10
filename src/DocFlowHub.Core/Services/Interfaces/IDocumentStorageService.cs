@@ -2,10 +2,11 @@ using System.Threading.Tasks;
 using DocFlowHub.Core.Models.Common;
 using Microsoft.AspNetCore.Http;
 using System.IO;
+using System.Diagnostics;
 
 namespace DocFlowHub.Core.Services.Interfaces;
 
-public interface IDocumentStorageService
+public interface IDocumentStorageService : IDisposable
 {
     /// <summary>
     /// Uploads a document file to storage
@@ -42,4 +43,8 @@ public interface IDocumentStorageService
     /// <param name="expiryMinutes">Number of minutes the URL will be valid</param>
     /// <returns>Temporary URL to download the file</returns>
     Task<ServiceResult<string>> GetDocumentUrlAsync(string fileName, int expiryMinutes = 60);
+
+    Task<ServiceResult<string>> GetFileHashAsync(IFormFile file);
+
+    Task<ServiceResult<string>> CopyDocumentAsync(string sourceFilePath, string userId);
 } 
