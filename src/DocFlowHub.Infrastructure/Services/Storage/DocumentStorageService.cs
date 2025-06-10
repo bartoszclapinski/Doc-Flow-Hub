@@ -3,10 +3,12 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using System.Threading;
 
 namespace DocFlowHub.Infrastructure.Services.Storage;
 
@@ -14,18 +16,40 @@ public class DocumentStorageService : IDocumentStorageService
 {
     private readonly BlobContainerClient _containerClient;
     private readonly DocumentStorageOptions _options;
+    private readonly SemaphoreSlim _initializationLock = new(1, 1);
+    private bool _isInitialized;
 
     public DocumentStorageService(IOptions<DocumentStorageOptions> options)
     {
         _options = options.Value;
         _containerClient = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
-        _containerClient.CreateIfNotExists();
+    }
+
+    private async Task EnsureInitializedAsync()
+    {
+        if (_isInitialized) return;
+
+        try
+        {
+            await _initializationLock.WaitAsync();
+            if (!_isInitialized)
+            {
+                await _containerClient.CreateIfNotExistsAsync();
+                _isInitialized = true;
+            }
+        }
+        finally
+        {
+            _initializationLock.Release();
+        }
     }
 
     public async Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, string userId)
     {
         try
         {
+            await EnsureInitializedAsync();
+
             if (file == null || file.Length == 0)
                 return ServiceResult<string>.Failure("No file was provided.");
 
@@ -55,6 +79,8 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
+            await EnsureInitializedAsync();
+            
             var blobClient = _containerClient.GetBlobClient(filePath);
             
             if (!await blobClient.ExistsAsync())
@@ -74,6 +100,8 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
+            await EnsureInitializedAsync();
+            
             var blobClient = _containerClient.GetBlobClient(filePath);
             
             if (!await blobClient.ExistsAsync())
@@ -92,6 +120,8 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
+            await EnsureInitializedAsync();
+            
             using var md5 = MD5.Create();
             await using var stream = file.OpenReadStream();
             var hash = await md5.ComputeHashAsync(stream);
@@ -107,6 +137,8 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
+            await EnsureInitializedAsync();
+            
             var blobClient = _containerClient.GetBlobClient(filePath);
             return await blobClient.ExistsAsync();
         }
@@ -120,6 +152,8 @@ public class DocumentStorageService : IDocumentStorageService
     {
         try
         {
+            await EnsureInitializedAsync();
+            
             var sourceBlobClient = _containerClient.GetBlobClient(sourceFilePath);
             
             if (!await sourceBlobClient.ExistsAsync())
@@ -129,12 +163,40 @@ public class DocumentStorageService : IDocumentStorageService
             var newBlobName = $"{userId}/{DateTime.UtcNow:yyyy/MM/dd}/{Guid.NewGuid()}{fileExtension}";
             var destinationBlobClient = _containerClient.GetBlobClient(newBlobName);
 
-            await destinationBlobClient.StartCopyFromUriAsync(sourceBlobClient.Uri);
+            // Start the copy operation
+            var copyOperation = await destinationBlobClient.StartCopyFromUriAsync(sourceBlobClient.Uri);
+
+            // Wait for the copy operation to complete
+            while (!copyOperation.HasCompleted)
+            {
+                var properties = await destinationBlobClient.GetPropertiesAsync();
+                if (properties.Value.CopyStatus == CopyStatus.Failed || 
+                    properties.Value.CopyStatus == CopyStatus.Aborted)
+                {
+                    await destinationBlobClient.DeleteIfExistsAsync();
+                    return ServiceResult<string>.Failure($"Copy failed with status: {properties.Value.CopyStatus}");
+                }
+                await Task.Delay(500); // Wait for 500ms before checking again
+            }
+
+            // Verify the copy was successful
+            var finalProperties = await destinationBlobClient.GetPropertiesAsync();
+            if (finalProperties.Value.CopyStatus != CopyStatus.Success)
+            {
+                await destinationBlobClient.DeleteIfExistsAsync();
+                return ServiceResult<string>.Failure($"Copy operation failed with status: {finalProperties.Value.CopyStatus}");
+            }
+
             return ServiceResult<string>.Success(newBlobName);
         }
         catch (Exception ex)
         {
             return ServiceResult<string>.Failure($"Failed to copy document: {ex.Message}");
         }
+    }
+
+    public void Dispose()
+    {
+        _initializationLock.Dispose();
     }
 } 

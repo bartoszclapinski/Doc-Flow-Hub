@@ -34,7 +34,9 @@ public class Document
     
     public DateTime? UpdatedAt { get; set; }
     
-    public string? CurrentVersionId { get; set; }
+    public int? CurrentVersionId { get; set; }
+    
+    public virtual DocumentVersion? CurrentVersion { get; set; }
     
     public bool IsDeleted { get; set; }
 } 
