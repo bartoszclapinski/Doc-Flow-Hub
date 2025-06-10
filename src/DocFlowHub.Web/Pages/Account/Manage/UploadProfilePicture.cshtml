@@ -18,7 +18,7 @@
                 <div class="card-body">
                     @if (TempData["StatusMessage"] != null)
                     {
-                        <div class="alert @(TempData["StatusMessage"].ToString()!.Contains("error", StringComparison.OrdinalIgnoreCase) ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+                        <div class="alert @(TempData["StatusMessage"]?.ToString()?.Contains("error", StringComparison.OrdinalIgnoreCase) == true ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
                             @TempData["StatusMessage"]
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
