@@ -1,5 +1,7 @@
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Models;
+using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Infrastructure.Data.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +16,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Team> Teams { get; set; }
     public DbSet<TeamMember> TeamMembers { get; set; }
+    public DbSet<Document> Documents { get; set; }
+    public DbSet<DocumentVersion> DocumentVersions { get; set; }
+    public DbSet<DocumentCategory> DocumentCategories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -41,5 +46,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .HasForeignKey(tm => tm.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // Apply document-related configurations
+        builder.ApplyConfiguration(new DocumentConfiguration());
+        builder.ApplyConfiguration(new DocumentVersionConfiguration());
+        builder.ApplyConfiguration(new DocumentCategoryConfiguration());
     }
 } 

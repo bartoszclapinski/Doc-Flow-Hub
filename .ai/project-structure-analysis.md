@@ -154,10 +154,17 @@ public class ServiceResult
 DocFlowHub.Infrastructure/
 ├── Data/
 │   ├── ApplicationDbContext.cs
-│   └── DesignTimeDbContextFactory.cs
+│   ├── DesignTimeDbContextFactory.cs
+│   └── Configurations/
+│       ├── DocumentConfiguration.cs
+│       ├── DocumentVersionConfiguration.cs
+│       └── DocumentCategoryConfiguration.cs
 ├── Services/
-│   └── Profile/
-│       └── ProfileService.cs
+│   ├── Profile/
+│   │   └── ProfileService.cs
+│   └── Documents/
+│       ├── DocumentService.cs
+│       └── DocumentStorageService.cs
 ├── Migrations/
 ├── bin/
 ├── obj/
@@ -180,11 +187,16 @@ DocFlowHub.Infrastructure/
 Contains data access implementation:
 - `ApplicationDbContext.cs`: Main database context extending IdentityDbContext
 - `DesignTimeDbContextFactory.cs`: Factory for creating DbContext during design-time
+- `Configurations/`: Entity Framework configurations:
+  - `DocumentConfiguration.cs`: Document entity configuration with relationships
+  - `DocumentVersionConfiguration.cs`: Version tracking configuration
+  - `DocumentCategoryConfiguration.cs`: Category hierarchy configuration
 
 #### Services Directory
 Contains service implementations:
 - `ProfileService.cs`: Implementation of IProfileService for profile management
-- `Storage/DocumentStorageService.cs`: Implementation of IDocumentStorageService for document storage
+- `Documents/DocumentStorageService.cs`: Implementation of IDocumentStorageService for document storage
+- `Documents/DocumentService.cs`: Implementation of IDocumentService for document operations
 - `Storage/DocumentStorageOptions.cs`: Configuration options for document storage
 
 #### ApplicationDbContext Details
@@ -193,31 +205,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public DbSet<Team> Teams { get; set; }
     public DbSet<TeamMember> TeamMembers { get; set; }
+    public DbSet<Document> Documents { get; set; }
+    public DbSet<DocumentVersion> DocumentVersions { get; set; }
+    public DbSet<DocumentCategory> DocumentCategories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // Team configuration
-        builder.Entity<Team>(entity =>
-        {
-            entity.HasOne(t => t.Owner)
-                .WithMany(u => u.OwnedTeams)
-                .HasForeignKey(t => t.OwnerId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        // TeamMember configuration
-        builder.Entity<TeamMember>(entity =>
-        {
-            entity.HasOne(tm => tm.Team)
-                .WithMany(t => t.Members)
-                .HasForeignKey(tm => tm.TeamId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(tm => tm.User)
-                .WithMany(u => u.TeamMemberships)
-                .HasForeignKey(tm => tm.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        base.OnModelCreating(builder);
+        
+        builder.ApplyConfiguration(new DocumentConfiguration());
+        builder.ApplyConfiguration(new DocumentVersionConfiguration());
+        builder.ApplyConfiguration(new DocumentCategoryConfiguration());
+        
+        // ... existing team configurations ...
     }
 }
 ```
@@ -248,6 +248,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
      - Memory-efficient streaming
      - Proper interface contract implementation
 
+5. Document Management Features
+   - Entity Framework configurations for document entities
+   - Proper relationship configurations
+   - Soft delete implementation
+   - Version tracking setup
+   - Category hierarchy support
+   - Team-based access control
+   - Proper cascade delete behaviors
+   - String length constraints
+   - Global query filters
+
 ### Architecture Notes
 - Implements the infrastructure layer of Clean Architecture
 - Handles data persistence and external service integration
@@ -260,15 +271,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 - Uses defensive programming practices
 
 ### Next Steps
-1. Implement repository pattern
-2. Add data seeding
-3. Configure additional database providers if needed
-4. Implement caching strategy
-5. Add logging and monitoring
-6. Consider implementing unit of work pattern
-7. Add comprehensive integration tests
-8. Implement document versioning UI
-9. Add document preview functionality
+1. Implement DocumentService
+2. Create document endpoints
+3. Add document UI pages
+4. Implement remaining unit tests
+5. Add integration tests
+6. Complete documentation
 
 ## DocFlowHub.Web Project Analysis
 

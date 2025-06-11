@@ -2,12 +2,12 @@
 
 ## Document Management Implementation
 
-### 1. Document Model and Storage
-- Create document storage service in Infrastructure project:
+### 1. Document Model and Storage ✅
+- Created document storage service in Infrastructure project:
   ```
   dotnet add src/DocFlowHub.Infrastructure package Azure.Storage.Blobs
   ```
-- Implement document models in Core project:
+- Implemented document models in Core project:
   ```csharp
   // Document.cs
   public class Document
@@ -27,22 +27,27 @@
       public DateTime? UpdatedAt { get; set; }
   }
   ```
-- Create document repository interface and implementation
-- Add document-related migrations:
+- Created document repository interface and implementation
+- Added document-related migrations:
   ```
   dotnet ef migrations add AddDocumentManagement --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
   ```
+- Configured proper relationships and constraints
+- Set up soft delete functionality
+- Implemented proper cascade behaviors
 
-### 2. Document CRUD Operations
+### 2. Document CRUD Operations (In Progress)
 - Create document service interface in Core project:
   ```csharp
   public interface IDocumentService
   {
-      Task<Document> CreateDocumentAsync(DocumentCreateDto dto);
-      Task<Document> UpdateDocumentAsync(DocumentUpdateDto dto);
-      Task DeleteDocumentAsync(int id);
-      Task<Document> GetDocumentByIdAsync(int id);
-      Task<IEnumerable<Document>> GetUserDocumentsAsync(string userId);
+      Task<ServiceResult<DocumentDto>> CreateDocumentAsync(CreateDocumentRequest request, string userId);
+      Task<ServiceResult<DocumentDto>> UpdateDocumentAsync(UpdateDocumentRequest request, string userId);
+      Task<ServiceResult> DeleteDocumentAsync(int id, string userId);
+      Task<ServiceResult<DocumentDto>> GetDocumentByIdAsync(int id, string userId);
+      Task<ServiceResult<IEnumerable<DocumentDto>>> GetUserDocumentsAsync(string userId, DocumentFilter filter);
+      Task<ServiceResult<DocumentDto>> RestoreVersionAsync(int documentId, int versionId, string userId);
+      Task<ServiceResult<IEnumerable<DocumentVersionDto>>> GetDocumentVersionsAsync(int documentId, string userId);
   }
   ```
 - Implement document service in Infrastructure project
@@ -50,7 +55,7 @@
 - Add document validation using FluentValidation
 - Implement file type and size validation (30MB limit)
 
-### 3. Document List and Details Pages
+### 3. Document List and Details Pages (Not Started)
 - Create /Pages/Documents/Index.cshtml for document list:
   - Implement grid view with sorting
   - Add basic filtering options
