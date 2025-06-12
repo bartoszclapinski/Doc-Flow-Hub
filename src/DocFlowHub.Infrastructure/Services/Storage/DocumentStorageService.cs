@@ -151,30 +151,32 @@ public class DocumentStorageService : IDocumentStorageService
         }
     }
 
-    public async Task<ServiceResult<bool>> DocumentExistsAsync(string fileName)
+    public async Task<ServiceResult<bool>> DocumentExistsAsync(int documentId, int versionNumber)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             var exists = await blobClient.ExistsAsync();
             return ServiceResult<bool>.Success(exists.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking document existence {FileName}", fileName);
+            _logger.LogError(ex, "Error checking document existence {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<bool>.Failure($"Error checking document existence: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<string>> GetDocumentUrlAsync(string fileName, int expiryMinutes = 60)
+    public async Task<ServiceResult<string>> GetDocumentUrlAsync(int documentId, int versionNumber, int expiryMinutes = 60)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             
             if (!await blobClient.ExistsAsync())
             {
@@ -184,7 +186,7 @@ public class DocumentStorageService : IDocumentStorageService
             var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = _containerClient.Name,
-                BlobName = fileName,
+                BlobName = blobName,
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow,
                 ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes)
@@ -198,7 +200,7 @@ public class DocumentStorageService : IDocumentStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating SAS URL for document {FileName}", fileName);
+            _logger.LogError(ex, "Error generating SAS URL for document {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<string>.Failure($"Error generating document URL: {ex.Message}");
         }
     }

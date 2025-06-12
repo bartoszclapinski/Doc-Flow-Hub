@@ -18,9 +18,11 @@ public static class DocumentExtensions
             CreatedAt = document.CreatedAt,
             UpdatedAt = document.UpdatedAt,
             OwnerId = document.OwnerId,
+            OwnerName = document.Owner?.UserName ?? string.Empty,
             TeamId = document.TeamId,
+            TeamName = document.Team?.Name,
             IsDeleted = document.IsDeleted,
-            CurrentVersionId = document.Versions.OrderByDescending(v => v.VersionNumber).First().Id,
+            CurrentVersionId = document.Versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault()?.Id,
             Versions = document.Versions.Select(v => v.ToDto()).ToList(),
             Categories = document.Categories.Select(c => c.ToDto()).ToList()
         };

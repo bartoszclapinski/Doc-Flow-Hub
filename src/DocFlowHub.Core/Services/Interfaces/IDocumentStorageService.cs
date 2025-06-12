@@ -36,17 +36,19 @@ public interface IDocumentStorageService : IDisposable
     /// <summary>
     /// Checks if a document exists in storage
     /// </summary>
-    /// <param name="fileName">File name to check</param>
+    /// <param name="documentId">The ID of the document</param>
+    /// <param name="versionNumber">The version number of the document</param>
     /// <returns>True if file exists</returns>
-    Task<ServiceResult<bool>> DocumentExistsAsync(string fileName);
+    Task<ServiceResult<bool>> DocumentExistsAsync(int documentId, int versionNumber);
 
     /// <summary>
     /// Gets the URL for a document that can be used to download it
     /// </summary>
-    /// <param name="fileName">File name in storage</param>
+    /// <param name="documentId">The ID of the document</param>
+    /// <param name="versionNumber">The version number of the document</param>
     /// <param name="expiryMinutes">Number of minutes the URL will be valid</param>
     /// <returns>Temporary URL to download the file</returns>
-    Task<ServiceResult<string>> GetDocumentUrlAsync(string fileName, int expiryMinutes = 60);
+    Task<ServiceResult<string>> GetDocumentUrlAsync(int documentId, int versionNumber, int expiryMinutes = 60);
 
     Task<ServiceResult<string>> GetFileHashAsync(IFormFile file);
 
