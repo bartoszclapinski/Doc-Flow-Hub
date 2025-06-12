@@ -21,6 +21,7 @@ public class DocumentStorageService : IDocumentStorageService
     private readonly ILogger<DocumentStorageService> _logger;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _isInitialized;
+    private readonly StorageSharedKeyCredential _credential;
 
     public DocumentStorageService(
         IOptions<DocumentStorageOptions> options,
@@ -29,6 +30,16 @@ public class DocumentStorageService : IDocumentStorageService
         _options = options.Value;
         _logger = logger;
 
+        if (string.IsNullOrEmpty(_options.ConnectionString))
+            throw new ArgumentException("Azure Storage connection string is not configured");
+
+        if (string.IsNullOrEmpty(_options.AccountName) || string.IsNullOrEmpty(_options.AccountKey))
+            throw new ArgumentException("Azure Storage account name or key is not configured");
+
+        // Create credential for SAS token generation using options
+        _credential = new StorageSharedKeyCredential(_options.AccountName, _options.AccountKey);
+        
+        // Create blob service client using connection string from options
         var blobServiceClient = new BlobServiceClient(_options.ConnectionString);
         _containerClient = blobServiceClient.GetBlobContainerClient(_options.ContainerName);
     }
@@ -52,7 +63,7 @@ public class DocumentStorageService : IDocumentStorageService
         }
     }
 
-    public async Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, string fileName)
+    public async Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, int documentId, int versionNumber)
     {
         try
         {
@@ -74,16 +85,17 @@ public class DocumentStorageService : IDocumentStorageService
                 return ServiceResult<string>.Failure($"File type {extension} is not allowed");
             }
 
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
 
             await using var stream = file.OpenReadStream();
             await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = file.ContentType });
 
-            return ServiceResult<string>.Success(blobClient.Uri.ToString());
+            return ServiceResult<string>.Success(blobName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading document {FileName}", fileName);
+            _logger.LogError(ex, "Error uploading document {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<string>.Failure($"Error uploading document: {ex.Message}");
         }
     }
@@ -91,50 +103,42 @@ public class DocumentStorageService : IDocumentStorageService
     /// <summary>
     /// Downloads a document from storage.
     /// </summary>
-    /// <param name="fileName">The name of the file to download.</param>
+    /// <param name="documentId">The ID of the document.</param>
+    /// <param name="versionNumber">The version number of the document.</param>
     /// <returns>A ServiceResult containing the document stream. Note: The caller is responsible for disposing the returned Stream.</returns>
-    public async Task<ServiceResult<Stream>> DownloadDocumentAsync(string fileName)
+    public async Task<ServiceResult<byte[]>> DownloadDocumentAsync(int documentId, int versionNumber)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             
             if (!await blobClient.ExistsAsync())
             {
-                return ServiceResult<Stream>.Failure("Document not found");
+                return ServiceResult<byte[]>.Failure("Document not found");
             }
 
-            // Create a new memory stream that we'll copy the blob content into
-            var memoryStream = new MemoryStream();
-            
-            // Download and copy the blob content
-            var download = await blobClient.DownloadStreamingAsync();
-            using (download.Value)
-            using (var blobStream = download.Value.Content)
-            {
-                await blobStream.CopyToAsync(memoryStream);
-            }
-            
-            // Reset the position to the beginning for reading
-            memoryStream.Position = 0;
-            return ServiceResult<Stream>.Success(memoryStream);
+            using var memoryStream = new MemoryStream();
+            await blobClient.DownloadToAsync(memoryStream);
+            return ServiceResult<byte[]>.Success(memoryStream.ToArray());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error downloading document {FileName}", fileName);
-            return ServiceResult<Stream>.Failure($"Error downloading document: {ex.Message}");
+            _logger.LogError(ex, "Error downloading document {FileName}", GetBlobName(documentId, versionNumber));
+            return ServiceResult<byte[]>.Failure($"Error downloading document: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult> DeleteDocumentAsync(string fileName)
+    public async Task<ServiceResult> DeleteDocumentAsync(int documentId, int versionNumber)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             
             if (!await blobClient.ExistsAsync())
             {
@@ -146,35 +150,37 @@ public class DocumentStorageService : IDocumentStorageService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting document {FileName}", fileName);
+            _logger.LogError(ex, "Error deleting document {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult.Failure($"Error deleting document: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<bool>> DocumentExistsAsync(string fileName)
+    public async Task<ServiceResult<bool>> DocumentExistsAsync(int documentId, int versionNumber)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             var exists = await blobClient.ExistsAsync();
             return ServiceResult<bool>.Success(exists.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking document existence {FileName}", fileName);
+            _logger.LogError(ex, "Error checking document existence {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<bool>.Failure($"Error checking document existence: {ex.Message}");
         }
     }
 
-    public async Task<ServiceResult<string>> GetDocumentUrlAsync(string fileName, int expiryMinutes = 60)
+    public async Task<ServiceResult<string>> GetDocumentUrlAsync(int documentId, int versionNumber, int expiryMinutes = 60)
     {
         try
         {
             await EnsureInitializedAsync();
             
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var blobName = GetBlobName(documentId, versionNumber);
+            var blobClient = _containerClient.GetBlobClient(blobName);
             
             if (!await blobClient.ExistsAsync())
             {
@@ -184,7 +190,7 @@ public class DocumentStorageService : IDocumentStorageService
             var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = _containerClient.Name,
-                BlobName = fileName,
+                BlobName = blobName,
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow,
                 ExpiresOn = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes)
@@ -192,71 +198,14 @@ public class DocumentStorageService : IDocumentStorageService
 
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-            try
-            {
-                // Get the account name from the container client
-                var accountName = _containerClient.AccountName;
-                
-                // Extract the account key safely using Azure's built-in parser
-                var credential = new StorageSharedKeyCredential(accountName, GetAccountKeyFromConnectionString(_options.ConnectionString));
-                
-                var sasToken = sasBuilder.ToSasQueryParameters(credential).ToString();
-                return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
-            }
-            catch (FormatException fex)
-            {
-                _logger.LogError(fex, "Invalid connection string format");
-                return ServiceResult<string>.Failure("Invalid storage connection string format");
-            }
+            // Use the credential created in constructor from options
+            var sasToken = sasBuilder.ToSasQueryParameters(_credential).ToString();
+            return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating SAS URL for document {FileName}", fileName);
+            _logger.LogError(ex, "Error generating document URL for {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<string>.Failure($"Error generating document URL: {ex.Message}");
-        }
-    }
-
-    private static string GetAccountKeyFromConnectionString(string connectionString)
-    {
-        try
-        {
-            var parts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
-            foreach (var part in connectionString.Split(';')
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p)))
-            {
-                var keyValue = part.Split('=', 2);
-                if (keyValue.Length != 2)
-                {
-                    throw new FormatException($"Invalid connection string part: {part}");
-                }
-
-                var key = keyValue[0].Trim();
-                var value = keyValue[1].Trim();
-
-                if (parts.ContainsKey(key))
-                {
-                    throw new ArgumentException($"Duplicate key in connection string: {key}", nameof(connectionString));
-                }
-
-                parts.Add(key, value);
-            }
-
-            if (!parts.TryGetValue("AccountKey", out var accountKey))
-            {
-                throw new ArgumentException("AccountKey not found in connection string", nameof(connectionString));
-            }
-
-            return accountKey;
-        }
-        catch (ArgumentException)
-        {
-            throw; // Re-throw ArgumentException to preserve the original error
-        }
-        catch (Exception ex)
-        {
-            throw new FormatException("Invalid connection string format", ex);
         }
     }
 
@@ -324,8 +273,13 @@ public class DocumentStorageService : IDocumentStorageService
         }
     }
 
+    private static string GetBlobName(int documentId, int versionNumber)
+    {
+        return $"{documentId}/{versionNumber}";
+    }
+
     public void Dispose()
     {
         _initializationLock.Dispose();
     }
-} 
+}

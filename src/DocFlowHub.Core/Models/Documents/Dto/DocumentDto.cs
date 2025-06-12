@@ -10,12 +10,14 @@ public class DocumentDto
     public string Description { get; set; } = string.Empty;
     public string FileType { get; set; } = string.Empty;
     public long FileSize { get; set; }
-    public string OwnerName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public string OwnerId { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
     public int? TeamId { get; set; }
     public string? TeamName { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-    public int CurrentVersionNumber { get; set; }
-    public List<string> Categories { get; set; } = new();
+    public bool IsDeleted { get; set; }
+    public int? CurrentVersionId { get; set; }
+    public List<DocumentVersionDto> Versions { get; set; } = new();
+    public List<DocumentCategoryDto> Categories { get; set; } = new();
 } 

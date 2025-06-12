@@ -15,15 +15,18 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .HasMaxLength(200);
             
         builder.Property(d => d.Description)
-            .HasMaxLength(500);
-            
-        builder.Property(d => d.FilePath)
-            .IsRequired()
             .HasMaxLength(1000);
             
         builder.Property(d => d.FileType)
             .IsRequired()
             .HasMaxLength(50);
+            
+        builder.Property(d => d.FileSize)
+            .IsRequired();
+            
+        builder.Property(d => d.OwnerId)
+            .IsRequired()
+            .HasMaxLength(450);
             
         builder.Property(d => d.CreatedAt)
             .IsRequired();

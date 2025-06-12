@@ -10,4 +10,5 @@ public class CreateDocumentRequest
     public IFormFile File { get; set; } = null!;
     public int? TeamId { get; set; }
     public List<int> CategoryIds { get; set; } = new();
+    public string OwnerId { get; set; } = string.Empty;
 } 

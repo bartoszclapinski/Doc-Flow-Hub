@@ -7,11 +7,13 @@ using DocFlowHub.Infrastructure.Data;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Services.Profile;
 using DocFlowHub.Infrastructure.Services.Role;
+using DocFlowHub.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

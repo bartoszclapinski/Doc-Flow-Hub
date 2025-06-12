@@ -17,9 +17,9 @@ public class DocumentCategoryConfiguration : IEntityTypeConfiguration<DocumentCa
         builder.Property(c => c.Description)
             .HasMaxLength(500);
             
-        builder.HasOne(c => c.ParentCategory)
-            .WithMany(c => c.SubCategories)
-            .HasForeignKey(c => c.ParentCategoryId)
+        builder.HasOne(c => c.Parent)
+            .WithMany(c => c.Children)
+            .HasForeignKey(c => c.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
             
         builder.HasMany(c => c.Documents)

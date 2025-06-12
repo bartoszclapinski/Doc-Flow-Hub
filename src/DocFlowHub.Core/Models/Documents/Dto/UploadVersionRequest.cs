@@ -7,4 +7,5 @@ public class UploadVersionRequest
     public int DocumentId { get; set; }
     public IFormFile File { get; set; } = null!;
     public string? ChangeSummary { get; set; }
+    public string UserId { get; set; } = string.Empty;
 } 
