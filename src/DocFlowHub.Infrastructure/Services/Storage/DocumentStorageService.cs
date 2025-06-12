@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Azure.Storage;
-using Microsoft.Extensions.Configuration;
 
 namespace DocFlowHub.Infrastructure.Services.Storage;
 
@@ -26,57 +25,23 @@ public class DocumentStorageService : IDocumentStorageService
 
     public DocumentStorageService(
         IOptions<DocumentStorageOptions> options,
-        ILogger<DocumentStorageService> logger,
-        IConfiguration configuration)
+        ILogger<DocumentStorageService> logger)
     {
         _options = options.Value;
         _logger = logger;
 
-        var connectionString = configuration.GetConnectionString("AzureStorage");
-        if (string.IsNullOrEmpty(connectionString))
+        if (string.IsNullOrEmpty(_options.ConnectionString))
             throw new ArgumentException("Azure Storage connection string is not configured");
 
-        var containerName = configuration["Storage:ContainerName"] ?? "documents";
-        
-        // Parse connection string to get account name and key
-        var accountName = GetAccountNameFromConnectionString(connectionString);
-        var accountKey = GetAccountKeyFromConnectionString(connectionString);
-        
-        if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountKey))
-            throw new ArgumentException("Invalid Azure Storage connection string format");
+        if (string.IsNullOrEmpty(_options.AccountName) || string.IsNullOrEmpty(_options.AccountKey))
+            throw new ArgumentException("Azure Storage account name or key is not configured");
 
-        // Create credential for both blob operations and SAS token generation
-        _credential = new StorageSharedKeyCredential(accountName, accountKey);
+        // Create credential for SAS token generation using options
+        _credential = new StorageSharedKeyCredential(_options.AccountName, _options.AccountKey);
         
-        // Create blob service client using the same credential
-        var blobServiceClient = new BlobServiceClient(connectionString);
-        _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-    }
-
-    private static string GetAccountNameFromConnectionString(string connectionString)
-    {
-        var parts = connectionString.Split(';');
-        foreach (var part in parts)
-        {
-            if (part.StartsWith("AccountName=", StringComparison.OrdinalIgnoreCase))
-            {
-                return part.Substring("AccountName=".Length);
-            }
-        }
-        return string.Empty;
-    }
-
-    private static string GetAccountKeyFromConnectionString(string connectionString)
-    {
-        var parts = connectionString.Split(';');
-        foreach (var part in parts)
-        {
-            if (part.StartsWith("AccountKey=", StringComparison.OrdinalIgnoreCase))
-            {
-                return part.Substring("AccountKey=".Length);
-            }
-        }
-        return string.Empty;
+        // Create blob service client using connection string from options
+        var blobServiceClient = new BlobServiceClient(_options.ConnectionString);
+        _containerClient = blobServiceClient.GetBlobContainerClient(_options.ContainerName);
     }
 
     private async Task EnsureInitializedAsync()
@@ -233,7 +198,7 @@ public class DocumentStorageService : IDocumentStorageService
 
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-            // Use the credential created in constructor
+            // Use the credential created in constructor from options
             var sasToken = sasBuilder.ToSasQueryParameters(_credential).ToString();
             return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
         }
