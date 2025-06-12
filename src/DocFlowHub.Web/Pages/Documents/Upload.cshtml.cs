@@ -51,6 +51,12 @@ public class UploadModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         var categoriesResult = await _categoryService.GetAllCategoriesAsync();
         if (!categoriesResult.Succeeded)
         {
@@ -59,7 +65,7 @@ public class UploadModel : PageModel
         }
         Categories = categoriesResult.Data;
 
-        var teamsResult = await _teamService.GetUserTeamsAsync(User.GetUserId());
+        var teamsResult = await _teamService.GetUserTeamsAsync(userId);
         if (!teamsResult.Succeeded)
         {
             ErrorMessage = teamsResult.Error;
@@ -72,6 +78,12 @@ public class UploadModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         if (!ModelState.IsValid)
         {
             var categoriesResult = await _categoryService.GetAllCategoriesAsync();
@@ -80,7 +92,7 @@ public class UploadModel : PageModel
                 Categories = categoriesResult.Data;
             }
 
-            var teamsResult = await _teamService.GetUserTeamsAsync(User.GetUserId());
+            var teamsResult = await _teamService.GetUserTeamsAsync(userId);
             if (teamsResult.Succeeded)
             {
                 Teams = teamsResult.Data;
@@ -95,7 +107,7 @@ public class UploadModel : PageModel
             Description = Description,
             CategoryIds = SelectedCategoryIds,
             TeamId = TeamId,
-            OwnerId = User.GetUserId()
+            OwnerId = userId
         };
 
         var result = await _documentService.CreateDocumentAsync(request, File);
@@ -108,7 +120,7 @@ public class UploadModel : PageModel
                 Categories = categoriesResult.Data;
             }
 
-            var teamsResult = await _teamService.GetUserTeamsAsync(User.GetUserId());
+            var teamsResult = await _teamService.GetUserTeamsAsync(userId);
             if (teamsResult.Succeeded)
             {
                 Teams = teamsResult.Data;

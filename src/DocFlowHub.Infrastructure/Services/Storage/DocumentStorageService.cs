@@ -22,6 +22,7 @@ public class DocumentStorageService : IDocumentStorageService
     private readonly ILogger<DocumentStorageService> _logger;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _isInitialized;
+    private readonly StorageSharedKeyCredential _credential;
 
     public DocumentStorageService(
         IOptions<DocumentStorageOptions> options,
@@ -36,8 +37,46 @@ public class DocumentStorageService : IDocumentStorageService
             throw new ArgumentException("Azure Storage connection string is not configured");
 
         var containerName = configuration["Storage:ContainerName"] ?? "documents";
+        
+        // Parse connection string to get account name and key
+        var accountName = GetAccountNameFromConnectionString(connectionString);
+        var accountKey = GetAccountKeyFromConnectionString(connectionString);
+        
+        if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(accountKey))
+            throw new ArgumentException("Invalid Azure Storage connection string format");
+
+        // Create credential for both blob operations and SAS token generation
+        _credential = new StorageSharedKeyCredential(accountName, accountKey);
+        
+        // Create blob service client using the same credential
         var blobServiceClient = new BlobServiceClient(connectionString);
         _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+    }
+
+    private static string GetAccountNameFromConnectionString(string connectionString)
+    {
+        var parts = connectionString.Split(';');
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("AccountName=", StringComparison.OrdinalIgnoreCase))
+            {
+                return part.Substring("AccountName=".Length);
+            }
+        }
+        return string.Empty;
+    }
+
+    private static string GetAccountKeyFromConnectionString(string connectionString)
+    {
+        var parts = connectionString.Split(';');
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("AccountKey=", StringComparison.OrdinalIgnoreCase))
+            {
+                return part.Substring("AccountKey=".Length);
+            }
+        }
+        return string.Empty;
     }
 
     private async Task EnsureInitializedAsync()
@@ -194,58 +233,14 @@ public class DocumentStorageService : IDocumentStorageService
 
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-            var credential = new StorageSharedKeyCredential(_options.AccountName, _options.AccountKey);
-            var sasToken = sasBuilder.ToSasQueryParameters(credential).ToString();
+            // Use the credential created in constructor
+            var sasToken = sasBuilder.ToSasQueryParameters(_credential).ToString();
             return ServiceResult<string>.Success($"{blobClient.Uri}?{sasToken}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating SAS URL for document {FileName}", GetBlobName(documentId, versionNumber));
+            _logger.LogError(ex, "Error generating document URL for {FileName}", GetBlobName(documentId, versionNumber));
             return ServiceResult<string>.Failure($"Error generating document URL: {ex.Message}");
-        }
-    }
-
-    private static string GetAccountKeyFromConnectionString(string connectionString)
-    {
-        try
-        {
-            var parts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
-            foreach (var part in connectionString.Split(';')
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p)))
-            {
-                var keyValue = part.Split('=', 2);
-                if (keyValue.Length != 2)
-                {
-                    throw new FormatException($"Invalid connection string part: {part}");
-                }
-
-                var key = keyValue[0].Trim();
-                var value = keyValue[1].Trim();
-
-                if (parts.ContainsKey(key))
-                {
-                    throw new ArgumentException($"Duplicate key in connection string: {key}", nameof(connectionString));
-                }
-
-                parts.Add(key, value);
-            }
-
-            if (!parts.TryGetValue("AccountKey", out var accountKey))
-            {
-                throw new ArgumentException("AccountKey not found in connection string", nameof(connectionString));
-            }
-
-            return accountKey;
-        }
-        catch (ArgumentException)
-        {
-            throw; // Re-throw ArgumentException to preserve the original error
-        }
-        catch (Exception ex)
-        {
-            throw new FormatException("Invalid connection string format", ex);
         }
     }
 
@@ -322,4 +317,4 @@ public class DocumentStorageService : IDocumentStorageService
     {
         _initializationLock.Dispose();
     }
-} 
+}
