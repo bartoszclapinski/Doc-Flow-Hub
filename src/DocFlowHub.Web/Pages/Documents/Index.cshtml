@@ -1,0 +1,125 @@
+@page
+@model DocFlowHub.Web.Pages.Documents.IndexModel
+@{
+    ViewData["Title"] = "Documents";
+}
+
+<div class="container">
+    <h1>Documents</h1>
+
+    <div class="mb-4">
+        <a asp-page="./Upload" class="btn btn-primary">Upload Document</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @Model.ErrorMessage
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get">
+                        <div class="mb-3">
+                            <label asp-for="Filter.SearchTerm" class="form-label">Search</label>
+                            <input asp-for="Filter.SearchTerm" class="form-control" placeholder="Search documents...">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Categories</label>
+                            @foreach (var category in Model.Categories)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="Filter.CategoryId" value="@category.Id"
+                                           checked="@(Model.Filter.CategoryId == category.Id)">
+                                    <label class="form-check-label">
+                                        @category.Name
+                                    </label>
+                                </div>
+                            }
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a asp-page="./Index" class="btn btn-secondary">Clear</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            @if (!Model.Documents.Items.Any())
+            {
+                <div class="alert alert-info" role="alert">
+                    No documents found.
+                </div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    @foreach (var document in Model.Documents.Items)
+                    {
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">@document.Title</h5>
+                                    <p class="card-text">@document.Description</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            Last updated: @document.UpdatedAt.ToString("g")
+                                        </small>
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="btn-group">
+                                            <a asp-page="./Details" asp-route-id="@document.Id" 
+                                               class="btn btn-sm btn-outline-secondary">View</a>
+                                            <a asp-page="./Edit" asp-route-id="@document.Id" 
+                                               class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (Model.Documents.TotalPages > 1)
+                {
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            @for (var i = 1; i <= Model.Documents.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.Documents.PageNumber ? "active" : "")">
+                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i">@i</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+
+        return $"{size:0.##} {sizes[order]}";
+    }
+} 

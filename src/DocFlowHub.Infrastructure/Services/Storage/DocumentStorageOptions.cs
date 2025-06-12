@@ -12,4 +12,6 @@ public class DocumentStorageOptions
         ".pdf", ".doc", ".docx", ".txt", ".md",
         ".jpg", ".jpeg", ".png", ".gif"
     };
+    public string AccountName { get; set; } = string.Empty;
+    public string AccountKey { get; set; } = string.Empty;
 } 

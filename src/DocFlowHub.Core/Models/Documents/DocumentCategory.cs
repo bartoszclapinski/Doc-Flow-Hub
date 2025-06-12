@@ -11,11 +11,11 @@ public class DocumentCategory
     
     public string? Description { get; set; }
     
-    public int? ParentCategoryId { get; set; }
+    public int? ParentId { get; set; }
     
-    public virtual DocumentCategory? ParentCategory { get; set; }
+    public virtual DocumentCategory? Parent { get; set; }
     
-    public virtual ICollection<DocumentCategory> SubCategories { get; set; } = new List<DocumentCategory>();
+    public virtual ICollection<DocumentCategory> Children { get; set; } = new List<DocumentCategory>();
     
     public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
     

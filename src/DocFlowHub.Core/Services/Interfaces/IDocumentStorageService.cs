@@ -3,6 +3,7 @@ using DocFlowHub.Core.Models.Common;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Diagnostics;
+using DocFlowHub.Core.Models;
 
 namespace DocFlowHub.Core.Services.Interfaces;
 
@@ -12,22 +13,25 @@ public interface IDocumentStorageService : IDisposable
     /// Uploads a document file to storage
     /// </summary>
     /// <param name="file">The file to upload</param>
-    /// <param name="fileName">Unique file name in storage</param>
+    /// <param name="documentId">The ID of the document</param>
+    /// <param name="versionNumber">The version number of the document</param>
     /// <returns>URL to the uploaded file</returns>
-    Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, string fileName);
+    Task<ServiceResult<string>> UploadDocumentAsync(IFormFile file, int documentId, int versionNumber);
 
     /// <summary>
     /// Downloads a document file from storage
     /// </summary>
-    /// <param name="fileName">File name in storage</param>
+    /// <param name="documentId">The ID of the document</param>
+    /// <param name="versionNumber">The version number of the document</param>
     /// <returns>File stream if found</returns>
-    Task<ServiceResult<Stream>> DownloadDocumentAsync(string fileName);
+    Task<ServiceResult<byte[]>> DownloadDocumentAsync(int documentId, int versionNumber);
 
     /// <summary>
     /// Deletes a document file from storage
     /// </summary>
-    /// <param name="fileName">File name in storage</param>
-    Task<ServiceResult> DeleteDocumentAsync(string fileName);
+    /// <param name="documentId">The ID of the document</param>
+    /// <param name="versionNumber">The version number of the document</param>
+    Task<ServiceResult> DeleteDocumentAsync(int documentId, int versionNumber);
 
     /// <summary>
     /// Checks if a document exists in storage
