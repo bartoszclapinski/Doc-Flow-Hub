@@ -170,7 +170,7 @@
                                                 <small class="text-muted">@FormatFileSize(version.FileSize)</small>
                                             </div>
                                             <div class="ms-2">
-                                                <form method="post" asp-page-handler="Download" asp-route-versionId="@version.Id" class="d-inline">
+                                                <form method="post" asp-page-handler="Download" asp-route-versionId="@version.Id" class="d-inline download-form">
                                                     <button type="submit" class="btn btn-outline-primary btn-sm" title="Download this version">
                                                         <i class="bi bi-download"></i>
                                                     </button>
@@ -263,7 +263,7 @@
         });
 
         // Add loading state to download buttons
-        document.querySelectorAll('form[asp-page-handler="Download"] button').forEach(function(button) {
+        document.querySelectorAll('.download-form button').forEach(function(button) {
             button.addEventListener('click', function() {
                 const icon = this.querySelector('i');
                 const originalText = this.innerHTML;

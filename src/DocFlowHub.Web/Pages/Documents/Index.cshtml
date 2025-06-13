@@ -98,7 +98,7 @@
                                                 <i class="bi bi-pencil"></i> Edit
                                             </a>
                                         </div>
-                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
+                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline download-form">
                                             <button type="submit" class="btn btn-sm btn-success" title="Download current version">
                                                 <i class="bi bi-download"></i>
                                             </button>
@@ -148,7 +148,7 @@
 @section Scripts {
     <script>
         // Add loading state to download buttons
-        document.querySelectorAll('form[asp-page-handler="Download"] button').forEach(function(button) {
+        document.querySelectorAll('.download-form button').forEach(function(button) {
             button.addEventListener('click', function() {
                 const icon = this.querySelector('i');
                 const originalClass = icon.className;
