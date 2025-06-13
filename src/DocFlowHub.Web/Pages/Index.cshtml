@@ -5,72 +5,108 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 page-transition">
     <!-- Welcome Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <h1 class="h3 mb-0">Welcome, @Model.UserName!</h1>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-house-door me-2 text-primary"></i>
+                Welcome, @Model.UserName!
+            </h1>
             <p class="text-muted">Here's what's happening with your documents today.</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="card-title mb-1">Ready to get started?</h5>
+                            <p class="card-text mb-0">Upload your first document or manage existing ones</p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <a asp-page="/Documents/Upload" class="btn btn-light me-2">
+                                <i class="bi bi-cloud-upload me-1"></i> Upload Document
+                            </a>
+                            <a asp-page="/Documents/Index" class="btn btn-outline-light">
+                                <i class="bi bi-folder me-1"></i> Browse Documents
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100 card-stats">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-file-earmark-text text-primary fs-1"></i>
+                            <div class="icon-container bg-primary-subtle text-primary">
+                                <i class="bi bi-file-earmark-text fs-1"></i>
+                            </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title mb-0">Total Documents</h6>
-                            <h2 class="mt-2 mb-0">@Model.TotalDocuments</h2>
+                            <h6 class="card-title mb-0 text-muted">Total Documents</h6>
+                            <h2 class="mt-2 mb-0 counter" data-target="@Model.TotalDocuments">0</h2>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100 card-stats">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-people text-success fs-1"></i>
+                            <div class="icon-container bg-success-subtle text-success">
+                                <i class="bi bi-people fs-1"></i>
+                            </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title mb-0">Teams</h6>
-                            <h2 class="mt-2 mb-0">@Model.TotalTeams</h2>
+                            <h6 class="card-title mb-0 text-muted">Teams</h6>
+                            <h2 class="mt-2 mb-0 counter" data-target="@Model.TotalTeams">0</h2>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100 card-stats">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-clock-history text-warning fs-1"></i>
+                            <div class="icon-container bg-warning-subtle text-warning">
+                                <i class="bi bi-clock-history fs-1"></i>
+                            </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title mb-0">Recent Updates</h6>
-                            <h2 class="mt-2 mb-0">@Model.RecentUpdates</h2>
+                            <h6 class="card-title mb-0 text-muted">Recent Updates</h6>
+                            <h2 class="mt-2 mb-0 counter" data-target="@Model.RecentUpdates">0</h2>
+                            <small class="text-muted">Last 7 days</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100 card-stats">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="bi bi-share text-info fs-1"></i>
+                            <div class="icon-container bg-info-subtle text-info">
+                                <i class="bi bi-share fs-1"></i>
+                            </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title mb-0">Shared With Me</h6>
-                            <h2 class="mt-2 mb-0">@Model.SharedDocuments</h2>
+                            <h6 class="card-title mb-0 text-muted">Shared With Me</h6>
+                            <h2 class="mt-2 mb-0 counter" data-target="@Model.SharedDocuments">0</h2>
                         </div>
                     </div>
                 </div>
@@ -82,11 +118,16 @@
     <div class="row">
         <!-- Recent Documents -->
         <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Recent Documents</h5>
-                        <a href="/Documents" class="btn btn-sm btn-outline-primary">View All</a>
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                            Recent Documents
+                        </h5>
+                        <a asp-page="/Documents/Index" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i> View All
+                        </a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -95,22 +136,42 @@
                         <div class="list-group list-group-flush">
                             @foreach (var doc in Model.RecentDocuments)
                             {
-                                <a href="/Documents/Details/@doc.Id" class="list-group-item list-group-item-action">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">@doc.Title</h6>
-                                        <small class="text-muted">@doc.LastModified.ToString("MMM dd, yyyy")</small>
+                                <a asp-page="/Documents/Details" asp-route-id="@doc.Id" class="list-group-item list-group-item-action border-0 document-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <i class="bi @GetFileIcon(doc.FileType) me-2 text-muted"></i>
+                                                <h6 class="mb-0">@doc.Title</h6>
+                                            </div>
+                                            <p class="mb-1 text-muted">@doc.Description</p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar-event me-1"></i>
+                                                @doc.LastModified.ToString("MMM dd, yyyy 'at' HH:mm")
+                                                <span class="ms-3">
+                                                    <i class="bi bi-file-earmark me-1"></i>
+                                                    @FormatFileSize(doc.FileSize)
+                                                </span>
+                                            </small>
+                                        </div>
+                                        <div class="flex-shrink-0 ms-3">
+                                            <span class="badge bg-secondary">@doc.FileType.ToUpper()</span>
+                                        </div>
                                     </div>
-                                    <p class="mb-1 text-muted">@doc.Description</p>
                                 </a>
                             }
                         </div>
                     }
                     else
                     {
-                        <div class="text-center py-4">
-                            <i class="bi bi-file-earmark-text text-muted fs-1"></i>
-                            <p class="text-muted mt-2">No recent documents</p>
-                            <a href="/Documents/Create" class="btn btn-primary">Upload Document</a>
+                        <div class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-file-earmark-text text-muted fs-1 mb-3"></i>
+                                <h5 class="text-muted">No documents yet</h5>
+                                <p class="text-muted mb-3">Start by uploading your first document</p>
+                                <a asp-page="/Documents/Upload" class="btn btn-primary">
+                                    <i class="bi bi-cloud-upload me-1"></i> Upload Document
+                                </a>
+                            </div>
                         </div>
                     }
                 </div>
@@ -119,9 +180,12 @@
 
         <!-- Recent Activity -->
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h5 class="card-title mb-0">Recent Activity</h5>
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-activity me-2 text-success"></i>
+                        Recent Activity
+                    </h5>
                 </div>
                 <div class="card-body">
                     @if (Model.RecentActivities.Any())
@@ -130,11 +194,13 @@
                             @foreach (var activity in Model.RecentActivities)
                             {
                                 <div class="timeline-item">
-                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-marker @GetActivityMarkerClass(activity.Title)"></div>
                                     <div class="timeline-content">
-                                        <h6 class="mb-0">@activity.Title</h6>
-                                        <small class="text-muted">@activity.Timestamp.ToString("MMM dd, HH:mm")</small>
-                                        <p class="mb-0">@activity.Description</p>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="mb-1">@activity.Title</h6>
+                                            <small class="text-muted">@GetRelativeTime(activity.Timestamp)</small>
+                                        </div>
+                                        <p class="mb-0 text-muted">@activity.Description</p>
                                     </div>
                                 </div>
                             }
@@ -143,8 +209,11 @@
                     else
                     {
                         <div class="text-center py-4">
-                            <i class="bi bi-activity text-muted fs-1"></i>
-                            <p class="text-muted mt-2">No recent activity</p>
+                            <div class="empty-state">
+                                <i class="bi bi-activity text-muted fs-1 mb-3"></i>
+                                <h6 class="text-muted">No recent activity</h6>
+                                <p class="text-muted mb-0">Activity will appear here as you work with documents</p>
+                            </div>
                         </div>
                     }
                 </div>
@@ -153,34 +222,179 @@
     </div>
 </div>
 
+@functions {
+    private string GetFileIcon(string fileType)
+    {
+        return fileType.ToLower() switch
+        {
+            ".pdf" => "bi-file-earmark-pdf",
+            ".doc" or ".docx" => "bi-file-earmark-word",
+            ".txt" => "bi-file-earmark-text",
+            ".md" => "bi-markdown",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
+            _ => "bi-file-earmark"
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+        int counter = 0;
+        decimal number = bytes;
+        while (Math.Round(number / 1024) >= 1)
+        {
+            number /= 1024;
+            counter++;
+        }
+        return $"{number:n1} {suffixes[counter]}";
+    }
+
+    private string GetActivityMarkerClass(string activityTitle)
+    {
+        return activityTitle switch
+        {
+            "Document Created" => "bg-success",
+            "Document Updated" => "bg-primary",
+            "New Version Uploaded" => "bg-warning",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetRelativeTime(DateTime timestamp)
+    {
+        var timeSpan = DateTime.Now - timestamp;
+        
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+        
+        return timestamp.ToString("MMM dd");
+    }
+}
+
 @section Styles {
     <style>
+        .card-stats {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card-stats:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+        
+        .icon-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
         .timeline {
             position: relative;
             padding-left: 30px;
         }
+        
         .timeline-item {
             position: relative;
             padding-bottom: 1.5rem;
         }
+        
         .timeline-marker {
             position: absolute;
             left: -30px;
-            width: 15px;
-            height: 15px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #0d6efd;
             border: 3px solid #fff;
-            box-shadow: 0 0 0 2px #0d6efd;
+            box-shadow: 0 0 0 2px #e9ecef;
         }
+        
         .timeline-item:not(:last-child)::before {
             content: '';
             position: absolute;
-            left: -23px;
+            left: -24px;
             top: 15px;
             height: calc(100% - 15px);
             width: 2px;
             background: #e9ecef;
         }
+        
+        .document-item {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .document-item:hover {
+            background-color: rgba(13, 110, 253, 0.05);
+            transform: translateX(4px);
+        }
+        
+        .empty-state {
+            opacity: 0.8;
+        }
+        
+        .counter {
+            font-weight: 700;
+        }
+        
+        /* Animation for counter */
+        @@keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .counter {
+            animation: countUp 0.6s ease-out;
+        }
     </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate counters
+            const counters = document.querySelectorAll('.counter');
+            
+            counters.forEach(counter => {
+                const target = parseInt(counter.getAttribute('data-target'));
+                let current = 0;
+                const increment = target / 20; // 20 steps
+                const duration = 1000; // 1 second
+                const stepTime = duration / 20;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    counter.textContent = Math.floor(current);
+                }, stepTime);
+            });
+            
+            // Add smooth scrolling to links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 }

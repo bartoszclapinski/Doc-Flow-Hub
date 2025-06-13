@@ -68,20 +68,41 @@
                         <div class="col">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">@document.Title</h5>
-                                    <p class="card-text">@document.Description</p>
-                                    <p class="card-text">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                        @document.Title
+                                    </h5>
+                                    @if (!string.IsNullOrEmpty(document.Description))
+                                    {
+                                        <p class="card-text">@document.Description</p>
+                                    }
+                                    <div class="mb-2">
                                         <small class="text-muted">
-                                            Last updated: @document.UpdatedAt.ToString("g")
+                                            <i class="bi bi-calendar3 me-1"></i>
+                                            Last updated: @document.UpdatedAt.ToString("MMM dd, yyyy")
                                         </small>
-                                    </p>
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-file-earmark me-1"></i>
+                                            @document.FileType.ToUpper() • @FormatFileSize(document.FileSize)
+                                        </small>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
+                                        <div class="btn-group" role="group">
                                             <a asp-page="./Details" asp-route-id="@document.Id" 
-                                               class="btn btn-sm btn-outline-secondary">View</a>
+                                               class="btn btn-sm btn-outline-primary" title="View details and version history">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
                                             <a asp-page="./Edit" asp-route-id="@document.Id" 
-                                               class="btn btn-sm btn-outline-secondary">Edit</a>
+                                               class="btn btn-sm btn-outline-secondary" title="Edit document">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
                                         </div>
+                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Download current version">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
@@ -122,4 +143,57 @@
 
         return $"{size:0.##} {sizes[order]}";
     }
+}
+
+@section Scripts {
+    <script>
+        // Add loading state to download buttons
+        document.querySelectorAll('form[asp-page-handler="Download"] button').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const icon = this.querySelector('i');
+                const originalClass = icon.className;
+                
+                // Show loading state
+                this.disabled = true;
+                icon.className = 'bi bi-arrow-down-circle spin';
+                
+                // Reset after a delay (file download should trigger)
+                setTimeout(() => {
+                    this.disabled = false;
+                    icon.className = originalClass;
+                }, 3000);
+            });
+        });
+        
+        // Add hover effects for better UX
+        document.querySelectorAll('.card').forEach(function(card) {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'transform 0.2s ease-in-out';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+    
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .card {
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
 } 
