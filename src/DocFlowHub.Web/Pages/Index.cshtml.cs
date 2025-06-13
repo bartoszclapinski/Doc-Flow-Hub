@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Teams;
 using DocFlowHub.Web.Extensions;
 using System.Security.Claims;
 
@@ -28,9 +29,12 @@ namespace DocFlowHub.Web.Pages
         public string? UserName { get; set; }
         public int TotalDocuments { get; set; }
         public int TotalTeams { get; set; }
+        public int TeamsAsOwner { get; set; }
+        public int TeamsAsMember { get; set; }
         public int RecentUpdates { get; set; }
         public int SharedDocuments { get; set; }
         public List<DocumentSummary> RecentDocuments { get; set; } = new();
+        public List<TeamSummary> RecentTeams { get; set; } = new();
         public List<ActivitySummary> RecentActivities { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync()
@@ -48,6 +52,7 @@ namespace DocFlowHub.Web.Pages
             {
                 await LoadUserStatistics(userId);
                 await LoadRecentDocuments(userId);
+                await LoadRecentTeams(userId);
                 await LoadRecentActivities(userId);
             }
 
@@ -82,10 +87,12 @@ namespace DocFlowHub.Web.Pages
                 }
 
                 // Get user's teams count
-                var userTeams = await _teamService.GetUserTeamsAsync(userId);
+                var userTeams = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
                 if (userTeams.Succeeded)
                 {
-                    TotalTeams = userTeams.Data?.Count() ?? 0;
+                    TotalTeams = userTeams.Data.TotalItems;
+                    TeamsAsOwner = userTeams.Data.Items.Count(t => t.OwnerId == userId);
+                    TeamsAsMember = userTeams.Data.Items.Count(t => t.OwnerId != userId);
                 }
             }
             catch (Exception)
@@ -133,6 +140,42 @@ namespace DocFlowHub.Web.Pages
             {
                 // Log error and set empty list
                 RecentDocuments = new List<DocumentSummary>();
+            }
+        }
+
+        private async Task LoadRecentTeams(string userId)
+        {
+            try
+            {
+                var filter = new TeamFilter
+                {
+                    PageNumber = 1,
+                    PageSize = 5 // Get latest 5 teams
+                };
+
+                var recentTeams = await _teamService.GetUserTeamsAsync(userId, filter);
+                
+                if (recentTeams.Succeeded)
+                {
+                    // Sort by UpdatedAt descending to get most recent first
+                    RecentTeams = recentTeams.Data.Items
+                        .OrderByDescending(t => t.UpdatedAt.HasValue ? t.UpdatedAt.Value : t.CreatedAt)
+                        .Take(5)
+                        .Select(t => new TeamSummary
+                        {
+                            Id = t.Id,
+                            Name = t.Name,
+                            Description = t.Description ?? "",
+                            LastModified = t.UpdatedAt.HasValue ? t.UpdatedAt.Value : t.CreatedAt,
+                            MemberCount = t.MemberCount,
+                            IsOwner = t.OwnerId == userId
+                        }).ToList();
+                }
+            }
+            catch (Exception)
+            {
+                // Log error and set empty list
+                RecentTeams = new List<TeamSummary>();
             }
         }
 
@@ -241,5 +284,15 @@ namespace DocFlowHub.Web.Pages
         public DateTime Timestamp { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
+    }
+
+    public class TeamSummary
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime LastModified { get; set; }
+        public int MemberCount { get; set; }
+        public bool IsOwner { get; set; }
     }
 }

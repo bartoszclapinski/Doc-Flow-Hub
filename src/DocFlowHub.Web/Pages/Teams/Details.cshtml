@@ -1,0 +1,363 @@
+@page "/Teams/Details/{id:int}"
+@using DocFlowHub.Web.Extensions
+@using DocFlowHub.Core.Models
+@model DocFlowHub.Web.Pages.Teams.DetailsModel
+@{
+    ViewData["Title"] = Model.Team?.Name ?? "Team Details";
+}
+
+<div class="container-fluid">
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+    
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @Model.SuccessMessage
+        </div>
+    }
+    
+    @if (Model.Team != null)
+    {
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Teams</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Team.Name</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <!-- Main Team Details -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h1 class="card-title mb-0 h4">
+                                <i class="bi bi-people-fill me-2"></i>
+                                @Model.Team.Name
+                            </h1>
+                            <div class="btn-group">
+                                @if (Model.Team.OwnerId == User.GetUserId())
+                                {
+                                    <a asp-page="./Edit" asp-route-id="@Model.Team.Id" class="btn btn-outline-light btn-sm">
+                                        <i class="bi bi-pencil"></i> Edit Team
+                                    </a>
+                                }
+                                <a asp-page="./Index" class="btn btn-light btn-sm">
+                                    <i class="bi bi-arrow-left"></i> Back to Teams
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(Model.Team.Description))
+                        {
+                            <div class="mb-4">
+                                <h5>Description</h5>
+                                <p class="text-muted">@Model.Team.Description</p>
+                            </div>
+                        }
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-5">Team Owner</dt>
+                                    <dd class="col-sm-7">
+                                        <i class="bi bi-person-circle text-success"></i>
+                                        @(Model.Team.OwnerName ?? "Unknown")
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5">Members</dt>
+                                    <dd class="col-sm-7">
+                                        <span class="badge bg-info">@Model.Team.MemberCount member@(Model.Team.MemberCount != 1 ? "s" : "")</span>
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-5">Created</dt>
+                                    <dd class="col-sm-7">
+                                        <span data-bs-toggle="tooltip" title="@Model.Team.CreatedAt.ToString("F")">
+                                            @Model.Team.CreatedAt.ToString("MMM dd, yyyy")
+                                        </span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5">Last Updated</dt>
+                                    <dd class="col-sm-7">
+                                        @if (Model.Team.UpdatedAt.HasValue)
+                                        {
+                                            <span data-bs-toggle="tooltip" title="@Model.Team.UpdatedAt.Value.ToString("F")">
+                                                @Model.Team.UpdatedAt.Value.ToString("MMM dd, yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Never</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (Model.Team.OwnerId == User.GetUserId())
+                        {
+                            <div class="mt-4">
+                                <div class="border rounded p-3 bg-light">
+                                    <h6 class="mb-3">
+                                        <i class="bi bi-person-plus text-primary me-1"></i>
+                                        Add New Member
+                                    </h6>
+                                    <form method="post" asp-page-handler="AddMember" class="row g-3">
+                                        <div class="col-md-8">
+                                            <input asp-for="NewMemberEmail" type="email" class="form-control" 
+                                                   placeholder="Enter member's email address" required />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="bi bi-plus-circle me-1"></i>
+                                                Add Member
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <small class="form-text text-muted">
+                                        New members will be added with "Member" role and can view shared team documents.
+                                    </small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Team Members Sidebar -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-people"></i>
+                            Team Members (@Model.Team.MemberCount)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (Model.Members.Items.Any())
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var member in Model.Members.Items)
+                                {
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    <i class="bi bi-person-circle me-1"></i>
+                                                    @(member.UserName ?? member.UserId)
+                                                </h6>
+                                                <p class="mb-1 small text-muted">
+                                                    <i class="bi bi-envelope me-1"></i>
+                                                    @(member.UserEmail ?? "Unknown")
+                                                </p>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @if (member.Role == TeamRole.Admin)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-star-fill me-1"></i>Owner
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-person-check me-1"></i>Member
+                                                        </span>
+                                                    }
+                                                    <small class="text-muted">
+                                                        Joined: @member.JoinedAt.ToString("MMM yyyy")
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            @if (Model.Team.OwnerId == User.GetUserId() && member.UserId != User.GetUserId())
+                                            {
+                                                <div class="ms-2">
+                                                    <div class="btn-group" role="group">
+                                                        @if (member.Role == TeamRole.Member)
+                                                        {
+                                                            <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
+                                                                <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                                <input type="hidden" name="newRole" value="@TeamRole.Admin" />
+                                                                <button type="submit" class="btn btn-outline-success btn-sm" 
+                                                                        title="Promote to Admin" onclick="return confirm('Promote this member to Admin?')">
+                                                                    <i class="bi bi-arrow-up"></i>
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                        <form method="post" asp-page-handler="RemoveMember" class="d-inline">
+                                                            <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                                                    title="Remove from team" onclick="return confirm('Remove this member from the team?')">
+                                                                <i class="bi bi-person-x"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            
+                            @if (Model.Members.TotalPages > 1)
+                            {
+                                <div class="card-footer">
+                                    <nav aria-label="Team members pagination">
+                                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                                            @if (Model.Members.PageNumber > 1)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber - 1)">
+                                                        <i class="bi bi-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                            }
+                                            
+                                            @for (int i = Math.Max(1, Model.Members.PageNumber - 2); i <= Math.Min(Model.Members.TotalPages, Model.Members.PageNumber + 2); i++)
+                                            {
+                                                <li class="page-item @(i == Model.Members.PageNumber ? "active" : "")">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@i">@i</a>
+                                                </li>
+                                            }
+                                            
+                                            @if (Model.Members.PageNumber < Model.Members.TotalPages)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber + 1)">
+                                                        <i class="bi bi-chevron-right"></i>
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </nav>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="card-body text-center text-muted">
+                                <i class="bi bi-people display-4"></i>
+                                <p class="mt-2">No members yet</p>
+                                @if (Model.Team.OwnerId == User.GetUserId())
+                                {
+                                    <small>Add the first member using the form on the left.</small>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (Model.Team.OwnerId == User.GetUserId())
+                {
+                    <div class="card shadow-sm mt-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-info-circle text-primary"></i>
+                                Team Management
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled small mb-0">
+                                <li><i class="bi bi-check text-success me-1"></i> Add/remove team members</li>
+                                <li><i class="bi bi-check text-success me-1"></i> Promote members to admins</li>
+                                <li><i class="bi bi-check text-success me-1"></i> Share documents with team</li>
+                                <li><i class="bi bi-check text-success me-1"></i> Manage team settings</li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Enhanced form submission for member actions
+            const forms = document.querySelectorAll('form');
+            forms.forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        const originalContent = submitBtn.innerHTML;
+                        
+                        // Set loading state
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Processing...';
+                        
+                        // Reset after timeout as fallback
+                        setTimeout(() => {
+                            submitBtn.innerHTML = originalContent;
+                            submitBtn.disabled = false;
+                        }, 10000);
+                    }
+                });
+            });
+
+            // Auto-dismiss success messages
+            const successAlert = document.querySelector('.alert-success');
+            if (successAlert) {
+                setTimeout(() => {
+                    successAlert.style.opacity = '0';
+                    setTimeout(() => {
+                        successAlert.style.display = 'none';
+                    }, 300);
+                }, 5000);
+            }
+        });
+    </script>
+    
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .list-group-item {
+            transition: background-color 0.2s ease;
+        }
+        
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .btn-group .btn {
+            transition: all 0.2s ease;
+        }
+        
+        .btn-group .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .card {
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+        }
+    </style>
+} 

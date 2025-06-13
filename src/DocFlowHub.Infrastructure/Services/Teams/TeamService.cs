@@ -4,6 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using DocFlowHub.Core.Models;
 using DocFlowHub.Core.Models.Common;
+using DocFlowHub.Core.Models.Teams;
+using DocFlowHub.Core.Models.Teams.Dto;
+using DocFlowHub.Core.Models.Teams.Extensions;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -24,14 +27,20 @@ public class TeamService : ITeamService
         _logger = logger;
     }
 
-    public async Task<ServiceResult<Team>> CreateTeamAsync(string name, string? description, string ownerId)
+    public async Task<ServiceResult<TeamDto>> CreateTeamAsync(CreateTeamRequest request, string ownerId)
     {
         try
         {
+            // Validation
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                return ServiceResult<TeamDto>.Failure("Team name is required");
+            }
+
             var team = new Team
             {
-                Name = name,
-                Description = description,
+                Name = request.Name,
+                Description = request.Description,
                 OwnerId = ownerId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -48,37 +57,40 @@ public class TeamService : ITeamService
             _context.Teams.Add(team);
             await _context.SaveChangesAsync();
 
-            return ServiceResult<Team>.Success(team);
+            _logger.LogInformation("Team {TeamName} created successfully for user {UserId}", request.Name, ownerId);
+
+            return ServiceResult<TeamDto>.Success(team.ToDto());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating team");
-            return ServiceResult<Team>.Failure("Error creating team: " + ex.Message);
+            _logger.LogError(ex, "Error creating team {TeamName} for user {UserId}", request.Name, ownerId);
+            return ServiceResult<TeamDto>.Failure("An error occurred while creating the team");
         }
     }
 
-    public async Task<ServiceResult<Team>> UpdateTeamAsync(int id, string name, string? description, string userId)
+    public async Task<ServiceResult<TeamDto>> UpdateTeamAsync(int id, string name, string? description, string userId)
     {
         try
         {
             var team = await _context.Teams
                 .Include(t => t.Members)
+                .Include(t => t.Owner)
                 .FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == userId);
 
             if (team == null)
-                return ServiceResult<Team>.Failure("Team not found or you don't have permission to update it");
+                return ServiceResult<TeamDto>.Failure("Team not found or you don't have permission to update it");
 
             team.Name = name;
             team.Description = description;
             team.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return ServiceResult<Team>.Success(team);
+            return ServiceResult<TeamDto>.Success(team.ToDto());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating team {TeamId}", id);
-            return ServiceResult<Team>.Failure("Error updating team: " + ex.Message);
+            return ServiceResult<TeamDto>.Failure("An error occurred while updating the team");
         }
     }
 
@@ -104,42 +116,63 @@ public class TeamService : ITeamService
         }
     }
 
-    public async Task<ServiceResult<Team>> GetTeamByIdAsync(int id)
+    public async Task<ServiceResult<TeamDto>> GetTeamByIdAsync(int id)
     {
         try
         {
             var team = await _context.Teams
                 .Include(t => t.Members)
                 .ThenInclude(m => m.User)
+                .Include(t => t.Owner)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (team == null)
-                return ServiceResult<Team>.Failure("Team not found");
+                return ServiceResult<TeamDto>.Failure("Team not found");
 
-            return ServiceResult<Team>.Success(team);
+            return ServiceResult<TeamDto>.Success(team.ToDto());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting team {TeamId}", id);
-            return ServiceResult<Team>.Failure("Error getting team: " + ex.Message);
+            return ServiceResult<TeamDto>.Failure("An error occurred while getting the team");
         }
     }
 
-    public async Task<ServiceResult<IEnumerable<Team>>> GetUserTeamsAsync(string userId)
+    public async Task<ServiceResult<PagedResult<TeamDto>>> GetUserTeamsAsync(string userId, TeamFilter filter)
     {
         try
         {
-            var teams = await _context.Teams
+            var query = _context.Teams
                 .Include(t => t.Members)
-                .Where(t => t.Members.Any(m => m.UserId == userId))
+                .Include(t => t.Owner)
+                .Where(t => t.Members.Any(m => m.UserId == userId));
+
+            if (!string.IsNullOrEmpty(filter.SearchTerm))
+            {
+                query = query.Where(t => t.Name.Contains(filter.SearchTerm) || 
+                                   (t.Description != null && t.Description.Contains(filter.SearchTerm)));
+            }
+
+            var totalItems = await query.CountAsync();
+            var teams = await query
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
                 .ToListAsync();
 
-            return ServiceResult<IEnumerable<Team>>.Success(teams);
+            var result = new PagedResult<TeamDto>
+            {
+                Items = teams.ToDto(),
+                TotalItems = totalItems,
+                PageNumber = filter.PageNumber,
+                PageSize = filter.PageSize
+            };
+
+            return ServiceResult<PagedResult<TeamDto>>.Success(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting teams for user {UserId}", userId);
-            return ServiceResult<IEnumerable<Team>>.Failure("Error getting user teams: " + ex.Message);
+            return ServiceResult<PagedResult<TeamDto>>.Failure("An error occurred while getting user teams");
         }
     }
 
@@ -215,7 +248,7 @@ public class TeamService : ITeamService
         }
     }
 
-    public async Task<ServiceResult<IEnumerable<TeamMember>>> GetTeamMembersAsync(int teamId)
+    public async Task<ServiceResult<PagedResult<TeamMemberDto>>> GetTeamMembersAsync(int teamId)
     {
         try
         {
@@ -225,14 +258,23 @@ public class TeamService : ITeamService
                 .FirstOrDefaultAsync(t => t.Id == teamId);
 
             if (team == null)
-                return ServiceResult<IEnumerable<TeamMember>>.Failure("Team not found");
+                return ServiceResult<PagedResult<TeamMemberDto>>.Failure("Team not found");
 
-            return ServiceResult<IEnumerable<TeamMember>>.Success(team.Members);
+            var totalItems = team.Members.Count;
+            var result = new PagedResult<TeamMemberDto>
+            {
+                Items = team.Members.ToDto(),
+                TotalItems = totalItems,
+                PageNumber = 1,
+                PageSize = totalItems // Return all members for now
+            };
+
+            return ServiceResult<PagedResult<TeamMemberDto>>.Success(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting members for team {TeamId}", teamId);
-            return ServiceResult<IEnumerable<TeamMember>>.Failure("Error getting team members: " + ex.Message);
+            return ServiceResult<PagedResult<TeamMemberDto>>.Failure("An error occurred while getting team members");
         }
     }
 } 

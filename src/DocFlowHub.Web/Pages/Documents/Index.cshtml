@@ -1,106 +1,225 @@
 @page
+@using DocFlowHub.Web.Extensions
 @model DocFlowHub.Web.Pages.Documents.IndexModel
 @{
     ViewData["Title"] = "Documents";
 }
 
-<div class="container">
-    <h1>Documents</h1>
-
-    <div class="mb-4">
-        <a asp-page="./Upload" class="btn btn-primary">Upload Document</a>
+<div class="container-fluid py-4 page-transition">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                        Documents
+                    </h1>
+                    <p class="text-muted mb-0">Manage and organize your documents</p>
+                </div>
+                <div>
+                    <a asp-page="./Upload" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-1"></i>Upload Document
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger" role="alert">
-            @Model.ErrorMessage
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
         </div>
     }
 
     <div class="row">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Filters</h5>
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-funnel me-2 text-primary"></i>
+                        Filters
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form method="get">
-                        <div class="mb-3">
-                            <label asp-for="Filter.SearchTerm" class="form-label">Search</label>
-                            <input asp-for="Filter.SearchTerm" class="form-control" placeholder="Search documents...">
+                        <!-- Search -->
+                        <div class="mb-4">
+                            <label asp-for="Filter.SearchTerm" class="form-label fw-bold">
+                                <i class="bi bi-search me-1"></i>Search
+                            </label>
+                            <input asp-for="Filter.SearchTerm" class="form-control" 
+                                   placeholder="Search documents...">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Categories</label>
-                            @foreach (var category in Model.Categories)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           name="Filter.CategoryId" value="@category.Id"
-                                           checked="@(Model.Filter.CategoryId == category.Id)">
-                                    <label class="form-check-label">
-                                        @category.Name
-                                    </label>
-                                </div>
-                            }
-                        </div>
+                        <!-- Team Filter -->
+                        @if (Model.UserTeams.Any())
+                        {
+                            <div class="mb-4">
+                                <label asp-for="Filter.TeamId" class="form-label fw-bold">
+                                    <i class="bi bi-people me-1"></i>Team
+                                </label>
+                                <select asp-for="Filter.TeamId" class="form-select">
+                                    <option value="">All Documents</option>
+                                    <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
+                                    @foreach (var team in Model.UserTeams)
+                                    {
+                                        <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
+                                            @team.Name (@team.MemberCount members)
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
 
-                        <button type="submit" class="btn btn-primary">Apply Filters</button>
-                        <a asp-page="./Index" class="btn btn-secondary">Clear</a>
+                        <!-- Categories -->
+                        @if (Model.Categories.Any())
+                        {
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-tags me-1"></i>Categories
+                                </label>
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="Filter.CategoryId" value="@category.Id"
+                                               checked="@(Model.Filter.CategoryId == category.Id)"
+                                               id="category-@category.Id">
+                                        <label class="form-check-label" for="category-@category.Id">
+                                            @category.Name
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Filter Actions -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Apply Filters
+                            </button>
+                            <a asp-page="./Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-9">
+        <!-- Documents Grid -->
+        <div class="col-lg-9 col-md-8">
             @if (!Model.Documents.Items.Any())
             {
-                <div class="alert alert-info" role="alert">
-                    No documents found.
+                <div class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
+                        <h5 class="text-muted mt-3">No documents found</h5>
+                        <p class="text-muted">Try adjusting your filters or upload your first document</p>
+                        <a asp-page="./Upload" class="btn btn-primary">
+                            <i class="bi bi-cloud-upload me-1"></i>Upload Document
+                        </a>
+                    </div>
                 </div>
             }
             else
             {
-                <div class="row row-cols-1 row-cols-md-3 g-4">
+                <!-- Document Cards -->
+                <div class="row row-cols-1 row-cols-lg-2 row-cols-xl-3 g-4">
                     @foreach (var document in Model.Documents.Items)
                     {
                         <div class="col">
-                            <div class="card h-100">
+                            <div class="card h-100 border-0 shadow-sm document-card">
                                 <div class="card-body">
-                                    <h5 class="card-title">
-                                        <i class="bi bi-file-earmark-text text-primary me-2"></i>
-                                        @document.Title
-                                    </h5>
+                                    <!-- Document Header -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi @GetFileIcon(document.FileType) text-primary me-2"></i>
+                                            @document.Title
+                                        </h5>
+                                        @if (!string.IsNullOrEmpty(document.TeamName))
+                                        {
+                                            <span class="badge bg-success-subtle text-success" title="Shared with team: @document.TeamName">
+                                                <i class="bi bi-people me-1"></i>Team
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary" title="Private document">
+                                                <i class="bi bi-lock me-1"></i>Private
+                                            </span>
+                                        }
+                                    </div>
+
+                                    <!-- Description -->
                                     @if (!string.IsNullOrEmpty(document.Description))
                                     {
-                                        <p class="card-text">@document.Description</p>
+                                        <p class="card-text text-muted small mb-3">
+                                            @(document.Description.Length > 100 ? document.Description.Substring(0, 100) + "..." : document.Description)
+                                        </p>
                                     }
-                                    <div class="mb-2">
-                                        <small class="text-muted">
+
+                                    <!-- Categories -->
+                                    @if (document.Categories.Any())
+                                    {
+                                        <div class="mb-3">
+                                            @foreach (var category in document.Categories.Take(3))
+                                            {
+                                                <span class="badge bg-primary-subtle text-primary me-1">@category.Name</span>
+                                            }
+                                            @if (document.Categories.Count > 3)
+                                            {
+                                                <span class="badge bg-light text-muted">+@(document.Categories.Count - 3) more</span>
+                                            }
+                                        </div>
+                                    }
+
+                                    <!-- Metadata -->
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">
                                             <i class="bi bi-calendar3 me-1"></i>
-                                            Last updated: @document.UpdatedAt.ToString("MMM dd, yyyy")
+                                            Updated: @document.UpdatedAt.ToString("MMM dd, yyyy")
                                         </small>
-                                        <br>
-                                        <small class="text-muted">
+                                        <small class="text-muted d-block">
                                             <i class="bi bi-file-earmark me-1"></i>
                                             @document.FileType.ToUpper() • @FormatFileSize(document.FileSize)
                                         </small>
+                                        <small class="text-muted d-block">
+                                            <i class="bi bi-person me-1"></i>
+                                            Owner: @document.OwnerName
+                                        </small>
                                     </div>
+                                </div>
+
+                                <!-- Card Footer with Actions -->
+                                <div class="card-footer bg-transparent border-0 pt-0">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="btn-group" role="group">
                                             <a asp-page="./Details" asp-route-id="@document.Id" 
                                                class="btn btn-sm btn-outline-primary" title="View details and version history">
-                                                <i class="bi bi-eye"></i> View
+                                                <i class="bi bi-eye"></i>
                                             </a>
-                                            <a asp-page="./Edit" asp-route-id="@document.Id" 
-                                               class="btn btn-sm btn-outline-secondary" title="Edit document">
-                                                <i class="bi bi-pencil"></i> Edit
-                                            </a>
+                                            @if (document.OwnerId == User.GetUserId())
+                                            {
+                                                <a asp-page="./Edit" asp-route-id="@document.Id" 
+                                                   class="btn btn-sm btn-outline-secondary" title="Edit document">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            }
                                         </div>
                                         <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline download-form">
-                                            <button type="submit" class="btn btn-sm btn-success" title="Download current version">
+                                            <button type="submit" class="btn btn-sm btn-success loading-btn" title="Download current version">
+                                                <span class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
                                                 <i class="bi bi-download"></i>
+                                                <span class="btn-text ms-1 d-none d-md-inline">Download</span>
                                             </button>
                                         </form>
                                     </div>
@@ -110,14 +229,33 @@
                     }
                 </div>
 
+                <!-- Pagination -->
                 @if (Model.Documents.TotalPages > 1)
                 {
                     <nav aria-label="Page navigation" class="mt-4">
                         <ul class="pagination justify-content-center">
-                            @for (var i = 1; i <= Model.Documents.TotalPages; i++)
+                            @if (Model.Documents.PageNumber > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber - 1)">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                            }
+                            
+                            @for (var i = Math.Max(1, Model.Documents.PageNumber - 2); i <= Math.Min(Model.Documents.TotalPages, Model.Documents.PageNumber + 2); i++)
                             {
                                 <li class="page-item @(i == Model.Documents.PageNumber ? "active" : "")">
                                     <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i">@i</a>
+                                </li>
+                            }
+                            
+                            @if (Model.Documents.PageNumber < Model.Documents.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber + 1)">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
                                 </li>
                             }
                         </ul>
@@ -143,57 +281,93 @@
 
         return $"{size:0.##} {sizes[order]}";
     }
+
+    private string GetFileIcon(string fileType)
+    {
+        return fileType.ToLower() switch
+        {
+            ".pdf" => "bi-file-earmark-pdf",
+            ".doc" or ".docx" => "bi-file-earmark-word",
+            ".txt" => "bi-file-earmark-text",
+            ".md" => "bi-markdown",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
+            _ => "bi-file-earmark"
+        };
+    }
 }
 
 @section Scripts {
     <script>
-        // Add loading state to download buttons
-        document.querySelectorAll('.download-form button').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const icon = this.querySelector('i');
-                const originalClass = icon.className;
-                
-                // Show loading state
-                this.disabled = true;
-                icon.className = 'bi bi-arrow-down-circle spin';
-                
-                // Reset after a delay (file download should trigger)
-                setTimeout(() => {
-                    this.disabled = false;
-                    icon.className = originalClass;
-                }, 3000);
-            });
-        });
-        
-        // Add hover effects for better UX
-        document.querySelectorAll('.card').forEach(function(card) {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
-                this.style.transition = 'transform 0.2s ease-in-out';
+        document.addEventListener('DOMContentLoaded', function() {
+            // Enhanced download button functionality
+            document.querySelectorAll('.download-form .loading-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const spinner = this.querySelector('.spinner-border');
+                    const icon = this.querySelector('.bi-download');
+                    const text = this.querySelector('.btn-text');
+                    
+                    // Show loading state
+                    this.disabled = true;
+                    spinner.classList.remove('d-none');
+                    icon.classList.add('d-none');
+                    if (text) text.textContent = 'Downloading...';
+                    
+                    // Reset after delay
+                    setTimeout(() => {
+                        this.disabled = false;
+                        spinner.classList.add('d-none');
+                        icon.classList.remove('d-none');
+                        if (text) text.textContent = 'Download';
+                    }, 3000);
+                });
             });
             
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
+            // Enhanced card hover effects
+            document.querySelectorAll('.document-card').forEach(function(card) {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-4px)';
+                    this.style.transition = 'all 0.3s ease';
+                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '';
+                });
             });
         });
     </script>
     
     <style>
-        .spin {
-            animation: spin 1s linear infinite;
+        .document-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
         }
         
-        @@keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .document-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
         }
         
-        .card {
-            transition: transform 0.2s ease-in-out;
+        .empty-state {
+            opacity: 0.8;
         }
         
-        .card:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        .badge {
+            font-size: 0.75rem;
+        }
+        
+        .btn-group .btn {
+            border-radius: 6px !important;
+        }
+        
+        .page-transition {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 } 

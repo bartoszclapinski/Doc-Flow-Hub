@@ -23,17 +23,33 @@
             <div class="card border-0 shadow-sm bg-primary text-white">
                 <div class="card-body">
                     <div class="row align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-6">
                             <h5 class="card-title mb-1">Ready to get started?</h5>
-                            <p class="card-text mb-0">Upload your first document or manage existing ones</p>
+                            <p class="card-text mb-0">Upload documents, manage teams, and collaborate with others</p>
                         </div>
-                        <div class="col-md-4 text-md-end">
-                            <a asp-page="/Documents/Upload" class="btn btn-light me-2">
+                        <div class="col-md-6">
+                            <div class="row g-2">
+                                <div class="col-lg-6">
+                                    <a asp-page="/Documents/Upload" class="btn btn-light w-100">
                                 <i class="bi bi-cloud-upload me-1"></i> Upload Document
                             </a>
-                            <a asp-page="/Documents/Index" class="btn btn-outline-light">
+                                </div>
+                                <div class="col-lg-6">
+                                    <a asp-page="/Documents/Index" class="btn btn-outline-light w-100">
                                 <i class="bi bi-folder me-1"></i> Browse Documents
                             </a>
+                                </div>
+                                <div class="col-lg-6">
+                                    <a asp-page="/Teams/Create" class="btn btn-light w-100">
+                                        <i class="bi bi-people me-1"></i> Create Team
+                                    </a>
+                                </div>
+                                <div class="col-lg-6">
+                                    <a asp-page="/Teams/Index" class="btn btn-outline-light w-100">
+                                        <i class="bi bi-people-fill me-1"></i> Manage Teams
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -72,6 +88,14 @@
                         <div class="flex-grow-1 ms-3">
                             <h6 class="card-title mb-0 text-muted">Teams</h6>
                             <h2 class="mt-2 mb-0 counter" data-target="@Model.TotalTeams">0</h2>
+                            <div class="mt-1">
+                                <small class="text-success">
+                                    <i class="bi bi-star-fill me-1"></i>@Model.TeamsAsOwner owner
+                                </small>
+                                <small class="text-info ms-2">
+                                    <i class="bi bi-person-check me-1"></i>@Model.TeamsAsMember member
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -114,10 +138,10 @@
         </div>
     </div>
 
-    <!-- Recent Documents and Activity -->
+    <!-- Recent Documents, Teams, and Activity -->
     <div class="row">
         <!-- Recent Documents -->
-        <div class="col-md-8">
+        <div class="col-lg-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 pb-0">
                     <div class="d-flex justify-content-between align-items-center">
@@ -134,27 +158,19 @@
                     @if (Model.RecentDocuments.Any())
                     {
                         <div class="list-group list-group-flush">
-                            @foreach (var doc in Model.RecentDocuments)
+                            @foreach (var doc in Model.RecentDocuments.Take(3))
                             {
                                 <a asp-page="/Documents/Details" asp-route-id="@doc.Id" class="list-group-item list-group-item-action border-0 document-item">
-                                    <div class="d-flex w-100 justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <i class="bi @GetFileIcon(doc.FileType) me-2 text-muted"></i>
-                                                <h6 class="mb-0">@doc.Title</h6>
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0 me-2">
+                                            <i class="bi @GetFileIcon(doc.FileType) text-muted"></i>
                                             </div>
-                                            <p class="mb-1 text-muted">@doc.Description</p>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <h6 class="mb-1 text-truncate">@doc.Title</h6>
+                                            <p class="mb-1 text-muted small text-truncate">@doc.Description</p>
                                             <small class="text-muted">
-                                                <i class="bi bi-calendar-event me-1"></i>
-                                                @doc.LastModified.ToString("MMM dd, yyyy 'at' HH:mm")
-                                                <span class="ms-3">
-                                                    <i class="bi bi-file-earmark me-1"></i>
-                                                    @FormatFileSize(doc.FileSize)
-                                                </span>
+                                                @doc.LastModified.ToString("MMM dd, yyyy")
                                             </small>
-                                        </div>
-                                        <div class="flex-shrink-0 ms-3">
-                                            <span class="badge bg-secondary">@doc.FileType.ToUpper()</span>
                                         </div>
                                     </div>
                                 </a>
@@ -163,12 +179,12 @@
                     }
                     else
                     {
-                        <div class="text-center py-5">
+                        <div class="text-center py-4">
                             <div class="empty-state">
-                                <i class="bi bi-file-earmark-text text-muted fs-1 mb-3"></i>
-                                <h5 class="text-muted">No documents yet</h5>
-                                <p class="text-muted mb-3">Start by uploading your first document</p>
-                                <a asp-page="/Documents/Upload" class="btn btn-primary">
+                                <i class="bi bi-file-earmark-text text-muted fs-2 mb-2"></i>
+                                <h6 class="text-muted">No documents yet</h6>
+                                <p class="text-muted small mb-3">Start by uploading your first document</p>
+                                <a asp-page="/Documents/Upload" class="btn btn-sm btn-primary">
                                     <i class="bi bi-cloud-upload me-1"></i> Upload Document
                                 </a>
                             </div>
@@ -178,12 +194,74 @@
             </div>
         </div>
 
+        <!-- Recent Teams -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-people me-2 text-success"></i>
+                            Recent Teams
+                        </h5>
+                        <a asp-page="/Teams/Index" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-eye me-1"></i> View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentTeams.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var team in Model.RecentTeams.Take(3))
+                            {
+                                <a asp-page="/Teams/Details" asp-route-id="@team.Id" class="list-group-item list-group-item-action border-0 team-item">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0 me-2">
+                                            <i class="bi @(team.IsOwner ? "bi-star-fill text-warning" : "bi-people text-success")"></i>
+                                        </div>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <h6 class="mb-1 text-truncate">@team.Name</h6>
+                                                <span class="badge bg-secondary-subtle text-secondary small">@team.MemberCount</span>
+                                            </div>
+                                            <p class="mb-1 text-muted small text-truncate">@team.Description</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    @team.LastModified.ToString("MMM dd, yyyy")
+                                                </small>
+                                                <small class="badge @(team.IsOwner ? "bg-warning-subtle text-warning" : "bg-info-subtle text-info")">
+                                                    @(team.IsOwner ? "Owner" : "Member")
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="bi bi-people text-muted fs-2 mb-2"></i>
+                                <h6 class="text-muted">No teams yet</h6>
+                                <p class="text-muted small mb-3">Create or join a team to collaborate</p>
+                                <a asp-page="/Teams/Create" class="btn btn-sm btn-success">
+                                    <i class="bi bi-plus-circle me-1"></i> Create Team
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Activity -->
-        <div class="col-md-4">
+        <div class="col-lg-4 mb-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 pb-0">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-activity me-2 text-success"></i>
+                        <i class="bi bi-activity me-2 text-info"></i>
                         Recent Activity
                     </h5>
                 </div>
@@ -191,16 +269,14 @@
                     @if (Model.RecentActivities.Any())
                     {
                         <div class="timeline">
-                            @foreach (var activity in Model.RecentActivities)
+                            @foreach (var activity in Model.RecentActivities.Take(4))
                             {
                                 <div class="timeline-item">
                                     <div class="timeline-marker @GetActivityMarkerClass(activity.Title)"></div>
                                     <div class="timeline-content">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <h6 class="mb-1">@activity.Title</h6>
+                                        <h6 class="mb-1 small">@activity.Title</h6>
+                                        <p class="mb-1 text-muted small text-truncate">@activity.Description</p>
                                             <small class="text-muted">@GetRelativeTime(activity.Timestamp)</small>
-                                        </div>
-                                        <p class="mb-0 text-muted">@activity.Description</p>
                                     </div>
                                 </div>
                             }
@@ -210,9 +286,9 @@
                     {
                         <div class="text-center py-4">
                             <div class="empty-state">
-                                <i class="bi bi-activity text-muted fs-1 mb-3"></i>
+                                <i class="bi bi-activity text-muted fs-2 mb-2"></i>
                                 <h6 class="text-muted">No recent activity</h6>
-                                <p class="text-muted mb-0">Activity will appear here as you work with documents</p>
+                                <p class="text-muted small mb-0">Activity will appear here as you work</p>
                             </div>
                         </div>
                     }
@@ -336,6 +412,17 @@
         
         .document-item:hover {
             background-color: rgba(13, 110, 253, 0.05);
+            transform: translateX(4px);
+        }
+        
+        .team-item {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .team-item:hover {
+            background-color: rgba(25, 135, 84, 0.05);
             transform: translateX(4px);
         }
         

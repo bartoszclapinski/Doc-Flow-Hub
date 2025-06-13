@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using DocFlowHub.Core.Models;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Teams;
+using DocFlowHub.Core.Models.Teams.Dto;
 using DocFlowHub.Core.Models.Documents.Dto;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
@@ -46,7 +48,7 @@ public class UploadModel : PageModel
     public int? TeamId { get; set; }
 
     public IEnumerable<DocumentCategoryDto> Categories { get; set; } = new List<DocumentCategoryDto>();
-    public IEnumerable<Team> Teams { get; set; } = new List<Team>();
+    public IEnumerable<TeamDto> Teams { get; set; } = new List<TeamDto>();
     public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
@@ -65,13 +67,13 @@ public class UploadModel : PageModel
         }
         Categories = categoriesResult.Data;
 
-        var teamsResult = await _teamService.GetUserTeamsAsync(userId);
+        var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
         if (!teamsResult.Succeeded)
         {
             ErrorMessage = teamsResult.Error;
             return Page();
         }
-        Teams = teamsResult.Data;
+        Teams = teamsResult.Data.Items;
 
         return Page();
     }
@@ -92,10 +94,10 @@ public class UploadModel : PageModel
                 Categories = categoriesResult.Data;
             }
 
-            var teamsResult = await _teamService.GetUserTeamsAsync(userId);
+            var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
             if (teamsResult.Succeeded)
             {
-                Teams = teamsResult.Data;
+                Teams = teamsResult.Data.Items;
             }
 
             return Page();
@@ -120,10 +122,10 @@ public class UploadModel : PageModel
                 Categories = categoriesResult.Data;
             }
 
-            var teamsResult = await _teamService.GetUserTeamsAsync(userId);
+            var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
             if (teamsResult.Succeeded)
             {
-                Teams = teamsResult.Data;
+                Teams = teamsResult.Data.Items;
             }
 
             return Page();

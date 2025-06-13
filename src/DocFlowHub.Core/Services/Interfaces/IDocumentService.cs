@@ -13,6 +13,8 @@ public interface IDocumentService
     Task<ServiceResult<DocumentDto>> GetDocumentByIdAsync(int id);
     Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(DocumentFilter filter);
     Task<ServiceResult<IEnumerable<DocumentDto>>> GetUserDocumentsAsync(string userId, DocumentFilter filter);
+    Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsForUserAsync(string userId, DocumentFilter filter);
+    Task<ServiceResult<bool>> CanUserAccessDocumentAsync(int documentId, string userId);
     Task<ServiceResult<DocumentDto>> CreateDocumentAsync(CreateDocumentRequest request, IFormFile file);
     Task<ServiceResult<DocumentDto>> UpdateDocumentAsync(int id, UpdateDocumentRequest request);
     Task<ServiceResult<DocumentDto>> UpdateDocumentContentAsync(int id, IFormFile file);

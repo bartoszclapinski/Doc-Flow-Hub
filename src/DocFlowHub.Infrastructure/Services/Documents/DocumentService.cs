@@ -37,6 +37,8 @@ public class DocumentService : IDocumentService
         var document = await _context.Documents
             .Include(d => d.Versions)
             .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
             .FirstOrDefaultAsync(d => d.Id == id);
 
         if (document == null)
@@ -50,6 +52,8 @@ public class DocumentService : IDocumentService
         var query = _context.Documents
             .Include(d => d.Versions)
             .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(filter.SearchTerm))
@@ -108,6 +112,139 @@ public class DocumentService : IDocumentService
             return ServiceResult<IEnumerable<DocumentDto>>.Failure(result.Error!);
 
         return ServiceResult<IEnumerable<DocumentDto>>.Success(result.Data.Items);
+    }
+
+    /// <summary>
+    /// Gets documents that the user has access to (owned documents + team shared documents)
+    /// </summary>
+    public async Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsForUserAsync(string userId, DocumentFilter filter)
+    {
+        var query = _context.Documents
+            .Include(d => d.Versions)
+            .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
+            .AsQueryable();
+
+        // Only include documents the user has access to:
+        // 1. Documents owned by the user
+        // 2. Documents shared with teams where the user is a member
+        var userTeamIds = await _context.TeamMembers
+            .Where(tm => tm.UserId == userId)
+            .Select(tm => tm.TeamId)
+            .ToListAsync();
+
+        query = query.Where(d => 
+            d.OwnerId == userId || // User owns the document
+            (d.TeamId.HasValue && userTeamIds.Contains(d.TeamId.Value)) // Document is shared with user's team
+        );
+
+        // Apply additional filters
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            query = query.Where(d => 
+                d.Title.Contains(filter.SearchTerm) || 
+                d.Description.Contains(filter.SearchTerm));
+        }
+
+        if (!string.IsNullOrEmpty(filter.FileType))
+        {
+            query = query.Where(d => d.FileType == filter.FileType);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(d => 
+                d.Categories.Any(c => c.Id == filter.CategoryId));
+        }
+
+        // If OwnerId filter is specified, further restrict to only owned documents
+        if (!string.IsNullOrEmpty(filter.OwnerId))
+        {
+            query = query.Where(d => d.OwnerId == filter.OwnerId);
+        }
+
+        // If TeamId filter is specified, further restrict based on value:
+        // TeamId = 0 means "private documents only" (no team)
+        // TeamId > 0 means specific team documents
+        if (filter.TeamId.HasValue)
+        {
+            if (filter.TeamId.Value == 0)
+            {
+                // Private documents only (no team assignment)
+                query = query.Where(d => d.TeamId == null);
+            }
+            else
+            {
+                // Specific team documents
+                query = query.Where(d => d.TeamId == filter.TeamId);
+            }
+        }
+
+        if (!filter.IncludeDeleted)
+        {
+            query = query.Where(d => !d.IsDeleted);
+        }
+
+        var totalItems = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
+            .Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<DocumentDto>>.Success(new PagedResult<DocumentDto>
+        {
+            Items = items.Select(d => d.ToDto()),
+            TotalItems = totalItems,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize
+        });
+    }
+
+    /// <summary>
+    /// Checks if a user has access to a specific document
+    /// </summary>
+    public async Task<ServiceResult<bool>> CanUserAccessDocumentAsync(int documentId, string userId)
+    {
+        try
+        {
+            var document = await _context.Documents
+                .Include(d => d.Team)
+                .ThenInclude(t => t.Members)
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+
+            if (document == null)
+                return ServiceResult<bool>.Failure("Document not found");
+
+            // User can access document if:
+            // 1. They own the document
+            if (document.OwnerId == userId)
+            {
+                return ServiceResult<bool>.Success(true);
+            }
+
+            // 2. Document is shared with a team where the user is a member
+            if (document.TeamId.HasValue)
+            {
+                var userTeamIds = await _context.TeamMembers
+                    .Where(tm => tm.UserId == userId)
+                    .Select(tm => tm.TeamId)
+                    .ToListAsync();
+
+                if (userTeamIds.Contains(document.TeamId.Value))
+                {
+                    return ServiceResult<bool>.Success(true);
+                }
+            }
+
+            return ServiceResult<bool>.Success(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking document access for user {UserId} and document {DocumentId}", userId, documentId);
+            return ServiceResult<bool>.Failure("An error occurred while checking document access");
+        }
     }
 
     public async Task<ServiceResult<DocumentDto>> CreateDocumentAsync(CreateDocumentRequest request, IFormFile file)
@@ -171,6 +308,8 @@ public class DocumentService : IDocumentService
         var document = await _context.Documents
             .Include(d => d.Versions)
             .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
             .FirstOrDefaultAsync(d => d.Id == id);
 
         if (document == null)
