@@ -1,0 +1,299 @@
+@page "/Documents/Details/{id:int}"
+@model DocFlowHub.Web.Pages.Documents.DetailsModel
+@{
+    ViewData["Title"] = Model.Document?.Title ?? "Document Details";
+}
+
+<div class="container-fluid">
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+    
+    @if (Model.Document != null)
+    {
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Documents</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Document.Title</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <!-- Main Document Details -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h1 class="card-title mb-0 h4">
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                @Model.Document.Title
+                            </h1>
+                            <div class="btn-group">
+                                <form method="post" asp-page-handler="Download" asp-route-versionId="@Model.Document.CurrentVersionId" class="d-inline">
+                                    <button type="submit" class="btn btn-light btn-sm">
+                                        <i class="bi bi-download"></i> Download
+                                    </button>
+                                </form>
+                                <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(Model.Document.Description))
+                        {
+                            <div class="mb-4">
+                                <h5>Description</h5>
+                                <p class="text-muted">@Model.Document.Description</p>
+                            </div>
+                        }
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-5">File Type</dt>
+                                    <dd class="col-sm-7">
+                                        <span class="badge bg-info">@Model.Document.FileType.ToUpper()</span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5">File Size</dt>
+                                    <dd class="col-sm-7">@FormatFileSize(Model.Document.FileSize)</dd>
+                                    
+                                    <dt class="col-sm-5">Created</dt>
+                                    <dd class="col-sm-7">
+                                        <span data-bs-toggle="tooltip" title="@Model.Document.CreatedAt.ToString("F")">
+                                            @Model.Document.CreatedAt.ToString("MMM dd, yyyy")
+                                        </span>
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-5">Last Modified</dt>
+                                    <dd class="col-sm-7">
+                                        @if (Model.Document.UpdatedAt != DateTime.MinValue)
+                                        {
+                                            <span data-bs-toggle="tooltip" title="@Model.Document.UpdatedAt.ToString("F")">
+                                                @Model.Document.UpdatedAt.ToString("MMM dd, yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Never</span>
+                                        }
+                                    </dd>
+                                    
+                                    <dt class="col-sm-5">Owner</dt>
+                                    <dd class="col-sm-7">
+                                        <i class="bi bi-person-circle"></i>
+                                        @Model.Document.OwnerName
+                                    </dd>
+                                    
+                                    @if (Model.Document.TeamId.HasValue)
+                                    {
+                                        <dt class="col-sm-5">Team</dt>
+                                        <dd class="col-sm-7">
+                                            <i class="bi bi-people-fill text-primary"></i>
+                                            Shared with team
+                                        </dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (Model.Categories.Any())
+                        {
+                            <div class="mt-3">
+                                <h6>Categories:</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var category in Model.Categories)
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-tag-fill"></i>
+                                            @category.Name
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Version History Sidebar -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock-history"></i>
+                            Version History
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (Model.Versions.Items.Any())
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var version in Model.Versions.Items)
+                                {
+                                    <div class="list-group-item @(version.Id == Model.Document.CurrentVersionId ? "list-group-item-primary" : "")">
+                                        <div class="d-flex w-100 justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    Version @version.VersionNumber
+                                                    @if (version.Id == Model.Document.CurrentVersionId)
+                                                    {
+                                                        <span class="badge bg-success ms-1">Current</span>
+                                                    }
+                                                </h6>
+                                                <p class="mb-1 small text-muted">
+                                                    <i class="bi bi-calendar3"></i>
+                                                    @version.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                                                </p>
+                                                @if (!string.IsNullOrEmpty(version.UserName))
+                                                {
+                                                    <p class="mb-1 small text-muted">
+                                                        <i class="bi bi-person"></i>
+                                                        @version.UserName
+                                                    </p>
+                                                }
+                                                @if (!string.IsNullOrEmpty(version.ChangeSummary))
+                                                {
+                                                    <p class="mb-1 small">@version.ChangeSummary</p>
+                                                }
+                                                <small class="text-muted">@FormatFileSize(version.FileSize)</small>
+                                            </div>
+                                            <div class="ms-2">
+                                                <form method="post" asp-page-handler="Download" asp-route-versionId="@version.Id" class="d-inline download-form">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm" title="Download this version">
+                                                        <i class="bi bi-download"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            
+                            @if (Model.Versions.TotalPages > 1)
+                            {
+                                <div class="card-footer">
+                                    <nav aria-label="Version history pagination">
+                                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                                            @if (Model.Versions.PageNumber > 1)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Versions.PageNumber - 1)">
+                                                        <i class="bi bi-chevron-left"></i>
+                                                    </a>
+                                                </li>
+                                            }
+                                            
+                                            @for (int i = Math.Max(1, Model.Versions.PageNumber - 2); i <= Math.Min(Model.Versions.TotalPages, Model.Versions.PageNumber + 2); i++)
+                                            {
+                                                <li class="page-item @(i == Model.Versions.PageNumber ? "active" : "")">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@i">@i</a>
+                                                </li>
+                                            }
+                                            
+                                            @if (Model.Versions.PageNumber < Model.Versions.TotalPages)
+                                            {
+                                                <li class="page-item">
+                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Versions.PageNumber + 1)">
+                                                        <i class="bi bi-chevron-right"></i>
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </nav>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="p-3 text-center text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                No version history available
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center">
+            <h3>Document not found</h3>
+            <p class="text-muted">The requested document could not be found or you don't have permission to view it.</p>
+            <a asp-page="./Index" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back to Documents
+            </a>
+        </div>
+    }
+</div>
+
+@functions {
+    private static string FormatFileSize(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+        int counter = 0;
+        decimal number = bytes;
+        while (Math.Round(number / 1024) >= 1)
+        {
+            number /= 1024;
+            counter++;
+        }
+        return $"{number:n1} {suffixes[counter]}";
+    }
+}
+
+@section Scripts {
+    <script>
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Add loading state to download buttons
+        document.querySelectorAll('.download-form button').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const icon = this.querySelector('i');
+                const originalText = this.innerHTML;
+                
+                // Show loading state
+                this.disabled = true;
+                icon.className = 'bi bi-download spin';
+                
+                // Reset after a delay (file download should trigger)
+                setTimeout(() => {
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }, 3000);
+            });
+        });
+    </script>
+    
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .list-group-item-primary {
+            background-color: rgba(13, 110, 253, 0.1);
+            border-color: rgba(13, 110, 253, 0.2);
+        }
+    </style>
+} 

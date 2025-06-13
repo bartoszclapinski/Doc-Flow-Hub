@@ -19,10 +19,58 @@
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ux-enhancements.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    <!-- Global Loading Overlay -->
+    <div id="global-loading" class="global-loading d-none">
+        <div class="loading-content">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Processing your request...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+        <div id="success-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="success-toast-body">
+                Operation completed successfully!
+            </div>
+        </div>
+
+        <div id="error-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-white">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="error-toast-body">
+                An error occurred. Please try again.
+            </div>
+        </div>
+
+        <div id="info-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-info text-white">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong class="me-auto">Information</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="info-toast-body">
+                Information message.
+            </div>
+        </div>
+    </div>
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
@@ -81,6 +129,89 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Global UX Enhancement Scripts -->
+    <script>
+        // Global notification system
+        window.DocFlowHub = {
+            showSuccess: function(message) {
+                document.getElementById('success-toast-body').textContent = message;
+                const toast = new bootstrap.Toast(document.getElementById('success-toast'));
+                toast.show();
+            },
+            showError: function(message) {
+                document.getElementById('error-toast-body').textContent = message;
+                const toast = new bootstrap.Toast(document.getElementById('error-toast'));
+                toast.show();
+            },
+            showInfo: function(message) {
+                document.getElementById('info-toast-body').textContent = message;
+                const toast = new bootstrap.Toast(document.getElementById('info-toast'));
+                toast.show();
+            },
+            showLoading: function() {
+                document.getElementById('global-loading').classList.remove('d-none');
+            },
+            hideLoading: function() {
+                document.getElementById('global-loading').classList.add('d-none');
+            }
+        };
+
+        // Enhanced form submission handling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add loading states to all forms
+            const forms = document.querySelectorAll('form');
+            forms.forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        // Store original content
+                        const originalText = submitBtn.innerHTML;
+                        const originalDisabled = submitBtn.disabled;
+                        
+                        // Set loading state
+                        submitBtn.disabled = true;
+                        if (submitBtn.querySelector('i')) {
+                            submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-animation"></i> Processing...';
+                        } else {
+                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+                        }
+                        
+                        // Reset after timeout (in case of errors)
+                        setTimeout(() => {
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = originalDisabled;
+                        }, 10000);
+                    }
+                });
+            });
+
+            // Enhanced button interactions
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(function(btn) {
+                // Add ripple effect on click
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    ripple.classList.add('btn-ripple');
+                    
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Identity;
 using DocFlowHub.Core.Identity;
-using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Web.Extensions;
 using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages
@@ -10,14 +12,17 @@ namespace DocFlowHub.Web.Pages
     public class IndexModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationDbContext _context;
+        private readonly IDocumentService _documentService;
+        private readonly ITeamService _teamService;
 
         public IndexModel(
             UserManager<ApplicationUser> userManager,
-            ApplicationDbContext context)
+            IDocumentService documentService,
+            ITeamService teamService)
         {
             _userManager = userManager;
-            _context = context;
+            _documentService = documentService;
+            _teamService = teamService;
         }
 
         public string? UserName { get; set; }
@@ -37,57 +42,185 @@ namespace DocFlowHub.Web.Pages
             }
 
             UserName = user.UserName;
-            TotalDocuments = 0;
-            TotalTeams = 0;
-            RecentUpdates = 0;
-            SharedDocuments = 0;
-            RecentDocuments = new List<DocumentSummary>();
-            RecentActivities = new List<ActivitySummary>();
+            var userId = User.GetUserId();
 
-            // TODO: Replace with actual data from services
-            RecentDocuments = new List<DocumentSummary>
+            if (!string.IsNullOrEmpty(userId))
             {
-                new() 
-                { 
-                    Id = 1, 
-                    Title = "Project Proposal", 
-                    Description = "Initial project proposal document",
-                    LastModified = DateTime.Now.AddDays(-1),
-                    FileType = "pdf",
-                    FileSize = 1250000 // 1.25 MB
-                },
-                new() 
-                { 
-                    Id = 2,
-                    Title = "Meeting Notes", 
-                    Description = "Notes from team meeting",
-                    LastModified = DateTime.Now.AddHours(-3),
-                    FileType = "docx",
-                    FileSize = 350000 // 350 KB
-                }
-            };
-
-            RecentActivities = new List<ActivitySummary>
-            {
-                new() 
-                { 
-                    Title = "Document Updated", 
-                    Description = "Project proposal was updated",
-                    Timestamp = DateTime.Now.AddDays(-1),
-                    UserId = "user-1",
-                    UserName = "John Doe"
-                },
-                new() 
-                { 
-                    Title = "New Comment", 
-                    Description = "Comment added to meeting notes",
-                    Timestamp = DateTime.Now.AddHours(-5),
-                    UserId = "user-2",
-                    UserName = "Jane Smith"
-                }
-            };
+                await LoadUserStatistics(userId);
+                await LoadRecentDocuments(userId);
+                await LoadRecentActivities(userId);
+            }
 
             return Page();
+        }
+
+        private async Task LoadUserStatistics(string userId)
+        {
+            try
+            {
+                // Get user's documents using GetDocumentsAsync with filter
+                var userFilter = new DocumentFilter
+                {
+                    OwnerId = userId,
+                    PageNumber = 1,
+                    PageSize = 1000, // Get all documents for counting
+                    IncludeDeleted = false
+                };
+
+                var userDocuments = await _documentService.GetDocumentsAsync(userFilter);
+                if (userDocuments.Succeeded)
+                {
+                    TotalDocuments = userDocuments.Data.TotalItems;
+
+                    // Count recent updates (documents modified in last 7 days)
+                    RecentUpdates = userDocuments.Data.Items.Count(d => 
+                        d.UpdatedAt >= DateTime.Now.AddDays(-7) ||
+                        (d.UpdatedAt == DateTime.MinValue && d.CreatedAt >= DateTime.Now.AddDays(-7)));
+
+                    // Get shared documents (documents with TeamId)
+                    SharedDocuments = userDocuments.Data.Items.Count(d => d.TeamId.HasValue);
+                }
+
+                // Get user's teams count
+                var userTeams = await _teamService.GetUserTeamsAsync(userId);
+                if (userTeams.Succeeded)
+                {
+                    TotalTeams = userTeams.Data?.Count() ?? 0;
+                }
+            }
+            catch (Exception)
+            {
+                // Log error and set default values
+                TotalDocuments = 0;
+                TotalTeams = 0;
+                RecentUpdates = 0;
+                SharedDocuments = 0;
+            }
+        }
+
+        private async Task LoadRecentDocuments(string userId)
+        {
+            try
+            {
+                var filter = new DocumentFilter
+                {
+                    OwnerId = userId,
+                    PageNumber = 1,
+                    PageSize = 5, // Get latest 5 documents
+                    IncludeDeleted = false
+                };
+
+                var recentDocs = await _documentService.GetDocumentsAsync(filter);
+                
+                if (recentDocs.Succeeded)
+                {
+                    // Sort by UpdatedAt descending to get most recent first
+                    RecentDocuments = recentDocs.Data.Items
+                        .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
+                        .Take(5)
+                        .Select(d => new DocumentSummary
+                        {
+                            Id = d.Id,
+                            Title = d.Title,
+                            Description = d.Description ?? "",
+                            LastModified = d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt,
+                            FileType = d.FileType,
+                            FileSize = d.FileSize
+                        }).ToList();
+                }
+            }
+            catch (Exception)
+            {
+                // Log error and set empty list
+                RecentDocuments = new List<DocumentSummary>();
+            }
+        }
+
+        private async Task LoadRecentActivities(string userId)
+        {
+            try
+            {
+                // Generate activity feed based on recent document changes
+                var filter = new DocumentFilter
+                {
+                    OwnerId = userId,
+                    PageNumber = 1,
+                    PageSize = 20, // Get more documents to analyze for activities
+                    IncludeDeleted = false
+                };
+
+                var recentDocs = await _documentService.GetDocumentsAsync(filter);
+                var activities = new List<ActivitySummary>();
+
+                if (recentDocs.Succeeded)
+                {
+                    foreach (var doc in recentDocs.Data.Items.Take(10))
+                    {
+                        // Check if document was updated recently
+                        if (doc.UpdatedAt != DateTime.MinValue && doc.UpdatedAt >= DateTime.Now.AddDays(-30))
+                        {
+                            activities.Add(new ActivitySummary
+                            {
+                                Title = "Document Updated",
+                                Description = $"{doc.Title} was updated",
+                                Timestamp = doc.UpdatedAt,
+                                UserId = userId,
+                                UserName = UserName ?? "Unknown"
+                            });
+                        }
+                        else if (doc.CreatedAt >= DateTime.Now.AddDays(-30))
+                        {
+                            activities.Add(new ActivitySummary
+                            {
+                                Title = "Document Created",
+                                Description = $"{doc.Title} was uploaded",
+                                Timestamp = doc.CreatedAt,
+                                UserId = userId,
+                                UserName = UserName ?? "Unknown"
+                            });
+                        }
+
+                        // Add version-related activities if document has multiple versions
+                        if (doc.CurrentVersionId.HasValue)
+                        {
+                            try
+                            {
+                                var versions = await _documentService.GetDocumentVersionsAsync(doc.Id, new DocumentFilter { PageSize = 5 });
+                                if (versions.Succeeded && versions.Data.TotalItems > 1)
+                                {
+                                    var latestVersion = versions.Data.Items.FirstOrDefault();
+                                    if (latestVersion != null && latestVersion.CreatedAt >= DateTime.Now.AddDays(-30))
+                                    {
+                                        activities.Add(new ActivitySummary
+                                        {
+                                            Title = "New Version Uploaded",
+                                            Description = $"New version of {doc.Title} was uploaded",
+                                            Timestamp = latestVersion.CreatedAt,
+                                            UserId = userId,
+                                            UserName = UserName ?? "Unknown"
+                                        });
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // Skip version info if error occurs
+                            }
+                        }
+                    }
+                }
+
+                // Sort activities by timestamp and take the most recent ones
+                RecentActivities = activities
+                    .OrderByDescending(a => a.Timestamp)
+                    .Take(5)
+                    .ToList();
+            }
+            catch (Exception)
+            {
+                // Log error and set empty list
+                RecentActivities = new List<ActivitySummary>();
+            }
         }
     }
 
