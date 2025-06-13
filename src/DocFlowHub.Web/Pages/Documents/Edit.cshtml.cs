@@ -70,8 +70,9 @@ namespace DocFlowHub.Web.Pages.Documents
 
             Document = documentResult.Data;
 
-            // Verify user has permission to edit
-            if (Document.OwnerId != userId && Document.TeamId == null)
+            // Verify user has permission to edit using secure method
+            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
+            if (!accessResult.Succeeded || !accessResult.Data)
             {
                 return Forbid();
             }
@@ -125,8 +126,9 @@ namespace DocFlowHub.Web.Pages.Documents
                 return Page();
             }
 
-            var document = documentResult.Data;
-            if (document.OwnerId != userId && document.TeamId == null)
+            // Verify user has access to this document using secure method
+            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
+            if (!accessResult.Succeeded || !accessResult.Data)
             {
                 return Forbid();
             }
@@ -195,8 +197,9 @@ namespace DocFlowHub.Web.Pages.Documents
                 return Page();
             }
 
-            var document = documentResult.Data;
-            if (document.OwnerId != userId && document.TeamId == null)
+            // Verify user has access to this document using secure method
+            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
+            if (!accessResult.Succeeded || !accessResult.Data)
             {
                 return Forbid();
             }

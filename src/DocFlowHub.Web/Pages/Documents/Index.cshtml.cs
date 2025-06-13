@@ -5,6 +5,8 @@ using DocFlowHub.Core.Models;
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Documents.Dto;
+using DocFlowHub.Core.Models.Teams;
+using DocFlowHub.Core.Models.Teams.Dto;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using System.Collections.Generic;
@@ -17,17 +19,21 @@ public class IndexModel : PageModel
 {
     private readonly IDocumentService _documentService;
     private readonly IDocumentCategoryService _categoryService;
+    private readonly ITeamService _teamService;
 
     public IndexModel(
         IDocumentService documentService,
-        IDocumentCategoryService categoryService)
+        IDocumentCategoryService categoryService,
+        ITeamService teamService)
     {
         _documentService = documentService;
         _categoryService = categoryService;
+        _teamService = teamService;
     }
 
     public PagedResult<DocumentDto> Documents { get; set; } = new();
     public IEnumerable<DocumentCategoryDto> Categories { get; set; } = new List<DocumentCategoryDto>();
+    public IEnumerable<TeamDto> UserTeams { get; set; } = new List<TeamDto>();
     public string? ErrorMessage { get; set; }
 
     [BindProperty(SupportsGet = true)]
@@ -35,6 +41,12 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         var categoriesResult = await _categoryService.GetAllCategoriesAsync();
         if (!categoriesResult.Succeeded)
         {
@@ -43,7 +55,15 @@ public class IndexModel : PageModel
         }
         Categories = categoriesResult.Data;
 
-        var documentsResult = await _documentService.GetDocumentsAsync(Filter);
+        // Load user's teams for team filter
+        var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
+        if (teamsResult.Succeeded)
+        {
+            UserTeams = teamsResult.Data.Items;
+        }
+
+        // Use secure method that only returns documents the user has access to
+        var documentsResult = await _documentService.GetDocumentsForUserAsync(userId, Filter);
         if (!documentsResult.Succeeded)
         {
             ErrorMessage = documentsResult.Error;
@@ -72,8 +92,9 @@ public class IndexModel : PageModel
 
         var document = documentResult.Data;
 
-        // Verify user has access to this document
-        if (document.OwnerId != userId && document.TeamId == null)
+        // Verify user has access to this document using secure method
+        var accessResult = await _documentService.CanUserAccessDocumentAsync(documentId, userId);
+        if (!accessResult.Succeeded || !accessResult.Data)
         {
             return Forbid();
         }

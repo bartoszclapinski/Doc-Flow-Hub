@@ -1,0 +1,197 @@
+@page
+@model DocFlowHub.Web.Pages.Teams.CreateModel
+@{
+    ViewData["Title"] = "Create Team";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Create New Team
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @Model.ErrorMessage
+                        </div>
+                    }
+
+                    <form method="post" id="createTeamForm">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                        
+                        <div class="mb-4">
+                            <label asp-for="Name" class="form-label">
+                                <i class="bi bi-people me-1"></i>
+                                Team Name <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Name" class="form-control" placeholder="Enter team name" maxlength="100" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                            <div class="form-text">
+                                Choose a descriptive name for your team (3-100 characters)
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label">
+                                <i class="bi bi-card-text me-1"></i>
+                                Description
+                            </label>
+                            <textarea asp-for="Description" class="form-control" rows="4" 
+                                      placeholder="Describe the purpose and goals of your team..." maxlength="500"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                            <div class="form-text">
+                                Optional description to help team members understand the team's purpose (max 500 characters)
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="bg-light p-3 rounded">
+                                <h6 class="mb-2">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Team Information
+                                </h6>
+                                <ul class="mb-0 small text-muted">
+                                    <li>You will be the team owner and can manage all team settings</li>
+                                    <li>You can invite members by email after creating the team</li>
+                                    <li>Team members can view and collaborate on shared documents</li>
+                                    <li>You can modify team details and member permissions anytime</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="./Index" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Back to Teams
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span class="btn-text">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    Create Team
+                                </span>
+                                <span class="btn-loading d-none">
+                                    <i class="bi bi-arrow-clockwise spin me-1"></i>
+                                    Creating...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('createTeamForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoading = submitBtn.querySelector('.btn-loading');
+            const nameInput = document.querySelector('input[name="Name"]');
+            const descInput = document.querySelector('textarea[name="Description"]');
+
+            // Character counter for description
+            if (descInput) {
+                const maxLength = 500;
+                const counter = document.createElement('div');
+                counter.className = 'form-text text-end';
+                counter.innerHTML = `<span id="charCount">0</span>/${maxLength} characters`;
+                descInput.parentNode.appendChild(counter);
+
+                const charCountSpan = document.getElementById('charCount');
+                
+                descInput.addEventListener('input', function() {
+                    const currentLength = this.value.length;
+                    charCountSpan.textContent = currentLength;
+                    
+                    if (currentLength > maxLength * 0.9) {
+                        charCountSpan.parentNode.classList.add('text-warning');
+                    } else {
+                        charCountSpan.parentNode.classList.remove('text-warning');
+                    }
+                });
+
+                // Initialize counter
+                descInput.dispatchEvent(new Event('input'));
+            }
+
+            // Form submission loading state
+            form.addEventListener('submit', function() {
+                if (form.checkValidity()) {
+                    submitBtn.disabled = true;
+                    btnText.classList.add('d-none');
+                    btnLoading.classList.remove('d-none');
+                    
+                    // Re-enable after timeout as fallback
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        btnText.classList.remove('d-none');
+                        btnLoading.classList.add('d-none');
+                    }, 10000);
+                }
+            });
+
+            // Auto-focus on team name input
+            if (nameInput) {
+                nameInput.focus();
+            }
+
+            // Real-time validation feedback
+            nameInput?.addEventListener('input', function() {
+                const value = this.value.trim();
+                const isValid = value.length >= 3 && value.length <= 100;
+                
+                this.classList.toggle('is-valid', isValid && value.length > 0);
+                this.classList.toggle('is-invalid', !isValid && value.length > 0);
+            });
+        });
+    </script>
+    
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        }
+        
+        .bg-light {
+            background-color: #f8f9fa !important;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+} 
