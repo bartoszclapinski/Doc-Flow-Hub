@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -55,6 +56,13 @@ public class DetailsModel : PageModel
         }
 
         Team = teamResult.Data;
+
+        // Authorization check: Verify user is team owner or member
+        var hasAccess = await CanUserAccessTeamAsync(userId, Id);
+        if (!hasAccess)
+        {
+            return Forbid();
+        }
 
         // Load team members
         var membersResult = await _teamService.GetTeamMembersAsync(Id);
@@ -163,5 +171,24 @@ public class DetailsModel : PageModel
         // Note: We'll need to add this method to ITeamService interface
         TempData["InfoMessage"] = "Role management will be implemented in the next update.";
         return RedirectToPage("Details", new { id = Id });
+    }
+
+    private async Task<bool> CanUserAccessTeamAsync(string userId, int teamId)
+    {
+        // Check if user is team owner
+        var teamResult = await _teamService.GetTeamByIdAsync(teamId);
+        if (teamResult.Succeeded && teamResult.Data.OwnerId == userId)
+        {
+            return true;
+        }
+
+        // Check if user is team member
+        var membersResult = await _teamService.GetTeamMembersAsync(teamId);
+        if (membersResult.Succeeded)
+        {
+            return membersResult.Data.Items.Any(m => m.UserId == userId);
+        }
+
+        return false;
     }
 } 
