@@ -175,6 +175,7 @@ namespace DocFlowHub.Web.Pages.Documents
             if (!documentResult.Succeeded)
             {
                 ErrorMessage = documentResult.Error;
+                await LoadPageDataAsync(userId);
                 return Page();
             }
 
@@ -182,12 +183,23 @@ namespace DocFlowHub.Web.Pages.Documents
             if (document.OwnerId != userId)
             {
                 ErrorMessage = "Only document owners can share documents with teams";
+                await LoadPageDataAsync(userId);
                 return Page();
             }
 
             if (!ShareWithTeamId.HasValue)
             {
                 ErrorMessage = "Please select a team to share with";
+                await LoadPageDataAsync(userId);
+                return Page();
+            }
+
+            // Validate that the user is a member of the selected team
+            var userTeamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
+            if (!userTeamsResult.Succeeded || !userTeamsResult.Data.Items.Any(t => t.Id == ShareWithTeamId.Value))
+            {
+                ErrorMessage = "You can only share documents with teams you are a member of";
+                await LoadPageDataAsync(userId);
                 return Page();
             }
 
@@ -217,6 +229,7 @@ namespace DocFlowHub.Web.Pages.Documents
             if (!documentResult.Succeeded)
             {
                 ErrorMessage = documentResult.Error;
+                await LoadPageDataAsync(userId);
                 return Page();
             }
 
@@ -224,6 +237,7 @@ namespace DocFlowHub.Web.Pages.Documents
             if (document.OwnerId != userId)
             {
                 ErrorMessage = "Only document owners can unshare documents from teams";
+                await LoadPageDataAsync(userId);
                 return Page();
             }
 
@@ -238,6 +252,42 @@ namespace DocFlowHub.Web.Pages.Documents
             }
 
             return RedirectToPage(new { id = Id });
+        }
+
+        private async Task LoadPageDataAsync(string userId)
+        {
+            // Load document data
+            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
+            if (documentResult.Succeeded)
+            {
+                Document = documentResult.Data;
+            }
+
+            // Load version history
+            var versionsResult = await _documentService.GetDocumentVersionsAsync(Id, new DocumentFilter 
+            { 
+                PageNumber = PageNumber, 
+                PageSize = 10 
+            });
+            
+            if (versionsResult.Succeeded)
+            {
+                Versions = versionsResult.Data;
+            }
+
+            // Load categories
+            var categoriesResult = await _categoryService.GetDocumentCategoriesAsync(Id);
+            if (categoriesResult.Succeeded)
+            {
+                Categories = categoriesResult.Data;
+            }
+
+            // Load user teams for sharing
+            var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
+            if (teamsResult.Succeeded)
+            {
+                UserTeams = teamsResult.Data.Items;
+            }
         }
     }
 } 

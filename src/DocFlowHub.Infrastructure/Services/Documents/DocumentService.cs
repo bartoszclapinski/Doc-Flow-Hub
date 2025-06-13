@@ -188,9 +188,9 @@ public class DocumentService : IDocumentService
 
         var totalItems = await query.CountAsync();
         var items = await query
+            .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
             .Skip((filter.PageNumber - 1) * filter.PageSize)
             .Take(filter.PageSize)
-            .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
             .ToListAsync();
 
         return ServiceResult<PagedResult<DocumentDto>>.Success(new PagedResult<DocumentDto>
