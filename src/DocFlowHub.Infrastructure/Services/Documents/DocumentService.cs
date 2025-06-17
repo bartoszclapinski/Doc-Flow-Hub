@@ -186,9 +186,11 @@ public class DocumentService : IDocumentService
             query = query.Where(d => !d.IsDeleted);
         }
 
+        // Apply sorting
+        query = ApplySorting(query, filter.SortBy, filter.SortDirection);
+
         var totalItems = await query.CountAsync();
         var items = await query
-            .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
             .Skip((filter.PageNumber - 1) * filter.PageSize)
             .Take(filter.PageSize)
             .ToListAsync();
@@ -526,5 +528,24 @@ public class DocumentService : IDocumentService
             await transaction.RollbackAsync();
             return ServiceResult<DocumentDto>.Failure($"Error uploading new version: {ex.Message}");
         }
+    }
+
+    private static IQueryable<Document> ApplySorting(IQueryable<Document> query, string? sortBy, string? sortDirection)
+    {
+        var isDescending = sortDirection?.ToLower() == "desc";
+
+        return sortBy?.ToLower() switch
+        {
+            "title" => isDescending 
+                ? query.OrderByDescending(d => d.Title)
+                : query.OrderBy(d => d.Title),
+                            "updatedat" => isDescending 
+                    ? query.OrderByDescending(d => d.UpdatedAt ?? d.CreatedAt)
+                    : query.OrderBy(d => d.UpdatedAt ?? d.CreatedAt),
+            "filesize" => isDescending 
+                ? query.OrderByDescending(d => d.FileSize)
+                : query.OrderBy(d => d.FileSize),
+                            _ => query.OrderByDescending(d => d.UpdatedAt ?? d.CreatedAt) // Default sorting
+        };
     }
 } 

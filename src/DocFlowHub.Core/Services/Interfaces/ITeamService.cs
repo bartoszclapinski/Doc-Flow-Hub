@@ -16,5 +16,6 @@ public interface ITeamService
     Task<ServiceResult<PagedResult<TeamDto>>> GetUserTeamsAsync(string userId, TeamFilter filter);
     Task<ServiceResult> AddMemberToTeamAsync(int teamId, string userId, string addedByUserId);
     Task<ServiceResult> RemoveMemberFromTeamAsync(int teamId, string userId, string removedByUserId);
+    Task<ServiceResult> UpdateMemberRoleAsync(int teamId, string userId, TeamRole newRole, string updatedByUserId);
     Task<ServiceResult<PagedResult<TeamMemberDto>>> GetTeamMembersAsync(int teamId);
 } 

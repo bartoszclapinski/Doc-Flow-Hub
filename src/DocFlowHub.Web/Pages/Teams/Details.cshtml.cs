@@ -168,8 +168,17 @@ public class DetailsModel : PageModel
             return RedirectToPage("Details", new { id = Id });
         }
 
-        // Note: We'll need to add this method to ITeamService interface
-        TempData["InfoMessage"] = "Role management will be implemented in the next update.";
+        var result = await _teamService.UpdateMemberRoleAsync(Id, memberUserId, newRole, userId);
+        if (result.Succeeded)
+        {
+            var roleText = newRole == TeamRole.Admin ? "Admin" : "Member";
+            TempData["SuccessMessage"] = $"Member role updated to {roleText} successfully!";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = result.Error;
+        }
+
         return RedirectToPage("Details", new { id = Id });
     }
 

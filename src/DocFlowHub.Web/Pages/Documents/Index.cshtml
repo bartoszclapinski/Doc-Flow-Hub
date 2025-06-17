@@ -38,196 +38,262 @@
         </div>
     }
 
-    <div class="row">
-        <!-- Filters Sidebar -->
-        <div class="col-lg-3 col-md-4 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-funnel me-2 text-primary"></i>
-                        Filters
-                    </h5>
-                </div>
+    <!-- Filters Section - Top Layout -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm azure-filter-panel">
                 <div class="card-body">
                     <form method="get">
-                        <!-- Search -->
-                        <div class="mb-4">
-                            <label asp-for="Filter.SearchTerm" class="form-label fw-bold">
-                                <i class="bi bi-search me-1"></i>Search
-                            </label>
-                            <input asp-for="Filter.SearchTerm" class="form-control" 
-                                   placeholder="Search documents...">
-                        </div>
-
-                        <!-- Team Filter -->
-                        @if (Model.UserTeams.Any())
-                        {
-                            <div class="mb-4">
-                                <label asp-for="Filter.TeamId" class="form-label fw-bold">
-                                    <i class="bi bi-people me-1"></i>Team
+                        <div class="row g-3 align-items-end">
+                            <!-- Search -->
+                            <div class="col-md-4">
+                                <label asp-for="Filter.SearchTerm" class="form-label small fw-semibold text-muted">
+                                    <i class="bi bi-search me-1"></i>Search Documents
                                 </label>
-                                <select asp-for="Filter.TeamId" class="form-select">
-                                    <option value="">All Documents</option>
-                                    <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
-                                    @foreach (var team in Model.UserTeams)
-                                    {
-                                        <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
-                                            @team.Name (@team.MemberCount members)
-                                        </option>
-                                    }
-                                </select>
+                                <input asp-for="Filter.SearchTerm" class="form-control" 
+                                       placeholder="Search by title, description...">
                             </div>
-                        }
 
-                        <!-- Categories -->
-                        @if (Model.Categories.Any())
-                        {
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-tags me-1"></i>Categories
-                                </label>
-                                @foreach (var category in Model.Categories)
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
-                                               name="Filter.CategoryId" value="@category.Id"
-                                               checked="@(Model.Filter.CategoryId == category.Id)"
-                                               id="category-@category.Id">
-                                        <label class="form-check-label" for="category-@category.Id">
-                                            @category.Name
-                                        </label>
-                                    </div>
-                                }
+                            <!-- Team Filter -->
+                            @if (Model.UserTeams != null && Model.UserTeams.Any())
+                            {
+                                <div class="col-md-3">
+                                    <label asp-for="Filter.TeamId" class="form-label small fw-semibold text-muted">
+                                        <i class="bi bi-building me-1"></i>Workspace
+                                    </label>
+                                    <select asp-for="Filter.TeamId" class="form-select">
+                                        <option value="">All Documents</option>
+                                        <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
+                                        @foreach (var team in Model.UserTeams)
+                                        {
+                                            <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
+                                                @team.Name (@team.MemberCount members)
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            <!-- Categories -->
+                            @if (Model.Categories != null && Model.Categories.Any())
+                            {
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold text-muted">
+                                        <i class="bi bi-tags me-1"></i>Category
+                                    </label>
+                                    <select asp-for="Filter.CategoryId" class="form-select">
+                                        <option value="">All Categories</option>
+                                        @foreach (var category in Model.Categories)
+                                        {
+                                            <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">
+                                                @category.Name
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            <!-- Filter Actions -->
+                            <div class="col-md-2">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">
+                                        <i class="bi bi-search me-1"></i>Apply
+                                    </button>
+                                    <a asp-page="./Index" class="btn btn-outline-secondary flex-fill">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                    </a>
+                                </div>
                             </div>
-                        }
-
-                        <!-- Filter Actions -->
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-1"></i>Apply Filters
-                            </button>
-                            <a asp-page="./Index" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-clockwise me-1"></i>Clear Filters
-                            </a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Documents Grid -->
-        <div class="col-lg-9 col-md-8">
+    <!-- Documents List -->
+    <div class="row">
+        <div class="col-12">
             @if (!Model.Documents.Items.Any())
             {
-                <div class="text-center py-5">
-                    <div class="empty-state">
-                        <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
-                        <h5 class="text-muted mt-3">No documents found</h5>
-                        <p class="text-muted">Try adjusting your filters or upload your first document</p>
-                        <a asp-page="./Upload" class="btn btn-primary">
-                            <i class="bi bi-cloud-upload me-1"></i>Upload Document
-                        </a>
+                <div class="azure-empty-state text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
                     </div>
+                    <h5 class="text-muted">No documents found</h5>
+                    <p class="text-muted mb-4">Try adjusting your filters or upload your first document</p>
+                    <a asp-page="./Upload" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-1"></i>Upload Document
+                    </a>
                 </div>
             }
             else
             {
-                <!-- Document Cards -->
-                <div class="row row-cols-1 row-cols-lg-2 row-cols-xl-3 g-4">
-                    @foreach (var document in Model.Documents.Items)
-                    {
-                        <div class="col">
-                            <div class="card h-100 border-0 shadow-sm document-card">
-                                <div class="card-body">
-                                    <!-- Document Header -->
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="card-title mb-0">
-                                            <i class="bi @GetFileIcon(document.FileType) text-primary me-2"></i>
-                                            @document.Title
-                                        </h5>
-                                        @if (!string.IsNullOrEmpty(document.TeamName))
-                                        {
-                                            <span class="badge bg-success-subtle text-success" title="Shared with team: @document.TeamName">
-                                                <i class="bi bi-people me-1"></i>Team
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary-subtle text-secondary" title="Private document">
-                                                <i class="bi bi-lock me-1"></i>Private
-                                            </span>
-                                        }
-                                    </div>
+                                 <!-- Results Info -->
+                 <div class="d-flex justify-content-between align-items-center mb-3">
+                     <div class="text-muted small">
+                         Showing @Model.Documents.Items.Count() of @Model.Documents.TotalItems documents
+                     </div>
+                     <div class="text-muted small">
+                         Page @Model.Documents.PageNumber of @Model.Documents.TotalPages
+                     </div>
+                 </div>
 
-                                    <!-- Description -->
-                                    @if (!string.IsNullOrEmpty(document.Description))
+                <!-- Documents Table -->
+                <div class="card border-0 shadow-sm azure-table-container">
+                    <table class="table table-hover azure-table mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable" style="width: 45%;">
+                                <a href="@Model.GetSortUrl("Title", ViewData["TitleSortDirection"]?.ToString() ?? "asc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-file-earmark me-1"></i>Document
+                                    @if (ViewData["CurrentSort"]?.ToString() == "Title")
                                     {
-                                        <p class="card-text text-muted small mb-3">
-                                            @(document.Description.Length > 100 ? document.Description.Substring(0, 100) + "..." : document.Description)
-                                        </p>
+                                        <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
                                     }
-
-                                    <!-- Categories -->
-                                    @if (document.Categories.Any())
+                                </a>
+                            </th>
+                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase d-none d-md-table-cell" style="width: 15%;">
+                                        <i class="bi bi-building me-1"></i>Workspace
+                                    </th>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-lg-table-cell" style="width: 20%;">
+                                <a href="@Model.GetSortUrl("UpdatedAt", ViewData["UpdatedAtSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-clock me-1"></i>Modified
+                                    @if (ViewData["CurrentSort"]?.ToString() == "UpdatedAt")
                                     {
-                                        <div class="mb-3">
-                                            @foreach (var category in document.Categories.Take(3))
-                                            {
-                                                <span class="badge bg-primary-subtle text-primary me-1">@category.Name</span>
-                                            }
-                                            @if (document.Categories.Count > 3)
-                                            {
-                                                <span class="badge bg-light text-muted">+@(document.Categories.Count - 3) more</span>
-                                            }
-                                        </div>
+                                        <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
                                     }
+                                </a>
+                            </th>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-xl-table-cell" style="width: 10%;">
+                                <a href="@Model.GetSortUrl("FileSize", ViewData["FileSizeSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-hdd me-1"></i>Size
+                                    @if (ViewData["CurrentSort"]?.ToString() == "FileSize")
+                                    {
+                                        <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                    }
+                                </a>
+                            </th>
+                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase text-end" style="width: 10%;">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var document in Model.Documents.Items)
+                                {
+                                    <tr class="azure-table-row">
+                                        <!-- Document Info -->
+                                        <td class="border-0 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3 flex-shrink-0">
+                                                    <i class="bi @GetFileIcon(document.FileType) text-primary fs-4"></i>
+                                                </div>
+                                                <div class="flex-grow-1 min-width-0">
+                                                    <div class="fw-semibold text-dark mb-1 text-truncate">@document.Title</div>
+                                                    @if (!string.IsNullOrEmpty(document.Description))
+                                                    {
+                                                        <div class="text-muted small text-truncate">
+                                                            @(document.Description.Length > 80 ? document.Description.Substring(0, 80) + "..." : document.Description)
+                                                        </div>
+                                                    }
+                                                    <!-- Mobile-only info -->
+                                                    <div class="d-md-none mt-1">
+                                                        @if (!string.IsNullOrEmpty(document.TeamName))
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success me-2">
+                                                                <i class="bi bi-people me-1"></i>@document.TeamName
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary-subtle text-secondary me-2">
+                                                                <i class="bi bi-lock me-1"></i>Private
+                                                            </span>
+                                                        }
+                                                        <small class="text-muted">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd"))</small>
+                                                    </div>
+                                                    @if (document.Categories != null && document.Categories.Any())
+                                                    {
+                                                        <div class="mt-1">
+                                                            @foreach (var category in document.Categories.Take(2))
+                                                            {
+                                                                <span class="badge bg-primary-subtle text-primary me-1 small">@category.Name</span>
+                                                            }
+                                                            @if (document.Categories.Count > 2)
+                                                            {
+                                                                <span class="badge bg-light text-muted small">+@(document.Categories.Count - 2)</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
 
-                                    <!-- Metadata -->
-                                    <div class="mb-3">
-                                        <small class="text-muted d-block">
-                                            <i class="bi bi-calendar3 me-1"></i>
-                                            Updated: @document.UpdatedAt.ToString("MMM dd, yyyy")
-                                        </small>
-                                        <small class="text-muted d-block">
-                                            <i class="bi bi-file-earmark me-1"></i>
-                                            @document.FileType.ToUpper() • @FormatFileSize(document.FileSize)
-                                        </small>
-                                        <small class="text-muted d-block">
-                                            <i class="bi bi-person me-1"></i>
-                                            Owner: @document.OwnerName
-                                        </small>
-                                    </div>
-                                </div>
-
-                                <!-- Card Footer with Actions -->
-                                <div class="card-footer bg-transparent border-0 pt-0">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group" role="group">
-                                            <a asp-page="./Details" asp-route-id="@document.Id" 
-                                               class="btn btn-sm btn-outline-primary" title="View details and version history">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            @if (document.OwnerId == User.GetUserId())
+                                        <!-- Workspace -->
+                                        <td class="border-0 py-3 d-none d-md-table-cell">
+                                            @if (!string.IsNullOrEmpty(document.TeamName))
                                             {
-                                                <a asp-page="./Edit" asp-route-id="@document.Id" 
-                                                   class="btn btn-sm btn-outline-secondary" title="Edit document">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
+                                                <span class="badge bg-success-subtle text-success workspace-badge" title="@document.TeamName">
+                                                    <i class="bi bi-people me-1"></i>@(document.TeamName.Length > 12 ? document.TeamName.Substring(0, 12) + "..." : document.TeamName)
+                                                </span>
                                             }
-                                        </div>
-                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline download-form">
-                                            <button type="submit" class="btn btn-sm btn-success loading-btn" title="Download current version">
-                                                <span class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-                                                <i class="bi bi-download"></i>
-                                                <span class="btn-text ms-1 d-none d-md-inline">Download</span>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary">
+                                                    <i class="bi bi-lock me-1"></i>Private
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <!-- Modified -->
+                                        <td class="border-0 py-3 d-none d-lg-table-cell">
+                                            <div class="text-muted small">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</div>
+                                            <div class="text-muted small">by @document.OwnerName</div>
+                                        </td>
+
+                                        <!-- Size -->
+                                        <td class="border-0 py-3 d-none d-xl-table-cell">
+                                            <div class="text-muted small">@FormatFileSize(document.FileSize)</div>
+                                            <div class="text-muted small">@document.FileType.ToUpper()</div>
+                                        </td>
+
+                                        <!-- Actions -->
+                                        <td class="border-0 py-3 text-end">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
+                                                            <i class="bi bi-eye me-2"></i>View Details
+                                                        </a>
+                                                    </li>
+                                                    @if (document.OwnerId == User.GetUserId())
+                                                    {
+                                                        <li>
+                                                            <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
+                                                                <i class="bi bi-pencil me-2"></i>Edit
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
+                                                            <button type="submit" class="dropdown-item text-success">
+                                                                <i class="bi bi-download me-2"></i>Download
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                                                         </tbody>
+                         </table>
+                 </div>
 
                 <!-- Pagination -->
                 @if (Model.Documents.TotalPages > 1)
@@ -299,75 +365,129 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Enhanced download button functionality
-            document.querySelectorAll('.download-form .loading-btn').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    const spinner = this.querySelector('.spinner-border');
-                    const icon = this.querySelector('.bi-download');
-                    const text = this.querySelector('.btn-text');
-                    
-                    // Show loading state
-                    this.disabled = true;
-                    spinner.classList.remove('d-none');
-                    icon.classList.add('d-none');
-                    if (text) text.textContent = 'Downloading...';
-                    
-                    // Reset after delay
-                    setTimeout(() => {
-                        this.disabled = false;
-                        spinner.classList.add('d-none');
-                        icon.classList.remove('d-none');
-                        if (text) text.textContent = 'Download';
-                    }, 3000);
-                });
-            });
-            
-            // Enhanced card hover effects
-            document.querySelectorAll('.document-card').forEach(function(card) {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-4px)';
-                    this.style.transition = 'all 0.3s ease';
-                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            // Enhanced table row hover effects
+            document.querySelectorAll('.azure-table-row').forEach(function(row) {
+                row.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f8f9fa';
+                    this.style.transition = 'background-color 0.15s ease';
                 });
                 
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '';
+                row.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '';
                 });
             });
         });
     </script>
     
     <style>
-        .document-card {
-            transition: all 0.3s ease;
-            border-radius: 12px;
+        .azure-filter-panel {
+            border-radius: 8px;
+            background: #ffffff;
         }
         
-        .document-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+                 .azure-table-container {
+             border-radius: 8px;
+             overflow: visible;
+         }
+         
+         .azure-table {
+             font-size: 0.9rem;
+             table-layout: fixed;
+             width: 100%;
+         }
+        
+        .azure-table thead th {
+            background-color: #f8f9fa !important;
+            font-weight: 600;
+            padding: 12px 16px;
         }
         
-        .empty-state {
-            opacity: 0.8;
+        .azure-table tbody td {
+            padding: 16px;
+            vertical-align: middle;
         }
         
-        .badge {
-            font-size: 0.75rem;
+        .azure-table-row:hover {
+            background-color: #f8f9fa !important;
         }
         
-        .btn-group .btn {
-            border-radius: 6px !important;
+        .azure-empty-state {
+            padding: 3rem 1rem;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
         }
         
         .page-transition {
-            animation: fadeIn 0.5s ease-in;
+            animation: fadeIn 0.3s ease-in;
         }
         
         @@keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        .dropdown-toggle::after {
+            display: none;
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .form-check-sm .form-check-input {
+            margin-top: 0.125rem;
+        }
+        
+                 .btn-sm {
+             font-size: 0.8rem;
+         }
+         
+         .min-width-0 {
+             min-width: 0;
+         }
+         
+         .text-truncate {
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+         }
+         
+         .azure-table td {
+             position: relative;
+         }
+         
+         .dropdown-menu {
+             z-index: 1050;
+         }
+         
+         .sortable a {
+             cursor: pointer;
+         }
+         
+         .sortable a:hover {
+             color: #495057 !important;
+         }
+         
+         .workspace-badge {
+             max-width: 120px;
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+             display: inline-block;
+         }
+         
+         .azure-filter-panel .form-control,
+         .azure-filter-panel .form-select {
+             border: 1px solid #ced4da;
+             border-radius: 6px;
+         }
+         
+         .azure-filter-panel .form-control:focus,
+         .azure-filter-panel .form-select:focus {
+             border-color: #86b7fe;
+             box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
+         }
     </style>
 } 

@@ -164,10 +164,16 @@
                                                     @(member.UserEmail ?? "Unknown")
                                                 </p>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    @if (member.Role == TeamRole.Admin)
+                                                    @if (member.UserId == Model.Team.OwnerId)
+                                                    {
+                                                        <span class="badge bg-warning">
+                                                            <i class="bi bi-crown-fill me-1"></i>Owner
+                                                        </span>
+                                                    }
+                                                    else if (member.Role == TeamRole.Admin)
                                                     {
                                                         <span class="badge bg-success">
-                                                            <i class="bi bi-star-fill me-1"></i>Owner
+                                                            <i class="bi bi-star-fill me-1"></i>Admin
                                                         </span>
                                                     }
                                                     else
@@ -193,6 +199,17 @@
                                                                 <button type="submit" class="btn btn-outline-success btn-sm" 
                                                                         title="Promote to Admin" onclick="return confirm('Promote this member to Admin?')">
                                                                     <i class="bi bi-arrow-up"></i>
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                        else if (member.Role == TeamRole.Admin)
+                                                        {
+                                                            <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
+                                                                <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                                <input type="hidden" name="newRole" value="@TeamRole.Member" />
+                                                                <button type="submit" class="btn btn-outline-warning btn-sm" 
+                                                                        title="Demote to Member" onclick="return confirm('Demote this admin to Member?')">
+                                                                    <i class="bi bi-arrow-down"></i>
                                                                 </button>
                                                             </form>
                                                         }

@@ -39,6 +39,12 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DocumentFilter Filter { get; set; } = new();
 
+    [BindProperty(SupportsGet = true)]
+    public string? SortBy { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? SortDirection { get; set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
         var userId = User.GetUserId();
@@ -46,6 +52,16 @@ public class IndexModel : PageModel
         {
             return RedirectToPage("/Account/Login");
         }
+
+        // Handle sorting
+        if (!string.IsNullOrEmpty(SortBy))
+        {
+            Filter.SortBy = SortBy;
+            Filter.SortDirection = SortDirection ?? "asc";
+        }
+
+        // Set ViewData for sorting indicators
+        SetSortViewData();
 
         var categoriesResult = await _categoryService.GetAllCategoriesAsync();
         if (!categoriesResult.Succeeded)
@@ -133,5 +149,47 @@ public class IndexModel : PageModel
             ".gif" => "image/gif",
             _ => "application/octet-stream"
         };
+    }
+
+    private void SetSortViewData()
+    {
+        ViewData["CurrentSort"] = Filter.SortBy;
+        
+        // Set next sort direction for each column
+        ViewData["TitleSortDirection"] = Filter.SortBy == "Title" && Filter.SortDirection == "asc" ? "desc" : "asc";
+        ViewData["UpdatedAtSortDirection"] = Filter.SortBy == "UpdatedAt" && Filter.SortDirection == "asc" ? "desc" : "asc";
+        ViewData["FileSizeSortDirection"] = Filter.SortBy == "FileSize" && Filter.SortDirection == "asc" ? "desc" : "asc";
+    }
+
+    public string GetSortUrl(string sortBy, string sortDirection)
+    {
+        var queryParams = new List<string>();
+        
+        // Add sorting parameters
+        queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
+        queryParams.Add($"sortDirection={Uri.EscapeDataString(sortDirection)}");
+        
+        // Add current filter parameters (excluding existing sort parameters)
+        if (!string.IsNullOrEmpty(Filter.SearchTerm))
+            queryParams.Add($"Filter.SearchTerm={Uri.EscapeDataString(Filter.SearchTerm)}");
+            
+        if (!string.IsNullOrEmpty(Filter.FileType))
+            queryParams.Add($"Filter.FileType={Uri.EscapeDataString(Filter.FileType)}");
+            
+        if (Filter.TeamId.HasValue)
+            queryParams.Add($"Filter.TeamId={Filter.TeamId.Value}");
+            
+        if (Filter.CategoryId.HasValue)
+            queryParams.Add($"Filter.CategoryId={Filter.CategoryId.Value}");
+            
+        if (Filter.IncludeTeamDocuments)
+            queryParams.Add($"Filter.IncludeTeamDocuments={Filter.IncludeTeamDocuments}");
+            
+        // Don't preserve page number when sorting - always reset to page 1 for better UX
+            
+        if (Filter.PageSize != 10) // Assuming 10 is default
+            queryParams.Add($"Filter.PageSize={Filter.PageSize}");
+        
+        return "?" + string.Join("&", queryParams);
     }
 } 
