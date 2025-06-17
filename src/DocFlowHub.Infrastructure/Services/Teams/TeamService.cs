@@ -248,6 +248,52 @@ public class TeamService : ITeamService
         }
     }
 
+    public async Task<ServiceResult> UpdateMemberRoleAsync(int teamId, string userId, TeamRole newRole, string updatedByUserId)
+    {
+        try
+        {
+            var team = await _context.Teams
+                .Include(t => t.Members)
+                .FirstOrDefaultAsync(t => t.Id == teamId);
+
+            if (team == null)
+                return ServiceResult.Failure("Team not found");
+
+            var updatedByMember = team.Members.FirstOrDefault(m => m.UserId == updatedByUserId);
+            if (updatedByMember == null || updatedByMember.Role != TeamRole.Admin)
+                return ServiceResult.Failure("You don't have permission to update member roles in this team");
+
+            var member = team.Members.FirstOrDefault(m => m.UserId == userId);
+            if (member == null)
+                return ServiceResult.Failure("User is not a member of this team");
+
+            // Prevent changing team owner's role
+            if (team.OwnerId == userId)
+                return ServiceResult.Failure("Cannot change the team owner's role");
+
+            // If demoting the last admin (other than owner), prevent it
+            if (member.Role == TeamRole.Admin && newRole == TeamRole.Member)
+            {
+                var adminCount = team.Members.Count(m => m.Role == TeamRole.Admin);
+                if (adminCount <= 1)
+                    return ServiceResult.Failure("Cannot demote the last admin from the team");
+            }
+
+            member.Role = newRole;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Member {UserId} role updated to {Role} in team {TeamId} by {UpdatedBy}", 
+                userId, newRole, teamId, updatedByUserId);
+
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating member {UserId} role in team {TeamId}", userId, teamId);
+            return ServiceResult.Failure("Error updating member role: " + ex.Message);
+        }
+    }
+
     public async Task<ServiceResult<PagedResult<TeamMemberDto>>> GetTeamMembersAsync(int teamId)
     {
         try

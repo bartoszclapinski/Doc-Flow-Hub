@@ -38,12 +38,15 @@
 
 ## Phase 2: Full Implementation
 
-### Sprint 4: Team Management (2 weeks) ⏳ IN PROGRESS
-- ⏳ Complete TeamService implementation
-- ⏳ Team creation functionality
-- ⏳ Team member management (invite, add, remove)
-- ⏳ Team document sharing
-- ⏳ Document access permissions and role-based control
+### Sprint 4: Team Management (2 weeks) ⏳ IN PROGRESS (~85% COMPLETE)
+- ✅ Complete TeamService implementation
+- ✅ Team creation functionality  
+- ✅ Team member management (invite, add, remove)
+- ✅ Team document sharing and filtering
+- ✅ Document access permissions and role-based control
+- ✅ Azure Portal-style UI redesign with sorting
+- ⏳ Email notification system for team invitations
+- ⏳ Final testing and verification
 
 ### Sprint 5: Advanced Document Features (2 weeks)
 - AI-powered document summarization

@@ -506,10 +506,14 @@ DocFlowHub.Web/
 
 #### Document Management Pages ✅ NEW
 - `Documents/Index.cshtml`: **Working document listing page** ✅
-  - Card-based responsive layout
+  - Professional Azure Portal-style table layout ✅ ENHANCED
+  - Horizontal filter layout for better space usage ✅ NEW
+  - Column sorting for Title, Modified Date, and File Size ✅ NEW
   - Search and filtering functionality
   - Category-based filtering
+  - Team-based filtering ✅ NEW
   - Pagination support
+  - Mobile-responsive without horizontal scrolling ✅ ENHANCED
   - Bootstrap 5.3 styling
 - `Documents/Upload.cshtml`: **Working document upload page** ✅
   - File upload with validation (30MB limit)
@@ -650,14 +654,17 @@ public class ActivitySummary
 7. Team collaboration features
 8. Document sharing and permissions UI
 
-#### 🔄 Recently Completed in Sprint 2
+#### 🔄 Recently Completed in Sprint 2-4
 1. **Document upload page with full validation** ✅
-2. **Document index page with filtering** ✅
+2. **Document index page with filtering and sorting** ✅ ENHANCED
 3. **Azure Storage integration** ✅
 4. **Category selection in forms** ✅
 5. **Team sharing functionality** ✅
-6. **Responsive card-based layout** ✅
-7. **Pagination support** ✅
+6. **Professional table layout (Azure Portal-style)** ✅ NEW
+7. **Column sorting with visual feedback** ✅ NEW
+8. **Horizontal filter layout** ✅ NEW
+9. **Mobile-responsive design without scrolling issues** ✅ ENHANCED
+10. **Pagination support** ✅
 
 ### Implementation Priorities Based on Sprint Plan
 1. **Complete document details page** - High Priority

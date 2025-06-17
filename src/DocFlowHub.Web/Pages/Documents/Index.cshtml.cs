@@ -39,6 +39,12 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public DocumentFilter Filter { get; set; } = new();
 
+    [BindProperty(SupportsGet = true)]
+    public string? SortBy { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? SortDirection { get; set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
         var userId = User.GetUserId();
@@ -46,6 +52,16 @@ public class IndexModel : PageModel
         {
             return RedirectToPage("/Account/Login");
         }
+
+        // Handle sorting
+        if (!string.IsNullOrEmpty(SortBy))
+        {
+            Filter.SortBy = SortBy;
+            Filter.SortDirection = SortDirection ?? "asc";
+        }
+
+        // Set ViewData for sorting indicators
+        SetSortViewData();
 
         var categoriesResult = await _categoryService.GetAllCategoriesAsync();
         if (!categoriesResult.Succeeded)
@@ -133,5 +149,15 @@ public class IndexModel : PageModel
             ".gif" => "image/gif",
             _ => "application/octet-stream"
         };
+    }
+
+    private void SetSortViewData()
+    {
+        ViewData["CurrentSort"] = Filter.SortBy;
+        
+        // Set next sort direction for each column
+        ViewData["TitleSortDirection"] = Filter.SortBy == "Title" && Filter.SortDirection == "asc" ? "desc" : "asc";
+        ViewData["UpdatedAtSortDirection"] = Filter.SortBy == "UpdatedAt" && Filter.SortDirection == "asc" ? "desc" : "asc";
+        ViewData["FileSizeSortDirection"] = Filter.SortBy == "FileSize" && Filter.SortDirection == "asc" ? "desc" : "asc";
     }
 } 
