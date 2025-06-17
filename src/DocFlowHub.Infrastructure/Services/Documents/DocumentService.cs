@@ -539,13 +539,13 @@ public class DocumentService : IDocumentService
             "title" => isDescending 
                 ? query.OrderByDescending(d => d.Title)
                 : query.OrderBy(d => d.Title),
-            "updatedat" => isDescending 
-                ? query.OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
-                : query.OrderBy(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt),
+                            "updatedat" => isDescending 
+                    ? query.OrderByDescending(d => d.UpdatedAt == DateTime.MinValue ? d.CreatedAt : d.UpdatedAt)
+                    : query.OrderBy(d => d.UpdatedAt == DateTime.MinValue ? d.CreatedAt : d.UpdatedAt),
             "filesize" => isDescending 
                 ? query.OrderByDescending(d => d.FileSize)
                 : query.OrderBy(d => d.FileSize),
-            _ => query.OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt) // Default sorting
+                            _ => query.OrderByDescending(d => d.UpdatedAt == DateTime.MinValue ? d.CreatedAt : d.UpdatedAt) // Default sorting
         };
     }
 } 

@@ -160,4 +160,37 @@ public class IndexModel : PageModel
         ViewData["UpdatedAtSortDirection"] = Filter.SortBy == "UpdatedAt" && Filter.SortDirection == "asc" ? "desc" : "asc";
         ViewData["FileSizeSortDirection"] = Filter.SortBy == "FileSize" && Filter.SortDirection == "asc" ? "desc" : "asc";
     }
+
+    public string GetSortUrl(string sortBy, string sortDirection)
+    {
+        var queryParams = new List<string>();
+        
+        // Add sorting parameters
+        queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
+        queryParams.Add($"sortDirection={Uri.EscapeDataString(sortDirection)}");
+        
+        // Add current filter parameters (excluding existing sort parameters)
+        if (!string.IsNullOrEmpty(Filter.SearchTerm))
+            queryParams.Add($"Filter.SearchTerm={Uri.EscapeDataString(Filter.SearchTerm)}");
+            
+        if (!string.IsNullOrEmpty(Filter.FileType))
+            queryParams.Add($"Filter.FileType={Uri.EscapeDataString(Filter.FileType)}");
+            
+        if (Filter.TeamId.HasValue)
+            queryParams.Add($"Filter.TeamId={Filter.TeamId.Value}");
+            
+        if (Filter.CategoryId.HasValue)
+            queryParams.Add($"Filter.CategoryId={Filter.CategoryId.Value}");
+            
+        if (Filter.IncludeTeamDocuments)
+            queryParams.Add($"Filter.IncludeTeamDocuments={Filter.IncludeTeamDocuments}");
+            
+        if (Filter.PageNumber > 1)
+            queryParams.Add($"Filter.PageNumber={Filter.PageNumber}");
+            
+        if (Filter.PageSize != 10) // Assuming 10 is default
+            queryParams.Add($"Filter.PageSize={Filter.PageSize}");
+        
+        return "?" + string.Join("&", queryParams);
+    }
 } 

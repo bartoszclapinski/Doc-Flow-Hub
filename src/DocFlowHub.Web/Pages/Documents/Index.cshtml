@@ -144,36 +144,36 @@
                     <table class="table table-hover azure-table mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable" style="width: 45%;">
-                                        <a href="?sortBy=Title&sortDirection=@(ViewData["TitleSortDirection"] ?? "asc")&@Html.Raw(Request.QueryString.ToString().Replace("sortBy=Title", "").Replace("sortDirection=asc", "").Replace("sortDirection=desc", "").TrimStart('&'))" class="text-decoration-none text-muted">
-                                            <i class="bi bi-file-earmark me-1"></i>Document
-                                            @if (ViewData["CurrentSort"]?.ToString() == "Title")
-                                            {
-                                                <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
-                                            }
-                                        </a>
-                                    </th>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable" style="width: 45%;">
+                                <a href="@Model.GetSortUrl("Title", ViewData["TitleSortDirection"]?.ToString() ?? "asc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-file-earmark me-1"></i>Document
+                                    @if (ViewData["CurrentSort"]?.ToString() == "Title")
+                                    {
+                                        <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                    }
+                                </a>
+                            </th>
                                     <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase d-none d-md-table-cell" style="width: 15%;">
                                         <i class="bi bi-building me-1"></i>Workspace
                                     </th>
-                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-lg-table-cell" style="width: 20%;">
-                                        <a href="?sortBy=UpdatedAt&sortDirection=@(ViewData["UpdatedAtSortDirection"] ?? "desc")&@Html.Raw(Request.QueryString.ToString().Replace("sortBy=UpdatedAt", "").Replace("sortDirection=asc", "").Replace("sortDirection=desc", "").TrimStart('&'))" class="text-decoration-none text-muted">
-                                            <i class="bi bi-clock me-1"></i>Modified
-                                            @if (ViewData["CurrentSort"]?.ToString() == "UpdatedAt")
-                                            {
-                                                <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
-                                            }
-                                        </a>
-                                    </th>
-                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-xl-table-cell" style="width: 10%;">
-                                        <a href="?sortBy=FileSize&sortDirection=@(ViewData["FileSizeSortDirection"] ?? "desc")&@Html.Raw(Request.QueryString.ToString().Replace("sortBy=FileSize", "").Replace("sortDirection=asc", "").Replace("sortDirection=desc", "").TrimStart('&'))" class="text-decoration-none text-muted">
-                                            <i class="bi bi-hdd me-1"></i>Size
-                                            @if (ViewData["CurrentSort"]?.ToString() == "FileSize")
-                                            {
-                                                <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
-                                            }
-                                        </a>
-                                    </th>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-lg-table-cell" style="width: 20%;">
+                                <a href="@Model.GetSortUrl("UpdatedAt", ViewData["UpdatedAtSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-clock me-1"></i>Modified
+                                    @if (ViewData["CurrentSort"]?.ToString() == "UpdatedAt")
+                                    {
+                                        <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                    }
+                                </a>
+                            </th>
+                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-xl-table-cell" style="width: 10%;">
+                                <a href="@Model.GetSortUrl("FileSize", ViewData["FileSizeSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
+                                    <i class="bi bi-hdd me-1"></i>Size
+                                    @if (ViewData["CurrentSort"]?.ToString() == "FileSize")
+                                    {
+                                        <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                    }
+                                </a>
+                            </th>
                                     <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase text-end" style="width: 10%;">
                                         Actions
                                     </th>
