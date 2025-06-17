@@ -79,8 +79,7 @@ namespace DocFlowHub.Web.Pages
 
                     // Count recent updates (documents modified in last 7 days)
                     RecentUpdates = userDocuments.Data.Items.Count(d => 
-                        d.UpdatedAt >= DateTime.Now.AddDays(-7) ||
-                        (d.UpdatedAt == DateTime.MinValue && d.CreatedAt >= DateTime.Now.AddDays(-7)));
+                        (d.UpdatedAt ?? d.CreatedAt) >= DateTime.Now.AddDays(-7));
 
                     // Get shared documents (documents with TeamId)
                     SharedDocuments = userDocuments.Data.Items.Count(d => d.TeamId.HasValue);
@@ -123,14 +122,14 @@ namespace DocFlowHub.Web.Pages
                 {
                     // Sort by UpdatedAt descending to get most recent first
                     RecentDocuments = recentDocs.Data.Items
-                        .OrderByDescending(d => d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt)
+                        .OrderByDescending(d => d.UpdatedAt ?? d.CreatedAt)
                         .Take(5)
                         .Select(d => new DocumentSummary
                         {
                             Id = d.Id,
                             Title = d.Title,
                             Description = d.Description ?? "",
-                            LastModified = d.UpdatedAt != DateTime.MinValue ? d.UpdatedAt : d.CreatedAt,
+                            LastModified = d.UpdatedAt ?? d.CreatedAt,
                             FileType = d.FileType,
                             FileSize = d.FileSize
                         }).ToList();
@@ -200,13 +199,13 @@ namespace DocFlowHub.Web.Pages
                     foreach (var doc in recentDocs.Data.Items.Take(10))
                     {
                         // Check if document was updated recently
-                        if (doc.UpdatedAt != DateTime.MinValue && doc.UpdatedAt >= DateTime.Now.AddDays(-30))
+                        if (doc.UpdatedAt.HasValue && doc.UpdatedAt.Value >= DateTime.Now.AddDays(-30))
                         {
                             activities.Add(new ActivitySummary
                             {
                                 Title = "Document Updated",
                                 Description = $"{doc.Title} was updated",
-                                Timestamp = doc.UpdatedAt,
+                                Timestamp = doc.UpdatedAt.Value,
                                 UserId = userId,
                                 UserName = UserName ?? "Unknown"
                             });

@@ -98,10 +98,10 @@
                                 <dl class="row">
                                     <dt class="col-sm-5">Last Modified</dt>
                                     <dd class="col-sm-7">
-                                        @if (Model.Document.UpdatedAt != DateTime.MinValue)
+                                                                                @if (Model.Document.UpdatedAt.HasValue)
                                         {
-                                            <span data-bs-toggle="tooltip" title="@Model.Document.UpdatedAt.ToString("F")">
-                                                @Model.Document.UpdatedAt.ToString("MMM dd, yyyy")
+                                            <span data-bs-toggle="tooltip" title="@Model.Document.UpdatedAt.Value.ToString("F")">
+                                                @Model.Document.UpdatedAt.Value.ToString("MMM dd, yyyy")
                                             </span>
                                         }
                                         else

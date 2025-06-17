@@ -76,7 +76,7 @@
                                                     <strong>Size:</strong> @FormatFileSize(Model.Document.FileSize)
                                                 </p>
                                                 <p class="mb-0">
-                                                    <strong>Modified:</strong> @Model.Document.UpdatedAt.ToString("MMM dd, yyyy")
+                                                    <strong>Modified:</strong> @((Model.Document.UpdatedAt ?? Model.Document.CreatedAt).ToString("MMM dd, yyyy"))
                                                 </p>
                                             </div>
                                         </div>

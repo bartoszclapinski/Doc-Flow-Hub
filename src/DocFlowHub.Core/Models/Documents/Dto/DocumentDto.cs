@@ -11,7 +11,7 @@ public class DocumentDto
     public string FileType { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public string OwnerId { get; set; } = string.Empty;
     public string OwnerName { get; set; } = string.Empty;
     public int? TeamId { get; set; }
