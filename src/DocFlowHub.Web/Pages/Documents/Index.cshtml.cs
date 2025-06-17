@@ -185,8 +185,7 @@ public class IndexModel : PageModel
         if (Filter.IncludeTeamDocuments)
             queryParams.Add($"Filter.IncludeTeamDocuments={Filter.IncludeTeamDocuments}");
             
-        if (Filter.PageNumber > 1)
-            queryParams.Add($"Filter.PageNumber={Filter.PageNumber}");
+        // Don't preserve page number when sorting - always reset to page 1 for better UX
             
         if (Filter.PageSize != 10) // Assuming 10 is default
             queryParams.Add($"Filter.PageSize={Filter.PageSize}");
