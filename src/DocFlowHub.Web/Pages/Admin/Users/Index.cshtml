@@ -1,0 +1,157 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "Manage Users";
+    ViewData["ActivePage"] = "Users";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h2>@ViewData["Title"]</h2>
+        <p class="text-muted">Manage system users, their roles, and permissions.</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search users..." id="searchInput">
+            <button class="btn btn-outline-secondary" type="button">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a asp-page="Create" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add User
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">System Users</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Users.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Roles</th>
+                            <th>Documents</th>
+                            <th>Teams</th>
+                            <th>Created</th>
+                            <th>Last Login</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-person-circle me-2 text-primary"></i>
+                                        @user.Email
+                                    </div>
+                                </td>
+                                <td>@($"{user.FirstName} {user.LastName}".Trim())</td>
+                                <td>
+                                    @foreach (var role in user.Roles)
+                                    {
+                                        <span class="badge bg-primary me-1">@role</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@user.DocumentCount</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">@user.TeamCount</span>
+                                </td>
+                                <td>@user.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    @if (user.LastLoginAt.HasValue)
+                                    {
+                                        @user.LastLoginAt.Value.ToString("MMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Never</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-page="Details" asp-route-id="@user.Id" class="btn btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-page="Edit" asp-route-id="@user.Id" class="btn btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        @if (user.Email != "admin@docflowhub.com")
+                                        {
+                                            <button type="button" class="btn btn-outline-danger" onclick="confirmDeleteUser('@user.Id', '@user.Email')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">No users found</h5>
+                <p class="text-muted">No users have been created yet.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDeleteUser(userId, userEmail) {
+            if (confirm(`Are you sure you want to delete user: ${userEmail}?`)) {
+                // Implement delete functionality
+                console.log('Delete user:', userId);
+            }
+        }
+
+        // Simple client-side search
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const tableRows = document.querySelectorAll('tbody tr');
+            
+            tableRows.forEach(row => {
+                const email = row.querySelector('td:first-child').textContent.toLowerCase();
+                const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                
+                if (email.includes(searchTerm) || name.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
+} 

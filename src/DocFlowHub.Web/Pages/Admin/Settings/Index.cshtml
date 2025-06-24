@@ -1,0 +1,201 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.Settings.IndexModel
+@{
+    ViewData["Title"] = "System Settings";
+    ViewData["ActivePage"] = "Settings";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h2>@ViewData["Title"]</h2>
+        <p class="text-muted">Configure application settings and preferences.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>Application Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="UpdateAppSettings">
+                    <div class="mb-3">
+                        <label class="form-label">Application Name</label>
+                        <input type="text" class="form-control" value="DocFlowHub" readonly>
+                        <div class="form-text">The name displayed in the application header.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Max File Size (MB)</label>
+                        <input type="number" class="form-control" value="30" min="1" max="100">
+                        <div class="form-text">Maximum file size allowed for document uploads.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Registration</label>
+                        <select class="form-select">
+                            <option value="open">Open Registration</option>
+                            <option value="admin">Admin Only</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                        <div class="form-text">Control who can register new accounts.</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cloud me-2"></i>Storage Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Storage Provider</label>
+                    <input type="text" class="form-control" value="Azure Blob Storage" readonly>
+                    <div class="form-text">Current document storage provider.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Storage Container</label>
+                    <input type="text" class="form-control" value="documents" readonly>
+                    <div class="form-text">Azure storage container name.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Connection Status</label>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2">Connected</span>
+                        <small class="text-muted">Last checked: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</small>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary" onclick="testStorageConnection()">
+                    <i class="bi bi-arrow-clockwise"></i> Test Connection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-check me-2"></i>Security Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="requireEmailConfirmation" checked>
+                        <label class="form-check-label" for="requireEmailConfirmation">
+                            Require Email Confirmation
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="enableTwoFactor">
+                        <label class="form-check-label" for="enableTwoFactor">
+                            Enable Two-Factor Authentication
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Session Timeout (minutes)</label>
+                    <input type="number" class="form-control" value="60" min="15" max="480">
+                </div>
+                
+                <button type="button" class="btn btn-warning">
+                    <i class="bi bi-shield-exclamation"></i> Update Security
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Version:</strong> 1.0.0
+                </div>
+                <div class="mb-2">
+                    <strong>Environment:</strong> Development
+                </div>
+                <div class="mb-2">
+                    <strong>Database:</strong> SQL Server
+                </div>
+                <div class="mb-2">
+                    <strong>Server Time:</strong> @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                </div>
+                <div class="mb-3">
+                    <strong>Uptime:</strong> <span id="uptime">@TimeSpan.FromMinutes(45).ToString(@"hh\:mm\:ss")</span>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-download"></i> Export Logs
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-arrow-clockwise"></i> Clear Cache
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function testStorageConnection() {
+            // Show loading state
+            event.target.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Testing...';
+            event.target.disabled = true;
+            
+            // Simulate connection test
+            setTimeout(() => {
+                event.target.innerHTML = '<i class="bi bi-check2"></i> Connection OK';
+                event.target.className = 'btn btn-success';
+                
+                setTimeout(() => {
+                    event.target.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Test Connection';
+                    event.target.className = 'btn btn-outline-primary';
+                    event.target.disabled = false;
+                }, 2000);
+            }, 1500);
+        }
+        
+        // Add spinning animation for loading states
+        const style = document.createElement('style');
+        style.textContent = `
+            .spin {
+                animation: spin 1s linear infinite;
+            }
+            @@keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+} 
