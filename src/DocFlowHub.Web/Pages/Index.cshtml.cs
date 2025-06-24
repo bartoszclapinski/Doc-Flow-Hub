@@ -45,6 +45,12 @@ namespace DocFlowHub.Web.Pages
                 return RedirectToPage("/Account/Login");
             }
 
+            // Redirect administrators to admin dashboard
+            if (User.IsInRole("Administrator"))
+            {
+                return RedirectToPage("/Admin/Index");
+            }
+
             UserName = user.UserName;
             var userId = User.GetUserId();
 

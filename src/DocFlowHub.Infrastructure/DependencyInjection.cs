@@ -28,9 +28,11 @@ public static class DependencyInjection
             .Where(parts => parts.Length == 2)
             .ToDictionary(parts => parts[0], parts => parts[1]);
 
+        // Get account name and key
         var accountName = parts.GetValueOrDefault("AccountName", string.Empty);
         var accountKey = parts.GetValueOrDefault("AccountKey", string.Empty);
 
+        // Configure document storage
         services.Configure<DocumentStorageOptions>(options =>
         {
             options.ConnectionString = connectionString;
