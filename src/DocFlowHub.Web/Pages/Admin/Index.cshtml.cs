@@ -63,6 +63,7 @@ public class IndexModel : PageModel
 
             var weekAgo = DateTime.UtcNow.AddDays(-7);
 
+            // Calculate document statistics
             foreach (var user in allUsers)
             {
                 var filter = new DocumentFilter
@@ -80,20 +81,10 @@ public class IndexModel : PageModel
                     TotalStorageUsed += userDocs.Data.Items.Sum(d => d.FileSize);
                     DocumentsThisWeek += userDocs.Data.Items.Count(d => d.CreatedAt >= weekAgo);
                 }
-
-                // Get user's teams
-                var teamFilter = new TeamFilter { PageNumber = 1, PageSize = 1000 };
-                var userTeams = await _teamService.GetUserTeamsAsync(user.Id, teamFilter);
-                if (userTeams.Succeeded)
-                {
-                    // Count unique teams (avoid double counting teams with multiple members)
-                    if (user == allUsers.First()) // Only count on first iteration
-                    {
-                        TotalTeams += userTeams.Data.Items.Count(t => t.OwnerId == user.Id);
-                        TeamsThisWeek += userTeams.Data.Items.Count(t => t.OwnerId == user.Id && t.CreatedAt >= weekAgo);
-                    }
-                }
             }
+
+            // Calculate team statistics separately to avoid double counting
+            await CalculateTeamStatistics(weekAgo);
         }
         catch (Exception)
         {
@@ -105,6 +96,56 @@ public class IndexModel : PageModel
             DocumentsThisWeek = 0;
             TeamsThisWeek = 0;
             TotalStorageUsed = 0;
+        }
+    }
+
+    private async Task CalculateTeamStatistics(DateTime weekAgo)
+    {
+        try
+        {
+            // Use a HashSet to track unique teams by ID to avoid double counting
+            var uniqueTeams = new HashSet<int>();
+            var recentTeams = new HashSet<int>();
+            
+            var allUsers = await _userManager.Users.ToListAsync();
+            
+            // Handle empty user list safely
+            if (!allUsers.Any())
+            {
+                TotalTeams = 0;
+                TeamsThisWeek = 0;
+                return;
+            }
+
+            // Get teams from all users and deduplicate
+            foreach (var user in allUsers)
+            {
+                var teamFilter = new TeamFilter { PageNumber = 1, PageSize = 1000 };
+                var userTeams = await _teamService.GetUserTeamsAsync(user.Id, teamFilter);
+                
+                if (userTeams.Succeeded)
+                {
+                    foreach (var team in userTeams.Data.Items)
+                    {
+                        // Add to unique teams set (automatically handles duplicates)
+                        uniqueTeams.Add(team.Id);
+                        
+                        // Track recent teams
+                        if (team.CreatedAt >= weekAgo)
+                        {
+                            recentTeams.Add(team.Id);
+                        }
+                    }
+                }
+            }
+
+            TotalTeams = uniqueTeams.Count;
+            TeamsThisWeek = recentTeams.Count;
+        }
+        catch (Exception)
+        {
+            TotalTeams = 0;
+            TeamsThisWeek = 0;
         }
     }
 
