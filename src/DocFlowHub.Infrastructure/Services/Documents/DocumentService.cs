@@ -251,6 +251,12 @@ public class DocumentService : IDocumentService
 
     public async Task<ServiceResult<DocumentDto>> CreateDocumentAsync(CreateDocumentRequest request, IFormFile file)
     {
+        // Validation
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return ServiceResult<DocumentDto>.Failure("Title is required");
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
