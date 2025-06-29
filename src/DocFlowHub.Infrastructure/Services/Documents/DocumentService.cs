@@ -13,6 +13,7 @@ using DocFlowHub.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DocFlowHub.Infrastructure.Services.Documents;
 
@@ -20,15 +21,18 @@ public class DocumentService : IDocumentService
 {
     private readonly ApplicationDbContext _context;
     private readonly IDocumentStorageService _storageService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
         ApplicationDbContext context,
         IDocumentStorageService storageService,
+        IServiceProvider serviceProvider,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _storageService = storageService;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -301,6 +305,26 @@ public class DocumentService : IDocumentService
 
             await transaction.CommitAsync();
 
+            // Generate AI summary in background (don't fail upload if this fails)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    _logger.LogInformation("Starting AI summary generation for document {DocumentId}", document.Id);
+                    
+                    // Create a new scope to get fresh services for background processing
+                    using var scope = _serviceProvider.CreateScope();
+                    var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
+                    
+                    await summaryService.RegenerateSummaryAsync(document.Id);
+                    _logger.LogInformation("AI summary generated successfully for document {DocumentId}", document.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate AI summary for document {DocumentId}. Upload completed successfully.", document.Id);
+                }
+            });
+
             return ServiceResult<DocumentDto>.Success(document.ToDto());
         }
         catch (Exception ex)
@@ -371,6 +395,26 @@ public class DocumentService : IDocumentService
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Generate AI summary for new version in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    _logger.LogInformation("Starting AI summary generation for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
+                    
+                    // Create a new scope to get fresh services for background processing
+                    using var scope = _serviceProvider.CreateScope();
+                    var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
+                    
+                    await summaryService.RegenerateSummaryAsync(document.Id);
+                    _logger.LogInformation("AI summary updated successfully for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate AI summary for document {DocumentId} version {VersionNumber}. Version upload completed successfully.", document.Id, versionNumber);
+                }
+            });
 
             return ServiceResult<DocumentDto>.Success(document.ToDto());
         }
@@ -525,6 +569,26 @@ public class DocumentService : IDocumentService
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Generate AI summary for new version in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    _logger.LogInformation("Starting AI summary generation for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
+                    
+                    // Create a new scope to get fresh services for background processing
+                    using var scope = _serviceProvider.CreateScope();
+                    var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
+                    
+                    await summaryService.RegenerateSummaryAsync(document.Id);
+                    _logger.LogInformation("AI summary updated successfully for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate AI summary for document {DocumentId} version {VersionNumber}. Version upload completed successfully.", document.Id, versionNumber);
+                }
+            });
 
             return ServiceResult<DocumentDto>.Success(document.ToDto());
         }

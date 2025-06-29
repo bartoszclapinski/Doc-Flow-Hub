@@ -23,6 +23,7 @@ public class DocumentServiceTests
 {
     private readonly Mock<ApplicationDbContext> _contextMock;
     private readonly Mock<IDocumentStorageService> _storageServiceMock;
+    private readonly Mock<IDocumentSummaryService> _summaryServiceMock;
     private readonly Mock<ILogger<DocumentService>> _loggerMock;
     private readonly DocumentService _documentService;
     private readonly ApplicationDbContext _context;
@@ -36,6 +37,7 @@ public class DocumentServiceTests
         
         _contextMock = new Mock<ApplicationDbContext>(options);
         _storageServiceMock = new Mock<IDocumentStorageService>();
+        _summaryServiceMock = new Mock<IDocumentSummaryService>();
         _loggerMock = new Mock<ILogger<DocumentService>>();
         
         // Create actual context for Entity Framework operations
@@ -44,6 +46,7 @@ public class DocumentServiceTests
         _documentService = new DocumentService(
             _context,
             _storageServiceMock.Object,
+            _summaryServiceMock.Object,
             _loggerMock.Object);
 
         // Seed test data

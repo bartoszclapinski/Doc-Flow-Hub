@@ -75,3 +75,8 @@ DocFlowHub.sln.DotSettings.user
 .upload
 *backup*.*
 *-Roadmap.md
+*-examples.md
+*-key*
+
+# Test files
+tests/DocFlowHub.Tests/appsettings.Test.json
