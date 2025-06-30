@@ -38,8 +38,36 @@ public static class DependencyInjection
         services.AddScoped<IDocumentSummaryService, DocumentSummaryService>();
         
         // Configure Document Storage
-        services.Configure<DocumentStorageOptions>(
-            configuration.GetSection("DocumentStorage"));
+        services.Configure<DocumentStorageOptions>(options =>
+        {
+            var section = configuration.GetSection("DocumentStorage");
+            section.Bind(options);
+            
+            // Parse connection string to extract AccountName and AccountKey if not explicitly provided
+            if (!string.IsNullOrEmpty(options.ConnectionString) && 
+                (string.IsNullOrEmpty(options.AccountName) || string.IsNullOrEmpty(options.AccountKey)))
+            {
+                var connectionStringParts = options.ConnectionString.Split(';');
+                foreach (var part in connectionStringParts)
+                {
+                    var keyValue = part.Split('=', 2);
+                    if (keyValue.Length == 2)
+                    {
+                        var key = keyValue[0].Trim();
+                        var value = keyValue[1].Trim();
+                        
+                        if (key.Equals("AccountName", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(options.AccountName))
+                        {
+                            options.AccountName = value;
+                        }
+                        else if (key.Equals("AccountKey", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(options.AccountKey))
+                        {
+                            options.AccountKey = value;
+                        }
+                    }
+                }
+            }
+        });
 
         return services;
     }
