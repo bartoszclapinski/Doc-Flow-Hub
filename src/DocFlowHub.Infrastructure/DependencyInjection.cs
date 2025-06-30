@@ -1,47 +1,72 @@
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Infrastructure.Services.Documents;
-using DocFlowHub.Infrastructure.Services.Storage;
-using DocFlowHub.Infrastructure.Services.Teams;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Linq;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Infrastructure.Services.Documents;
+using DocFlowHub.Infrastructure.Services.Teams;
+using DocFlowHub.Infrastructure.Services.Storage;
+using DocFlowHub.Infrastructure.Services.Profile;
+using DocFlowHub.Infrastructure.Services.Role;
+using DocFlowHub.Infrastructure.Services.AI;
 
 namespace DocFlowHub.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Document services
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
+        // Document Services
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentCategoryService, DocumentCategoryService>();
         services.AddScoped<IDocumentStorageService, DocumentStorageService>();
+        
+        // Team Services
         services.AddScoped<ITeamService, TeamService>();
-
-        // Configure document storage
-        var storageSection = configuration.GetSection(DocumentStorageOptions.SectionName);
-        var connectionString = storageSection.GetValue<string>("ConnectionString") ?? string.Empty;
-
-        // Parse connection string to get account name and key
-        var parts = connectionString.Split(';')
-            .Select(part => part.Split('=', 2))
-            .Where(parts => parts.Length == 2)
-            .ToDictionary(parts => parts[0], parts => parts[1]);
-
-        // Get account name and key
-        var accountName = parts.GetValueOrDefault("AccountName", string.Empty);
-        var accountKey = parts.GetValueOrDefault("AccountKey", string.Empty);
-
-        // Configure document storage
+        
+        // Profile Services
+        services.AddScoped<IProfileService, ProfileService>();
+        
+        // Role Services
+        services.AddScoped<IRoleService, RoleService>();
+        
+        // AI Services
+        services.AddScoped<IAIService, OpenAIService>();
+        services.AddScoped<IDocumentSummaryService, DocumentSummaryService>();
+        
+        // Configure Document Storage
         services.Configure<DocumentStorageOptions>(options =>
         {
-            options.ConnectionString = connectionString;
-            options.ContainerName = storageSection.GetValue<string>("ContainerName") ?? "documents";
-            options.MaxFileSizeBytes = storageSection.GetValue<long>("MaxFileSizeBytes", 31_457_280);
-            options.AllowedFileTypes = storageSection.GetSection("AllowedFileTypes").Get<string[]>() 
-                ?? new[] { ".md", ".doc", ".docx", ".pdf", ".jpg", ".jpeg", ".png" };
-            options.AccountName = accountName;
-            options.AccountKey = accountKey;
+            var section = configuration.GetSection("DocumentStorage");
+            section.Bind(options);
+            
+            // Parse connection string to extract AccountName and AccountKey if not explicitly provided
+            if (!string.IsNullOrEmpty(options.ConnectionString) && 
+                (string.IsNullOrEmpty(options.AccountName) || string.IsNullOrEmpty(options.AccountKey)))
+            {
+                var connectionStringParts = options.ConnectionString.Split(';');
+                foreach (var part in connectionStringParts)
+                {
+                    var keyValue = part.Split('=', 2);
+                    if (keyValue.Length == 2)
+                    {
+                        var key = keyValue[0].Trim();
+                        var value = keyValue[1].Trim();
+                        
+                        if (key.Equals("AccountName", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(options.AccountName))
+                        {
+                            options.AccountName = value;
+                        }
+                        else if (key.Equals("AccountKey", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(options.AccountKey))
+                        {
+                            options.AccountKey = value;
+                        }
+                    }
+                }
+            }
         });
 
         return services;

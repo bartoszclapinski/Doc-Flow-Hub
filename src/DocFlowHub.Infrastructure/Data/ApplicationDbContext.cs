@@ -1,5 +1,6 @@
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Models;
+using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Infrastructure.Data.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -19,6 +20,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentVersion> DocumentVersions { get; set; }
     public DbSet<DocumentCategory> DocumentCategories { get; set; }
+    
+    // AI-related entities
+    public DbSet<DocumentSummary> DocumentSummaries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,5 +55,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new DocumentConfiguration());
         builder.ApplyConfiguration(new DocumentVersionConfiguration());
         builder.ApplyConfiguration(new DocumentCategoryConfiguration());
+        
+        // Apply AI-related configurations
+        builder.ApplyConfiguration(new DocumentSummaryConfiguration());
     }
 } 

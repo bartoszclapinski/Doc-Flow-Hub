@@ -13,11 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
-builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// Add DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -41,12 +37,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // Add Email Sender
 builder.Services.AddTransient<IEmailSender, EmailSender>();
-
-// Add Profile Service
-builder.Services.AddScoped<IProfileService, ProfileService>();
-
-// Add Role Service
-builder.Services.AddScoped<IRoleService, RoleService>();
 
 // Configure cookie policy
 builder.Services.ConfigureApplicationCookie(options =>
