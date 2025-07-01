@@ -54,15 +54,28 @@
                                 <i class="bi bi-file-earmark-text me-2"></i>
                                 @Model.Document.Title
                             </h1>
-                            <div class="btn-group">
+                            <div class="d-flex gap-2">
                                 <form method="post" asp-page-handler="Download" asp-route-versionId="@Model.Document.CurrentVersionId" class="d-inline">
-                                    <button type="submit" class="btn btn-light btn-sm">
-                                        <i class="bi bi-download"></i> Download
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-download me-1"></i>Download
                                     </button>
                                 </form>
-                                <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
+                                @if (Model.Document.OwnerId == User.GetUserId())
+                                {
+                                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            onclick="confirmDeleteDocument(@Model.Document.Id, '@Model.Document.Title.Replace("'", "\\'")', '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
+                                        <i class="bi bi-trash me-1"></i>Delete
+                                    </button>
+                                }
+                                else
+                                {
+                                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </a>
+                                }
                             </div>
                         </div>
                     </div>
@@ -518,12 +531,20 @@
                                                 }
                                                 <small class="text-muted">@FormatFileSize(version.FileSize)</small>
                                             </div>
-                                            <div class="ms-2">
+                                            <div class="ms-2 d-flex gap-1">
                                                 <form method="post" asp-page-handler="Download" asp-route-versionId="@version.Id" class="d-inline download-form">
                                                     <button type="submit" class="btn btn-outline-primary btn-sm" title="Download this version">
                                                         <i class="bi bi-download"></i>
                                                     </button>
                                                 </form>
+                                                @if (Model.Document.OwnerId == User.GetUserId() && version.Id != Model.Document.CurrentVersionId && Model.Versions.Items.Count() > 1)
+                                                {
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                            title="Delete this version"
+                                                            onclick="confirmDeleteVersion(@version.Id, '@version.VersionNumber', '@FormatFileSize(version.FileSize)', '@version.CreatedAt.ToString("MMM dd, yyyy")')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -588,6 +609,122 @@
     }
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Confirm Document Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-warning me-2"></i>
+                    <strong>This action cannot be undone!</strong>
+                </div>
+                
+                <p>Are you sure you want to delete this document?</p>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title mb-2" id="deleteDocumentTitle"></h6>
+                        <div class="row text-muted small">
+                            <div class="col-6">
+                                <strong>Size:</strong> <span id="deleteDocumentSize"></span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Created:</strong> <span id="deleteDocumentDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-muted small mt-3">This will:</p>
+                <ul class="text-muted small">
+                    <li>Move the document to deleted items (soft delete)</li>
+                    <li>Remove the document from team sharing</li>
+                    <li>Preserve all version history</li>
+                    <li>Allow restoration by admins if needed</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                </button>
+                <form method="post" asp-page-handler="Delete" class="d-inline" id="deleteForm">
+                    <input type="hidden" id="deleteDocumentId" name="documentId" value="@Model.Document.Id" />
+                    <button type="submit" class="btn btn-danger loading-btn">
+                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+                        <i class="bi bi-trash me-1"></i>
+                        <span class="btn-text">Delete Document</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Version Delete Confirmation Modal -->
+<div class="modal fade" id="deleteVersionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Confirm Version Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-warning me-2"></i>
+                    <strong>This action cannot be undone!</strong>
+                </div>
+                
+                <p>Are you sure you want to delete this document version?</p>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title mb-2">Version <span id="deleteVersionNumber"></span></h6>
+                        <div class="row text-muted small">
+                            <div class="col-6">
+                                <strong>Size:</strong> <span id="deleteVersionSize"></span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Created:</strong> <span id="deleteVersionDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-muted small mt-3">This will:</p>
+                <ul class="text-muted small">
+                    <li>Permanently delete this version</li>
+                    <li>Remove the version from history</li>
+                    <li>Cannot be restored once deleted</li>
+                    <li>Current version will remain unaffected</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                </button>
+                <form method="post" asp-page-handler="DeleteVersion" class="d-inline" id="deleteVersionForm">
+                    <input type="hidden" id="deleteVersionId" name="versionId" />
+                    <button type="submit" class="btn btn-warning loading-btn">
+                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+                        <i class="bi bi-trash me-1"></i>
+                        <span class="btn-text">Delete Version</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @functions {
     private static string FormatFileSize(long bytes)
     {
@@ -605,11 +742,73 @@
 
 @section Scripts {
     <script>
+        // Confirm delete document function
+        function confirmDeleteDocument(documentId, title, size, createdDate) {
+            // Populate modal with document details
+            document.getElementById('deleteDocumentId').value = documentId;
+            document.getElementById('deleteDocumentTitle').textContent = title;
+            document.getElementById('deleteDocumentSize').textContent = size;
+            document.getElementById('deleteDocumentDate').textContent = createdDate;
+            
+            // Show the modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
+
+        // Confirm delete version function
+        function confirmDeleteVersion(versionId, versionNumber, size, createdDate) {
+            // Populate modal with version details
+            document.getElementById('deleteVersionId').value = versionId;
+            document.getElementById('deleteVersionNumber').textContent = versionNumber;
+            document.getElementById('deleteVersionSize').textContent = size;
+            document.getElementById('deleteVersionDate').textContent = createdDate;
+            
+            // Show the modal
+            const deleteVersionModal = new bootstrap.Modal(document.getElementById('deleteVersionModal'));
+            deleteVersionModal.show();
+        }
+
         // Initialize Bootstrap tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // Delete form loading state
+        const deleteForm = document.getElementById('deleteForm');
+        if (deleteForm) {
+            deleteForm.addEventListener('submit', function() {
+                const loadingBtn = deleteForm.querySelector('.loading-btn');
+                if (loadingBtn) {
+                    const spinner = loadingBtn.querySelector('.spinner-border');
+                    const btnText = loadingBtn.querySelector('.btn-text');
+                    const icon = loadingBtn.querySelector('.bi');
+                    
+                    spinner.classList.remove('d-none');
+                    if (icon) icon.classList.add('d-none');
+                    if (btnText) btnText.textContent = 'Deleting...';
+                    loadingBtn.disabled = true;
+                }
+            });
+        }
+
+        // Delete version form loading state
+        const deleteVersionForm = document.getElementById('deleteVersionForm');
+        if (deleteVersionForm) {
+            deleteVersionForm.addEventListener('submit', function() {
+                const loadingBtn = deleteVersionForm.querySelector('.loading-btn');
+                if (loadingBtn) {
+                    const spinner = loadingBtn.querySelector('.spinner-border');
+                    const btnText = loadingBtn.querySelector('.btn-text');
+                    const icon = loadingBtn.querySelector('.bi');
+                    
+                    spinner.classList.remove('d-none');
+                    if (icon) icon.classList.add('d-none');
+                    if (btnText) btnText.textContent = 'Deleting...';
+                    loadingBtn.disabled = true;
+                }
+            });
+        }
 
         // Add loading state to download buttons
         document.querySelectorAll('.download-form button').forEach(function(button) {
