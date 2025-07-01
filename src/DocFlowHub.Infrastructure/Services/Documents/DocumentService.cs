@@ -503,6 +503,175 @@ public class DocumentService : IDocumentService
         return ServiceResult.Success();
     }
 
+    public async Task<ServiceResult> DeleteDocumentVersionAsync(int documentId, int versionId, string userId)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // Get document with versions to check ownership and version count
+            var document = await _context.Documents
+                .Include(d => d.Versions)
+                .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsDeleted);
+
+            if (document == null)
+                return ServiceResult.Failure("Document not found");
+
+            // Check if user owns the document
+            if (document.OwnerId != userId)
+                return ServiceResult.Failure("You can only delete versions of documents that you own");
+
+            // Find the specific version
+            var version = document.Versions.FirstOrDefault(v => v.Id == versionId);
+            if (version == null)
+                return ServiceResult.Failure("Version not found");
+
+            // Check if this is the current version
+            if (document.CurrentVersionId.HasValue && version.Id == document.CurrentVersionId.Value)
+                return ServiceResult.Failure("Cannot delete the current active version of the document");
+            
+            // If CurrentVersionId is null, we need to be extra careful - don't allow deletion if this might be the only or newest version
+            if (!document.CurrentVersionId.HasValue)
+            {
+                var latestVersion = document.Versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
+                if (latestVersion != null && latestVersion.Id == version.Id)
+                    return ServiceResult.Failure("Cannot delete the latest version when no current version is set");
+            }
+
+            // Check if there's more than one version (need at least one version)
+            if (document.Versions.Count <= 1)
+                return ServiceResult.Failure("Cannot delete the only version of a document");
+
+            // Delete the version
+            _context.DocumentVersions.Remove(version);
+            
+            // Update document modified time
+            document.UpdatedAt = DateTime.UtcNow;
+            
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Successfully deleted version {VersionId} of document {DocumentId} by user {UserId}", 
+                versionId, documentId, userId);
+
+            // Optionally clean up physical file (non-blocking)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Try to delete the physical file, but don't fail if it doesn't work
+                    await _storageService.DeleteDocumentAsync(documentId, version.VersionNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete physical file for version {VersionId} (version number {VersionNumber})", 
+                        versionId, version.VersionNumber);
+                }
+            });
+
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error deleting version {VersionId} of document {DocumentId} by user {UserId}", 
+                versionId, documentId, userId);
+            return ServiceResult.Failure("An error occurred while deleting the version");
+        }
+    }
+
+    public async Task<ServiceResult<BulkDeleteResult>> BulkDeleteDocumentsAsync(IEnumerable<int> documentIds, string userId)
+    {
+        var documentIdsList = documentIds.ToList();
+        if (!documentIdsList.Any())
+        {
+            return ServiceResult<BulkDeleteResult>.Failure("No documents provided for deletion");
+        }
+
+        if (documentIdsList.Count > 100)
+        {
+            return ServiceResult<BulkDeleteResult>.Failure("Cannot delete more than 100 documents at once");
+        }
+
+        var result = new BulkDeleteResult
+        {
+            TotalRequested = documentIdsList.Count,
+            Results = new List<BulkDeleteItem>()
+        };
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // Get all documents with their details
+            var documents = await _context.Documents
+                .Where(d => documentIdsList.Contains(d.Id) && !d.IsDeleted)
+                .ToListAsync();
+
+            foreach (var documentId in documentIdsList)
+            {
+                var document = documents.FirstOrDefault(d => d.Id == documentId);
+                var deleteItem = new BulkDeleteItem
+                {
+                    DocumentId = documentId,
+                    DocumentTitle = document?.Title ?? $"Document {documentId}"
+                };
+
+                try
+                {
+                    if (document == null)
+                    {
+                        deleteItem.Success = false;
+                        deleteItem.ErrorMessage = "Document not found or already deleted";
+                    }
+                    else if (document.OwnerId != userId)
+                    {
+                        deleteItem.Success = false;
+                        deleteItem.ErrorMessage = "You can only delete documents that you own";
+                    }
+                    else
+                    {
+                        // Perform soft delete
+                        document.IsDeleted = true;
+                        document.UpdatedAt = DateTime.UtcNow;
+                        deleteItem.Success = true;
+                        result.SuccessfulDeletions++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting document {DocumentId}", documentId);
+                    deleteItem.Success = false;
+                    deleteItem.ErrorMessage = "An error occurred while deleting the document";
+                }
+
+                if (!deleteItem.Success)
+                {
+                    result.FailedDeletions++;
+                }
+
+                result.Results.Add(deleteItem);
+            }
+
+            // Save all changes in transaction
+            if (result.SuccessfulDeletions > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Bulk delete completed: {SuccessfulDeletions}/{TotalRequested} documents deleted successfully by user {UserId}", 
+                result.SuccessfulDeletions, result.TotalRequested, userId);
+
+            return ServiceResult<BulkDeleteResult>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error during bulk delete operation for user {UserId}", userId);
+            return ServiceResult<BulkDeleteResult>.Failure("An error occurred during bulk deletion. No documents were deleted.");
+        }
+    }
+
     public async Task<ServiceResult> RestoreDocumentAsync(int id)
     {
         var document = await _context.Documents.FindAsync(id);

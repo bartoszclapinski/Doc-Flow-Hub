@@ -11,6 +11,8 @@ using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using System.Linq;
 
 namespace DocFlowHub.Web.Pages.Documents;
 
@@ -133,6 +135,98 @@ public class IndexModel : PageModel
         var fileName = $"{document.Title}{document.FileType}";
 
         return File(downloadResult.Data, contentType, fileName);
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(int documentId)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        // Get document details first to check ownership
+        var documentResult = await _documentService.GetDocumentByIdAsync(documentId);
+        if (!documentResult.Succeeded)
+        {
+            TempData["ErrorMessage"] = documentResult.Error;
+            return RedirectToPage();
+        }
+
+        var document = documentResult.Data;
+
+        // Verify user owns this document (only owners can delete)
+        if (document.OwnerId != userId)
+        {
+            TempData["ErrorMessage"] = "You can only delete documents that you own.";
+            return RedirectToPage();
+        }
+
+        // Delete the document
+        var deleteResult = await _documentService.DeleteDocumentAsync(documentId);
+        if (!deleteResult.Succeeded)
+        {
+            TempData["ErrorMessage"] = deleteResult.Error;
+            return RedirectToPage();
+        }
+
+        TempData["SuccessMessage"] = $"Document '{document.Title}' has been successfully deleted.";
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostBulkDeleteAsync([FromBody] BulkDeleteRequest request)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return new JsonResult(new { success = false, error = "User not authenticated" });
+        }
+
+        if (request?.DocumentIds == null || !request.DocumentIds.Any())
+        {
+            return new JsonResult(new { success = false, error = "No documents selected for deletion" });
+        }
+
+        if (request.DocumentIds.Count > 100)
+        {
+            return new JsonResult(new { success = false, error = "Cannot delete more than 100 documents at once" });
+        }
+
+        try
+        {
+            // Call bulk delete service method
+            var result = await _documentService.BulkDeleteDocumentsAsync(request.DocumentIds, userId);
+            
+            if (!result.Succeeded)
+            {
+                return new JsonResult(new { success = false, error = result.Error });
+            }
+
+            var bulkResult = result.Data;
+            
+            // Return detailed results
+            return new JsonResult(new 
+            { 
+                success = true,
+                totalRequested = bulkResult.TotalRequested,
+                successfulDeletions = bulkResult.SuccessfulDeletions,
+                failedDeletions = bulkResult.FailedDeletions,
+                isFullySuccessful = bulkResult.IsFullySuccessful,
+                hasPartialFailure = bulkResult.HasPartialFailure,
+                results = bulkResult.Results.Select(r => new
+                {
+                    documentId = r.DocumentId,
+                    documentTitle = r.DocumentTitle,
+                    success = r.Success,
+                    errorMessage = r.ErrorMessage
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            // Log the exception (assuming you have logging configured)
+            return new JsonResult(new { success = false, error = "An unexpected error occurred during bulk deletion" });
+        }
     }
 
     private static string GetContentType(string fileExtension)

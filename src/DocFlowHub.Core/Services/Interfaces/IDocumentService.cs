@@ -22,6 +22,8 @@ public interface IDocumentService
     Task<ServiceResult<PagedResult<DocumentVersionDto>>> GetDocumentVersionsAsync(int documentId, DocumentFilter filter);
     Task<ServiceResult<byte[]>> DownloadDocumentVersionAsync(int documentId, int versionId);
     Task<ServiceResult> DeleteDocumentAsync(int id);
+    Task<ServiceResult> DeleteDocumentVersionAsync(int documentId, int versionId, string userId);
+    Task<ServiceResult<BulkDeleteResult>> BulkDeleteDocumentsAsync(IEnumerable<int> documentIds, string userId);
     Task<ServiceResult> RestoreDocumentAsync(int id);
     Task<ServiceResult<DocumentDto>> ShareDocumentWithTeamAsync(int documentId, int teamId);
     Task<ServiceResult> UnshareDocumentFromTeamAsync(int documentId);

@@ -183,6 +183,93 @@ namespace DocFlowHub.Web.Pages.Documents
             return File(downloadResult.Data, contentType, fileName);
         }
 
+        public async Task<IActionResult> OnPostDeleteAsync()
+        {
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            // Get document details first to check ownership
+            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
+            if (!documentResult.Succeeded)
+            {
+                ErrorMessage = documentResult.Error;
+                return Page();
+            }
+
+            var document = documentResult.Data;
+
+            // Verify user owns this document (only owners can delete)
+            if (document.OwnerId != userId)
+            {
+                ErrorMessage = "You can only delete documents that you own.";
+                return Page();
+            }
+
+            // Delete the document
+            var deleteResult = await _documentService.DeleteDocumentAsync(Id);
+            if (!deleteResult.Succeeded)
+            {
+                ErrorMessage = deleteResult.Error;
+                return Page();
+            }
+
+            // Redirect to documents index with success message
+            TempData["SuccessMessage"] = $"Document '{document.Title}' has been successfully deleted.";
+            return RedirectToPage("./Index");
+        }
+
+        public async Task<IActionResult> OnPostDeleteVersionAsync(int versionId)
+        {
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            // Get document details first to check ownership
+            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
+            if (!documentResult.Succeeded)
+            {
+                ErrorMessage = documentResult.Error;
+                await LoadPageDataAsync(userId);
+                return Page();
+            }
+
+            var document = documentResult.Data;
+
+            // Verify user owns this document (only owners can delete versions)
+            if (document.OwnerId != userId)
+            {
+                ErrorMessage = "You can only delete versions of documents that you own.";
+                await LoadPageDataAsync(userId);
+                return Page();
+            }
+
+            // Prevent deletion of current version
+            if (versionId == document.CurrentVersionId)
+            {
+                ErrorMessage = "Cannot delete the current active version of the document.";
+                await LoadPageDataAsync(userId);
+                return Page();
+            }
+
+            // Delete the version using the service
+            var deleteResult = await _documentService.DeleteDocumentVersionAsync(Id, versionId, userId);
+            if (!deleteResult.Succeeded)
+            {
+                ErrorMessage = deleteResult.Error;
+                await LoadPageDataAsync(userId);
+                return Page();
+            }
+            
+            SuccessMessage = "Document version has been successfully deleted.";
+            await LoadPageDataAsync(userId);
+            return Page();
+        }
+
         private static string GetContentType(string fileExtension)
         {
             return fileExtension.ToLower() switch
