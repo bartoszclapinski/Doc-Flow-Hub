@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
@@ -24,7 +25,7 @@ public class DocumentServiceTests
 {
     private readonly Mock<ApplicationDbContext> _contextMock;
     private readonly Mock<IDocumentStorageService> _storageServiceMock;
-    private readonly Mock<IServiceProvider> _serviceProviderMock;
+    private readonly Mock<IServiceScopeFactory> _serviceScopeFactoryMock;
     private readonly Mock<ILogger<DocumentService>> _loggerMock;
     private readonly DocumentService _documentService;
     private readonly ApplicationDbContext _context;
@@ -38,7 +39,7 @@ public class DocumentServiceTests
         
         _contextMock = new Mock<ApplicationDbContext>(options);
         _storageServiceMock = new Mock<IDocumentStorageService>();
-        _serviceProviderMock = new Mock<IServiceProvider>();
+        _serviceScopeFactoryMock = new Mock<IServiceScopeFactory>();
         _loggerMock = new Mock<ILogger<DocumentService>>();
         
         // Create actual context for Entity Framework operations
@@ -47,7 +48,7 @@ public class DocumentServiceTests
         _documentService = new DocumentService(
             _context,
             _storageServiceMock.Object,
-            _serviceProviderMock.Object,
+            _serviceScopeFactoryMock.Object,
             _loggerMock.Object);
 
         // Seed test data

@@ -12,6 +12,12 @@
     <a asp-page="/Admin/Roles/Index" class="list-group-item list-group-item-action @(activePage == "Roles" ? "active" : "")">
         <i class="bi bi-person-badge me-2"></i> Roles
     </a>
+    <a asp-page="/Admin/Analytics" class="list-group-item list-group-item-action @(activePage == "Analytics" ? "active" : "")">
+        <i class="bi bi-graph-up me-2"></i> AI Analytics
+    </a>
+    <a asp-page="/Admin/UserLimits" class="list-group-item list-group-item-action @(activePage == "UserLimits" ? "active" : "")">
+        <i class="bi bi-person-lines-fill me-2"></i> User Limits
+    </a>
     <a asp-page="/Admin/Settings/Index" class="list-group-item list-group-item-action @(activePage == "Settings" ? "active" : "")">
         <i class="bi bi-gear me-2"></i> Settings
     </a>

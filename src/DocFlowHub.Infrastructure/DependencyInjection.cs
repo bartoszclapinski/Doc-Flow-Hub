@@ -19,6 +19,9 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
+        // Add Memory Caching for AI Services Performance
+        services.AddMemoryCache();
+
         // Document Services
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentCategoryService, DocumentCategoryService>();
@@ -36,6 +39,10 @@ public static class DependencyInjection
         // AI Services
         services.AddScoped<IAIService, OpenAIService>();
         services.AddScoped<IDocumentSummaryService, DocumentSummaryService>();
+        services.AddScoped<IVersionComparisonService, VersionComparisonService>();
+        services.AddScoped<ITextExtractionService, TextExtractionService>();
+        services.AddScoped<IAISettingsService, AISettingsService>();
+        services.AddScoped<IAIUsageTrackingService, AIUsageTrackingService>();
         
         // Configure Document Storage
         services.Configure<DocumentStorageOptions>(options =>

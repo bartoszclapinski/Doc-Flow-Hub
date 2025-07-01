@@ -1,9 +1,11 @@
 using DocFlowHub.Core.Models.AI;
+using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace DocFlowHub.Infrastructure.Services.AI;
@@ -13,274 +15,391 @@ namespace DocFlowHub.Infrastructure.Services.AI;
 /// </summary>
 public class DocumentSummaryService : IDocumentSummaryService
 {
-    private readonly IAIService _aiService;
     private readonly ApplicationDbContext _context;
-    private readonly IDocumentStorageService _storageService;
+    private readonly IAIService _aiService;
+    private readonly ITextExtractionService _textExtractionService;
+    private readonly IAIUsageTrackingService _usageTrackingService;
     private readonly ILogger<DocumentSummaryService> _logger;
-    private readonly IMemoryCache _cache;
+    private readonly IMemoryCache _memoryCache;
+    
+    // Cache keys and expiration times
+    private static readonly TimeSpan SummaryCacheExpiration = TimeSpan.FromHours(24);
+    private static readonly TimeSpan DocumentContentCacheExpiration = TimeSpan.FromHours(1);
 
     public DocumentSummaryService(
-        IAIService aiService,
         ApplicationDbContext context,
-        IDocumentStorageService storageService,
+        IAIService aiService,
+        ITextExtractionService textExtractionService,
+        IAIUsageTrackingService usageTrackingService,
         ILogger<DocumentSummaryService> logger,
-        IMemoryCache cache)
+        IMemoryCache memoryCache)
     {
-        _aiService = aiService;
         _context = context;
-        _storageService = storageService;
+        _aiService = aiService;
+        _textExtractionService = textExtractionService;
+        _usageTrackingService = usageTrackingService;
         _logger = logger;
-        _cache = cache;
-    }
-
-    /// <summary>
-    /// Generate a summary for document content using AI
-    /// </summary>
-    public async Task<DocumentSummary> GenerateSummaryAsync(string documentContent, string documentTitle)
-    {
-        try
-        {
-            _logger.LogInformation("Generating summary for document: {DocumentTitle}", documentTitle);
-
-            // Create cache key for this content
-            var contentHash = GetContentHash(documentContent);
-            var cacheKey = $"summary_{contentHash}";
-
-            // Check cache first
-            if (_cache.TryGetValue(cacheKey, out DocumentSummary? cachedSummary) && cachedSummary != null)
-            {
-                _logger.LogInformation("Returning cached summary for document: {DocumentTitle}", documentTitle);
-                return cachedSummary;
-            }
-
-            // Prepare content for AI processing
-            var processedContent = PrepareContentForSummarization(documentContent, documentTitle);
-            
-            // Create AI prompt for summarization
-            var systemMessage = "You are a professional document analyst. Create a clear, concise summary of the document content. Focus on key points, main topics, and important information. Keep the summary between 100-300 words.";
-            var prompt = $"Document Title: {documentTitle}\n\nContent:\n{processedContent}\n\nPlease provide:\n1. A brief summary (2-3 sentences)\n2. Key points (bullet format)\n\nFormat your response as:\nSUMMARY: [your summary here]\nKEY POINTS:\n• [point 1]\n• [point 2]\n• [point 3]";
-
-            // Call AI service - explicitly use the overload with system message
-            var aiResponse = await _aiService.GenerateCompletionAsync(prompt, systemMessage, model: null);
-
-            if (!aiResponse.IsSuccess)
-            {
-                _logger.LogError("AI service failed to generate summary: {Error}", aiResponse.ErrorMessage);
-                throw new InvalidOperationException($"Failed to generate summary: {aiResponse.ErrorMessage}");
-            }
-
-            // Parse AI response
-            var summary = ParseAIResponse(aiResponse.Content, documentTitle);
-            
-            // Cache the result for 1 hour
-            _cache.Set(cacheKey, summary, TimeSpan.FromHours(1));
-
-            _logger.LogInformation("Successfully generated summary for document: {DocumentTitle}", documentTitle);
-            return summary;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generating summary for document: {DocumentTitle}", documentTitle);
-            throw;
-        }
+        _memoryCache = memoryCache;
     }
 
     /// <summary>
     /// Get existing summary for a document from database
     /// </summary>
-    public async Task<DocumentSummary?> GetSummaryAsync(int documentId)
+    public async Task<ServiceResult<DocumentSummary>> GetSummaryAsync(int documentId)
     {
         try
         {
-            _logger.LogInformation("Getting summary for document ID: {DocumentId}", documentId);
-            
-            var summary = await _context.DocumentSummaries
-                .FirstOrDefaultAsync(s => s.DocumentId == documentId);
-            
-            if (summary == null)
+            // Check cache first
+            var cacheKey = GetSummaryCacheKey(documentId);
+            if (_memoryCache.TryGetValue(cacheKey, out DocumentSummary? cachedSummary) && cachedSummary != null)
             {
-                _logger.LogInformation("No summary found for document ID: {DocumentId}", documentId);
-                return null;
+                _logger.LogDebug("Retrieved document summary from cache for document ID: {DocumentId}", documentId);
+                return ServiceResult<DocumentSummary>.Success(cachedSummary);
             }
 
-            _logger.LogInformation("Found summary for document ID: {DocumentId}", documentId);
-            return summary;
+            var summary = await _context.DocumentSummaries
+                .FirstOrDefaultAsync(ds => ds.DocumentId == documentId);
+
+            if (summary == null)
+            {
+                return ServiceResult<DocumentSummary>.Failure("Summary not found");
+            }
+
+            // Cache the result
+            _memoryCache.Set(cacheKey, summary, SummaryCacheExpiration);
+            _logger.LogDebug("Cached document summary for document ID: {DocumentId}", documentId);
+
+            return ServiceResult<DocumentSummary>.Success(summary);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting summary for document ID: {DocumentId}", documentId);
-            throw;
+            _logger.LogError(ex, "Error retrieving document summary for document ID: {DocumentId}", documentId);
+            return ServiceResult<DocumentSummary>.Failure("Failed to retrieve document summary");
+        }
+    }
+
+    /// <summary>
+    /// Generate a summary for document content using AI
+    /// </summary>
+    public async Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId)
+    {
+        return await GenerateSummaryAsync(documentId, AIModel.Gpt4oMini);
+    }
+
+    /// <summary>
+    /// Generate a summary for document content using AI with specific model
+    /// </summary>
+    public async Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId, AIModel model)
+    {
+        try
+        {
+            _logger.LogInformation("Generating summary for document ID: {DocumentId}", documentId);
+            
+            // Get document details with caching
+            var document = await GetDocumentWithCaching(documentId);
+            if (document == null)
+            {
+                return ServiceResult<DocumentSummary>.Failure("Document not found");
+            }
+
+            _logger.LogInformation("Generating summary for document: {DocumentTitle}", (string)document.Title);
+
+            // Extract document content with caching
+            var contentResult = await GetDocumentContentWithCaching(documentId);
+            if (!contentResult.Succeeded || string.IsNullOrWhiteSpace(contentResult.Data))
+            {
+                return ServiceResult<DocumentSummary>.Failure("Failed to extract document content for summary generation");
+            }
+
+            var content = contentResult.Data;
+            _logger.LogDebug("Extracted content length: {ContentLength} characters", content.Length);
+
+            // Generate AI summary
+            var prompt = $@"Please provide a comprehensive summary of the following document.
+
+Document Title: {document.Title}
+Content:
+{content}
+
+Please provide:
+1. A concise summary (2-3 sentences)
+2. Key points (bullet format, 3-5 main points)
+
+Summary:";
+
+            var aiResponse = await _aiService.GenerateCompletionAsync(prompt, model.ToApiString());
+            if (!aiResponse.IsSuccess || string.IsNullOrWhiteSpace(aiResponse.Content))
+            {
+                return ServiceResult<DocumentSummary>.Failure("Failed to generate AI summary");
+            }
+
+            // Log usage if we have a way to get the user (for now, skip if no userId available)
+            // Note: This service is often called in background processes without a user context
+
+            // Parse AI response
+            var aiContent = aiResponse.Content;
+            var (summary, keyPoints) = ParseAISummaryResponse(aiContent);
+
+            // Create and save summary
+            var documentSummary = new DocumentSummary
+            {
+                DocumentId = documentId,
+                Summary = summary,
+                KeyPoints = keyPoints,
+                AIModel = model.ToApiString(),
+                ConfidenceScore = 0.85, // Could be enhanced based on AI response
+                GeneratedAt = DateTime.UtcNow
+            };
+
+            _context.DocumentSummaries.Add(documentSummary);
+            await _context.SaveChangesAsync();
+
+            // Invalidate and update cache
+            InvalidateSummaryCache(documentId);
+            var cacheKey = GetSummaryCacheKey(documentId);
+            _memoryCache.Set(cacheKey, documentSummary, SummaryCacheExpiration);
+
+            _logger.LogInformation("Successfully generated and cached summary for document: {DocumentTitle}", (string)document.Title);
+            return ServiceResult<DocumentSummary>.Success(documentSummary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating summary for document ID: {DocumentId}", documentId);
+            return ServiceResult<DocumentSummary>.Failure("Failed to generate document summary");
         }
     }
 
     /// <summary>
     /// Regenerate summary for a document by fetching content and storing in database
     /// </summary>
-    public async Task<DocumentSummary> RegenerateSummaryAsync(int documentId)
+    public async Task<ServiceResult> RegenerateSummaryAsync(int documentId)
+    {
+        return await RegenerateSummaryAsync(documentId, AIModel.Gpt4oMini);
+    }
+
+    /// <summary>
+    /// Regenerate summary for a document with specific model
+    /// </summary>
+    public async Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model)
     {
         try
         {
-            _logger.LogInformation("Regenerating summary for document ID: {DocumentId}", documentId);
+            _logger.LogInformation("Regenerating summary for document ID: {DocumentId} with model: {Model}", documentId, model.ToDisplayName());
             
-            // 1. Fetch document from database
-            var document = await _context.Documents
-                .Include(d => d.Versions)
-                .FirstOrDefaultAsync(d => d.Id == documentId);
-
-            if (document == null)
-            {
-                throw new ArgumentException($"Document with ID {documentId} not found");
-            }
-
-            // 2. Get the latest version
-            var latestVersion = document.Versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
-            if (latestVersion == null)
-            {
-                throw new InvalidOperationException($"No versions found for document {documentId}");
-            }
-
-            // 3. Download document content
-            var contentResult = await _storageService.DownloadDocumentAsync(documentId, latestVersion.VersionNumber);
-            if (!contentResult.Succeeded)
-            {
-                throw new InvalidOperationException($"Failed to download document content: {contentResult.Error}");
-            }
-
-            // 4. Convert content to text (basic implementation for text files)
-            var documentContent = System.Text.Encoding.UTF8.GetString(contentResult.Data ?? Array.Empty<byte>());
-            
-            // 5. Generate summary
-            var summary = await GenerateSummaryAsync(documentContent, document.Title);
-            
-            // 6. Store in database
+            // Delete existing summary
             var existingSummary = await _context.DocumentSummaries
-                .FirstOrDefaultAsync(s => s.DocumentId == documentId);
+                .FirstOrDefaultAsync(ds => ds.DocumentId == documentId);
 
             if (existingSummary != null)
             {
-                // Update existing summary
-                existingSummary.Summary = summary.Summary;
-                existingSummary.KeyPoints = summary.KeyPoints;
-                existingSummary.GeneratedAt = summary.GeneratedAt;
-                existingSummary.AIModel = summary.AIModel;
-                existingSummary.ConfidenceScore = summary.ConfidenceScore;
-                _context.DocumentSummaries.Update(existingSummary);
-            }
-            else
-            {
-                // Create new summary
-                summary.DocumentId = documentId;
-                _context.DocumentSummaries.Add(summary);
+                _context.DocumentSummaries.Remove(existingSummary);
+                await _context.SaveChangesAsync();
+                _logger.LogDebug("Removed existing summary for document ID: {DocumentId}", documentId);
             }
 
+            // Invalidate caches
+            InvalidateSummaryCache(documentId);
+            InvalidateDocumentContentCache(documentId);
+
+            // Generate new summary with specified model
+            var result = await GenerateSummaryAsync(documentId, model);
+            if (!result.Succeeded)
+            {
+                return ServiceResult.Failure(result.Error!);
+            }
+
+            _logger.LogInformation("Successfully regenerated summary for document ID: {DocumentId} with model: {Model}", documentId, model.ToDisplayName());
+            return ServiceResult.Success();
+            }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error regenerating summary for document ID: {DocumentId} with model: {Model}", documentId, model.ToDisplayName());
+            return ServiceResult.Failure("Failed to regenerate document summary");
+        }
+    }
+
+    public async Task<ServiceResult> DeleteSummaryAsync(int documentId)
+    {
+        try
+        {
+            var summary = await _context.DocumentSummaries
+                .FirstOrDefaultAsync(ds => ds.DocumentId == documentId);
+
+            if (summary == null)
+            {
+                return ServiceResult.Failure("Summary not found");
+            }
+
+            _context.DocumentSummaries.Remove(summary);
             await _context.SaveChangesAsync();
             
-            _logger.LogInformation("Successfully regenerated summary for document ID: {DocumentId}", documentId);
-            return summary;
+            // Invalidate cache
+            InvalidateSummaryCache(documentId);
+
+            _logger.LogInformation("Successfully deleted summary for document ID: {DocumentId}", documentId);
+            return ServiceResult.Success();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error regenerating summary for document ID: {DocumentId}", documentId);
-            throw;
+            _logger.LogError(ex, "Error deleting summary for document ID: {DocumentId}", documentId);
+            return ServiceResult.Failure("Failed to delete document summary");
         }
     }
 
-    private static string PrepareContentForSummarization(string content, string title)
+    #region Private Methods
+
+    private async Task<dynamic?> GetDocumentWithCaching(int documentId)
     {
-        // Clean and prepare content for AI processing
-        var builder = new StringBuilder();
+        var cacheKey = $"document_basic_{documentId}";
         
-        // Split content into lines and process
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        
-        foreach (var line in lines.Take(100)) // Limit to first 100 lines to avoid token limits
+        if (_memoryCache.TryGetValue(cacheKey, out dynamic? cachedDocument) && cachedDocument != null)
         {
-            var cleanLine = line.Trim();
-            if (!string.IsNullOrEmpty(cleanLine) && cleanLine.Length > 10) // Skip very short lines
-            {
-                builder.AppendLine(cleanLine);
+            return cachedDocument;
+        }
+
+        var document = await _context.Documents
+            .Where(d => d.Id == documentId && !d.IsDeleted)
+            .Select(d => new { d.Id, d.Title, d.FilePath, d.FileType })
+            .FirstOrDefaultAsync();
+
+        if (document != null)
+        {
+            _memoryCache.Set(cacheKey, document, TimeSpan.FromMinutes(30));
+        }
+
+        return document;
+    }
+
+    private async Task<ServiceResult<string>> GetDocumentContentWithCaching(int documentId)
+        {
+        var cacheKey = GetDocumentContentCacheKey(documentId);
+        
+        if (_memoryCache.TryGetValue(cacheKey, out string? cachedContent) && !string.IsNullOrEmpty(cachedContent))
+        {
+            _logger.LogDebug("Retrieved document content from cache for document ID: {DocumentId}", documentId);
+            return ServiceResult<string>.Success(cachedContent);
             }
-        }
 
-        var processedContent = builder.ToString();
-        
-        // Ensure content is not too long (limit to ~3000 characters to leave room for prompt)
-        if (processedContent.Length > 3000)
+        // Get latest version
+        var latestVersion = await _context.DocumentVersions
+            .Where(dv => dv.DocumentId == documentId)
+            .OrderByDescending(dv => dv.VersionNumber)
+            .FirstOrDefaultAsync();
+
+        if (latestVersion == null)
         {
-            processedContent = processedContent.Substring(0, 3000) + "...";
+            return ServiceResult<string>.Failure("No document versions found");
         }
 
-        return processedContent;
+        // Extract content using text extraction service
+        var contentResult = await _textExtractionService.ExtractTextFromDocumentAsync(latestVersion.DocumentId, latestVersion.VersionNumber);
+        
+        if (contentResult.Succeeded && !string.IsNullOrWhiteSpace(contentResult.Data))
+        {
+            // Cache the extracted content with a hash for content-based invalidation
+            var contentHash = ComputeContentHash(contentResult.Data);
+            var cacheKeyWithHash = $"{cacheKey}_{contentHash}";
+            
+            _memoryCache.Set(cacheKeyWithHash, contentResult.Data, DocumentContentCacheExpiration);
+            _memoryCache.Set(cacheKey, contentResult.Data, DocumentContentCacheExpiration);
+            
+            _logger.LogDebug("Cached document content for document ID: {DocumentId}", documentId);
+        }
+
+        return contentResult;
     }
 
-    private static DocumentSummary ParseAIResponse(string aiResponse, string documentTitle)
+    private static (string summary, string keyPoints) ParseAISummaryResponse(string aiResponse)
     {
-        var summary = new DocumentSummary
-        {
-            GeneratedAt = DateTime.UtcNow,
-            AIModel = "gpt-4o-mini", // From configuration
-            ConfidenceScore = 0.8 // Default confidence score
-        };
-
-        try
-        {
-            // Parse the structured response
             var lines = aiResponse.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            var summaryBuilder = new StringBuilder();
-            var keyPointsBuilder = new StringBuilder();
-            bool inKeyPoints = false;
+        var summary = "";
+        var keyPoints = "";
+        var inKeyPoints = false;
 
             foreach (var line in lines)
             {
-                var cleanLine = line.Trim();
+            var trimmedLine = line.Trim();
                 
-                if (cleanLine.StartsWith("SUMMARY:", StringComparison.OrdinalIgnoreCase))
-                {
-                    summaryBuilder.AppendLine(cleanLine.Substring(8).Trim());
-                    inKeyPoints = false;
-                }
-                else if (cleanLine.StartsWith("KEY POINTS:", StringComparison.OrdinalIgnoreCase))
+            if (trimmedLine.StartsWith("Key points", StringComparison.OrdinalIgnoreCase) || 
+                trimmedLine.StartsWith("Key Points", StringComparison.OrdinalIgnoreCase))
                 {
                     inKeyPoints = true;
-                }
-                else if (inKeyPoints && cleanLine.StartsWith("•"))
-                {
-                    keyPointsBuilder.AppendLine(cleanLine);
-                }
-                else if (!inKeyPoints && !cleanLine.StartsWith("SUMMARY:"))
-                {
-                    summaryBuilder.AppendLine(cleanLine);
-                }
+                continue;
             }
 
-            summary.Summary = summaryBuilder.ToString().Trim();
-            summary.KeyPoints = keyPointsBuilder.ToString().Trim();
-
-            // Fallback if parsing fails
-            if (string.IsNullOrEmpty(summary.Summary))
+            if (inKeyPoints)
             {
-                summary.Summary = aiResponse.Length > 500 
-                    ? aiResponse.Substring(0, 500) + "..."
-                    : aiResponse;
+                if (trimmedLine.StartsWith("•") || trimmedLine.StartsWith("-") || trimmedLine.StartsWith("*"))
+                {
+                    keyPoints += trimmedLine + "\n";
+                }
+                }
+            else if (!string.IsNullOrWhiteSpace(trimmedLine) && 
+                     !trimmedLine.StartsWith("Summary", StringComparison.OrdinalIgnoreCase))
+                {
+                summary += trimmedLine + " ";
+                }
             }
-        }
-        catch (Exception)
-        {
-            // Fallback to raw response if parsing fails
-            summary.Summary = aiResponse.Length > 500 
-                ? aiResponse.Substring(0, 500) + "..."
-                : aiResponse;
-            summary.KeyPoints = null;
-        }
 
-        return summary;
+        return (summary.Trim(), keyPoints.Trim());
     }
 
-    private static string GetContentHash(string content)
+    private static string GetSummaryCacheKey(int documentId) => $"document_summary_{documentId}";
+    private static string GetDocumentContentCacheKey(int documentId) => $"document_content_{documentId}";
+
+    private void InvalidateSummaryCache(int documentId)
+            {
+        var cacheKey = GetSummaryCacheKey(documentId);
+        _memoryCache.Remove(cacheKey);
+        _logger.LogDebug("Invalidated summary cache for document ID: {DocumentId}", documentId);
+    }
+
+    private void InvalidateDocumentContentCache(int documentId)
     {
-        // Simple hash for caching purposes
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
-        return Convert.ToBase64String(bytes)[..16]; // Take first 16 characters
+        var cacheKey = GetDocumentContentCacheKey(documentId);
+        _memoryCache.Remove(cacheKey);
+        _logger.LogDebug("Invalidated content cache for document ID: {DocumentId}", documentId);
     }
+
+    private static string ComputeContentHash(string content)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+        return Convert.ToBase64String(hashBytes)[..8]; // Short hash for cache key
+    }
+
+    /// <summary>
+    /// Log AI usage data (if userId available)
+    /// </summary>
+    private async Task LogUsageAsync(string? userId, string operationType, AIResponse aiResponse, int? documentId, int inputSize, bool servedFromCache)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            // Skip logging if no userId (e.g., background processes)
+            return;
+        }
+
+        try
+        {
+            await _usageTrackingService.LogUsageAsync(
+                userId: userId,
+                operationType: operationType,
+                aiResponse: aiResponse,
+                documentId: documentId,
+                inputSize: inputSize,
+                servedFromCache: servedFromCache,
+                ipAddress: null, // Not available in service layer
+                userAgent: null, // Not available in service layer
+                qualitySetting: null,
+                metadata: null
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to log AI usage for user {UserId}, operation {OperationType}", userId, operationType);
+            // Don't fail the main operation if logging fails
+        }
+    }
+
+    #endregion
 } 

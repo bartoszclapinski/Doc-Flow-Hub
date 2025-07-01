@@ -1,0 +1,329 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.UserLimitsModel
+@{
+    ViewData["Title"] = "User Rate Limits";
+    ViewData["ActivePage"] = "UserLimits";
+    Layout = "_AdminLayout";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">User Rate Limits Management</h1>
+        <p class="text-muted mb-0">Monitor and manage AI usage limits for individual users</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="refreshLimits()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#setLimitsModal">
+            <i class="bi bi-gear"></i> Configure Limits
+        </button>
+    </div>
+</div>
+
+<!-- User Search and Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search User</label>
+                <input type="text" class="form-control" id="userSearch" placeholder="Enter email or user ID">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status Filter</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Users</option>
+                    <option value="normal">Normal Usage</option>
+                    <option value="warning">Near Limit</option>
+                    <option value="exceeded">Limit Exceeded</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" id="sortBy">
+                    <option value="usage">Usage Percentage</option>
+                    <option value="cost">Daily Cost</option>
+                    <option value="operations">Operations Count</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="button" class="btn btn-outline-primary d-block w-100" onclick="applyFilters()">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Rate Limits Overview -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-check-circle text-success fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1" id="normal-users">@Model.LimitsOverview?.NormalUsers ?? 0</h4>
+                <p class="text-muted mb-0">Normal Usage</p>
+                <small class="text-success">Under 80% limit</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1" id="warning-users">@Model.LimitsOverview?.WarningUsers ?? 0</h4>
+                <p class="text-muted mb-0">Near Limit</p>
+                <small class="text-warning">80-100% of limit</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-x-circle text-danger fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1" id="exceeded-users">@Model.LimitsOverview?.ExceededUsers ?? 0</h4>
+                <p class="text-muted mb-0">Limit Exceeded</p>
+                <small class="text-danger">Over daily limit</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-center mb-3">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                        <i class="bi bi-people text-info fs-4"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1" id="total-active">@Model.LimitsOverview?.TotalActiveUsers ?? 0</h4>
+                <p class="text-muted mb-0">Active Users</p>
+                <small class="text-info">Last 24 hours</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Limits Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 pb-0">
+        <h5 class="card-title mb-0">User Rate Limits Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end">Daily Usage</th>
+                        <th class="text-end">Hourly Usage</th>
+                        <th class="text-end">Daily Cost</th>
+                        <th class="text-end">Progress</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-limits-table">
+                    @if (Model.UserLimits != null)
+                    {
+                        @foreach (var user in Model.UserLimits.Where(u => u != null))
+                        {
+                            var statusClass = user.IsOverLimit ? "danger" : (user.IsNearLimit ? "warning" : "success");
+                            var statusIcon = user.IsOverLimit ? "x-circle" : (user.IsNearLimit ? "exclamation-triangle" : "check-circle");
+                            var statusText = user.IsOverLimit ? "Exceeded" : (user.IsNearLimit ? "Near Limit" : "Normal");
+                            
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="bi bi-person text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium">@(string.IsNullOrEmpty(user.UserId) ? "Unknown" : user.UserId.Substring(0, Math.Min(8, user.UserId.Length)))</div>
+                                            <small class="text-muted">User ID</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-@statusClass bg-opacity-10 text-@statusClass">
+                                        <i class="bi bi-@statusIcon me-1"></i>@statusText
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="fw-medium">@user.CurrentDailyOperations / @user.DailyOperationLimit</div>
+                                    <small class="text-muted">operations</small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="fw-medium">@user.CurrentHourlyOperations / @user.HourlyOperationLimit</div>
+                                    <small class="text-muted">this hour</small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="fw-medium">$@user.CurrentDailyCost.ToString("F2")</div>
+                                    <small class="text-muted">/ $@user.DailyCostLimit.ToString("F2")</small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                                            <div class="progress-bar bg-@statusClass" 
+                                                 style="width: @(Math.Min(100, user.UsagePercentage * 100))%"></div>
+                                        </div>
+                                        <small class="text-muted">@((user.UsagePercentage * 100).ToString("F0"))%</small>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                                data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#" onclick="viewUserDetails('@(user.UserId ?? "")')">
+                                                <i class="bi bi-eye me-2"></i>View Details
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="adjustLimits('@(user.UserId ?? "")')">
+                                                <i class="bi bi-sliders me-2"></i>Adjust Limits
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="resetUsage('@(user.UserId ?? "")')">
+                                                <i class="bi bi-arrow-counterclockwise me-2"></i>Reset Usage
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        @if (Model.UserLimits?.Any() != true)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-people text-muted fs-1"></i>
+                <p class="text-muted mt-3">No user data available</p>
+                <p class="text-muted">Users will appear here once they start using AI features</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Configure Limits Modal -->
+<div class="modal fade" id="setLimitsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configure Default Limits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="limitsForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Daily Operation Limit</label>
+                        <input type="number" class="form-control" id="dailyLimit" value="1000" min="1">
+                        <small class="text-muted">Maximum operations per day per user</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hourly Operation Limit</label>
+                        <input type="number" class="form-control" id="hourlyLimit" value="100" min="1">
+                        <small class="text-muted">Maximum operations per hour per user</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Daily Cost Limit ($)</label>
+                        <input type="number" class="form-control" id="costLimit" value="10.00" min="0" step="0.01">
+                        <small class="text-muted">Maximum daily cost per user</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function refreshLimits() {
+            window.location.reload();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('userSearch').value;
+            const status = document.getElementById('statusFilter').value;
+            const sort = document.getElementById('sortBy').value;
+            
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (status) params.append('status', status);
+            if (sort) params.append('sort', sort);
+            
+            window.location.href = `?${params.toString()}`;
+        }
+
+        function viewUserDetails(userId) {
+            // Navigate to user details or open modal with detailed usage info
+            console.log('Viewing details for user:', userId);
+        }
+
+        function adjustLimits(userId) {
+            // Open modal to adjust limits for specific user
+            console.log('Adjusting limits for user:', userId);
+        }
+
+        function resetUsage(userId) {
+            if (confirm('Are you sure you want to reset usage counters for this user?')) {
+                // Call API to reset usage
+                console.log('Resetting usage for user:', userId);
+            }
+        }
+
+        // Configure Limits Form
+        document.getElementById('limitsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dailyLimit = document.getElementById('dailyLimit').value;
+            const hourlyLimit = document.getElementById('hourlyLimit').value;
+            const costLimit = document.getElementById('costLimit').value;
+            
+            // Call API to update default limits
+            console.log('Updating limits:', { dailyLimit, hourlyLimit, costLimit });
+            
+            // Close modal and show success message
+            bootstrap.Modal.getInstance(document.getElementById('setLimitsModal')).hide();
+        });
+
+        // Real-time updates
+        function updateLimitsData() {
+            // Implement real-time updates if needed
+        }
+
+        // Initialize filters from URL parameters
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            
+            if (params.get('search')) {
+                document.getElementById('userSearch').value = params.get('search');
+            }
+            if (params.get('status')) {
+                document.getElementById('statusFilter').value = params.get('status');
+            }
+            if (params.get('sort')) {
+                document.getElementById('sortBy').value = params.get('sort');
+            }
+        });
+    </script>
+} 
