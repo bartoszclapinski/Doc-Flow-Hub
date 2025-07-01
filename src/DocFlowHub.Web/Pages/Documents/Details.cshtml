@@ -66,15 +66,9 @@
                                         <i class="bi bi-pencil me-1"></i>Edit
                                     </a>
                                     <button type="button" class="btn btn-outline-danger btn-sm" 
-                                            onclick="confirmDeleteDocument(@Model.Document.Id, '@Model.Document.Title.Replace("'", "\\'")', '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
+                                            onclick="confirmDeleteDocument(@Model.Document.Id, @Html.Raw(Json.Serialize(Model.Document.Title)), '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
                                         <i class="bi bi-trash me-1"></i>Delete
                                     </button>
-                                }
-                                else
-                                {
-                                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
-                                        <i class="bi bi-pencil me-1"></i>Edit
-                                    </a>
                                 }
                             </div>
                         </div>

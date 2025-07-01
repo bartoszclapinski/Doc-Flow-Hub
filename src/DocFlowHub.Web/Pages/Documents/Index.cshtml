@@ -332,7 +332,7 @@
                                                         </li>
                                                         <li>
                                                             <button type="button" class="dropdown-item text-danger" 
-                                                                    onclick="confirmDeleteDocument(@document.Id, '@document.Title.Replace("'", "\\'")', '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
+                                                                                onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
                                                                 <i class="bi bi-trash me-2"></i>Delete
                                                             </button>
                                                         </li>

@@ -526,8 +526,16 @@ public class DocumentService : IDocumentService
                 return ServiceResult.Failure("Version not found");
 
             // Check if this is the current version
-            if (version.Id == document.CurrentVersionId)
+            if (document.CurrentVersionId.HasValue && version.Id == document.CurrentVersionId.Value)
                 return ServiceResult.Failure("Cannot delete the current active version of the document");
+            
+            // If CurrentVersionId is null, we need to be extra careful - don't allow deletion if this might be the only or newest version
+            if (!document.CurrentVersionId.HasValue)
+            {
+                var latestVersion = document.Versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
+                if (latestVersion != null && latestVersion.Id == version.Id)
+                    return ServiceResult.Failure("Cannot delete the latest version when no current version is set");
+            }
 
             // Check if there's more than one version (need at least one version)
             if (document.Versions.Count <= 1)
