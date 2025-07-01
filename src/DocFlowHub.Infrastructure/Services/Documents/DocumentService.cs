@@ -633,7 +633,6 @@ public class DocumentService : IDocumentService
                     _logger.LogError(ex, "Error deleting document {DocumentId}", documentId);
                     deleteItem.Success = false;
                     deleteItem.ErrorMessage = "An error occurred while deleting the document";
-                    result.FailedDeletions++;
                 }
 
                 if (!deleteItem.Success)
