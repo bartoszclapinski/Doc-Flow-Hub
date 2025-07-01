@@ -1,5 +1,6 @@
 @page
 @model DocFlowHub.Web.Pages.Documents.UploadModel
+@using DocFlowHub.Core.Models.AI
 @{
     ViewData["Title"] = "Upload Document";
 }
@@ -78,12 +79,72 @@
                             
                             <span asp-validation-for="File" class="text-danger"></span>
                             
-                            <!-- Upload Progress -->
+                            <!-- Enhanced Upload Progress with AI Processing -->
                             <div class="upload-progress mt-3" id="upload-progress">
-                                <div class="progress">
+                                <!-- Progress Steps Indicator -->
+                                <div class="progress-steps mb-3" id="progress-steps" style="display: none;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="step-item" id="step-upload">
+                                            <div class="step-icon">
+                                                <i class="bi bi-cloud-upload"></i>
+                                            </div>
+                                            <small class="step-label">Upload File</small>
+                                        </div>
+                                        <div class="step-line"></div>
+                                        <div class="step-item" id="step-ai">
+                                            <div class="step-icon">
+                                                <i class="bi bi-robot"></i>
+                                            </div>
+                                            <small class="step-label">AI Processing</small>
+                                        </div>
+                                        <div class="step-line"></div>
+                                        <div class="step-item" id="step-complete">
+                                            <div class="step-icon">
+                                                <i class="bi bi-check-circle"></i>
+                                            </div>
+                                            <small class="step-label">Complete</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="progress mb-2">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated" 
                                          role="progressbar" style="width: 0%" id="progress-bar">
                                         <span id="progress-text">0%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Status Message -->
+                                <div class="progress-status" id="progress-status">
+                                    <div class="d-flex align-items-center">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status" id="progress-spinner" style="display: none;">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div class="progress-message" id="progress-message">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            <span id="progress-message-text">Ready to upload</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- AI Processing Details -->
+                                <div class="ai-processing-details mt-2" id="ai-processing-details" style="display: none;">
+                                    <div class="alert alert-info py-2 mb-0">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-2">
+                                                <div class="spinner-border spinner-border-sm text-info" role="status">
+                                                    <span class="visually-hidden">Processing...</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold" id="ai-stage-title">AI Processing</div>
+                                                <small class="text-muted" id="ai-stage-description">Analyzing document content...</small>
+                                            </div>
+                                            <div class="ai-processing-stats">
+                                                <small class="text-muted" id="ai-processing-time">Est. <span id="ai-time-remaining">30s</span></small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -156,6 +217,158 @@
                                         <option value="@team.Id">@team.Name</option>
                                     }
                                 </select>
+                            </div>
+                        }
+
+                        <!-- AI Settings -->
+                        @if (Model.AIFeaturesEnabled)
+                        {
+                            <div class="mb-4">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info bg-opacity-10">
+                                        <h6 class="card-title mb-0 text-info">
+                                            <i class="bi bi-robot me-2"></i>
+                                            AI-Powered Features
+                                            <small class="badge bg-info ms-2">✨ Smart Analysis</small>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Generate AI Summary -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input asp-for="GenerateAISummary" class="form-check-input" type="checkbox" 
+                                                           id="ai-summary-toggle">
+                                                    <label class="form-check-label fw-bold" for="ai-summary-toggle">
+                                                        <i class="bi bi-magic me-1 text-info"></i>
+                                                        Generate AI Summary
+                                                    </label>
+                                                    <div class="form-text">
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-info-circle me-1"></i>
+                                                            Automatically create an intelligent summary of your document content
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-6" id="ai-model-section">
+                                                <div class="mb-3">
+                                                    <label asp-for="SelectedAIModel" class="form-label fw-bold">
+                                                        <i class="bi bi-cpu me-1 text-primary"></i>
+                                                        AI Model
+                                                    </label>
+                                                    <select asp-for="SelectedAIModel" class="form-select" id="ai-model-select">
+                                                        @foreach (var aiModel in Model.AvailableAIModels)
+                                                        {
+                                                            <option value="@aiModel.Model" 
+                                                                    data-cost="@aiModel.Description"
+                                                                    selected="@(Model.SelectedAIModel == aiModel.Model)">
+                                                                @aiModel.Name@(aiModel.IsRecommended ? " ⭐" : "")
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                    <div class="form-text">
+                                                        <small class="text-muted" id="model-cost-info">
+                                                            <i class="bi bi-info-circle me-1"></i>
+                                                            <span id="cost-description">Good quality, lowest cost</span>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- AI Quality Settings -->
+                                        <div class="row" id="ai-quality-section">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label asp-for="AIQuality" class="form-label fw-bold">
+                                                        <i class="bi bi-sliders me-1 text-success"></i>
+                                                        AI Quality Level
+                                                        <span class="badge bg-secondary ms-2" id="quality-display">@((Model.AIQuality * 100).ToString("F0"))%</span>
+                                                    </label>
+                                                    <input asp-for="AIQuality" type="range" class="form-range" 
+                                                           min="0.3" max="1.0" step="0.1" value="@Model.AIQuality" 
+                                                           id="quality-slider">
+                                                    <div class="d-flex justify-content-between small text-muted">
+                                                        <span>⚡ Fast</span>
+                                                        <span>⚖️ Balanced</span>
+                                                        <span>🎯 Precise</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                                                        <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted">
+                                        <i class="bi bi-calculator me-1"></i>
+                                        AI Processing Estimate
+                                    </label>
+                                    <div class="alert alert-light mb-0 py-2">
+                                        <div class="row g-2 text-center">
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Cost</small>
+                                                <span class="fw-bold text-success" id="estimated-cost">@Model.EstimatedCost</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Time</small>
+                                                <span class="fw-bold text-info" id="estimated-time">@Model.EstimatedProcessingTime</span>
+                                            </div>
+                                            <div class="col-4">
+                                                <small class="text-muted d-block">Quality</small>
+                                                <span class="fw-bold text-primary" id="quality-level">@AISettingsHelper.GetQualityDisplayName(Model.AIQuality)</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted" id="model-capabilities">
+                                                <i class="bi bi-lightbulb me-1"></i><span id="capabilities-text">@Model.ModelCapabilities</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                                        </div>
+
+                                        <!-- AI Settings Status -->
+                                        @if (Model.UserAISettings != null)
+                                        {
+                                            <div class="row mt-3">
+                                                <div class="col-12">
+                                                    <div class="alert alert-info py-2 mb-0">
+                                                        <small>
+                                                            <i class="bi bi-gear me-1"></i>
+                                                            <strong>Your AI Preferences:</strong>
+                                                            @if (Model.UserAISettings.UseCustomApiKey)
+                                                            {
+                                                                <span class="badge bg-success ms-1">Custom API Key</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-primary ms-1">System API</span>
+                                                            }
+                                                            <a asp-page="/Settings/AI" class="btn btn-sm btn-outline-info ms-2">
+                                                                <i class="bi bi-gear-fill me-1"></i>Manage Settings
+                                                            </a>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- AI Features Disabled Message -->
+                            <div class="mb-4">
+                                <div class="alert alert-secondary">
+                                    <i class="bi bi-robot me-2"></i>
+                                    <strong>AI Features Available!</strong>
+                                    Enable AI-powered document analysis in your 
+                                    <a asp-page="/Settings/AI" class="alert-link">AI Settings</a>
+                                    to automatically generate summaries and intelligent insights.
+                                </div>
                             </div>
                         }
 
@@ -287,43 +500,85 @@
                 }
             });
 
-            // Enhanced form submission
+            // Enhanced form submission with AI processing workflow
             uploadForm.addEventListener('submit', function(e) {
-                if (!fileInput.files || fileInput.files.length === 0) {
-                    e.preventDefault();
-                    if (window.DocFlowHub) {
-                        window.DocFlowHub.showError('Please select a file to upload');
-                    }
-                    return;
-                }
-                
-                // Show progress bar
-                progressDiv.classList.add('show');
-                submitBtn.disabled = true;
-                
-                // Simulate progress (you can replace with actual upload progress)
-                simulateUploadProgress();
-            });
-
-            function simulateUploadProgress() {
-                let progress = 0;
+                const progressContainer = document.getElementById('upload-progress');
+                const progressSteps = document.getElementById('progress-steps');
                 const progressBar = document.getElementById('progress-bar');
                 const progressText = document.getElementById('progress-text');
+                const progressMessage = document.getElementById('progress-message-text');
+                const progressSpinner = document.getElementById('progress-spinner');
+                const aiProcessingDetails = document.getElementById('ai-processing-details');
                 
-                const interval = setInterval(() => {
-                    progress += Math.random() * 15;
-                    if (progress > 90) progress = 90;
+                // Show progress indicators
+                progressContainer.classList.add('show');
+                progressSteps.style.display = 'block';
+                progressSpinner.style.display = 'inline-block';
+                
+                // Update upload step
+                const stepUpload = document.getElementById('step-upload');
+                stepUpload.classList.add('active');
+                progressBar.style.width = '25%';
+                progressText.textContent = '25%';
+                progressMessage.textContent = 'Uploading document...';
+                
+                if (aiToggle && aiToggle.checked) {
+                    // Show AI processing message
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.innerHTML = '<i class="bi bi-robot me-1"></i> Uploading & Processing with AI...';
                     
-                    progressBar.style.width = progress + '%';
-                    progressText.textContent = Math.round(progress) + '%';
+                    // Simulate AI processing stages after a delay
+                    setTimeout(() => {
+                        // File uploaded, start AI processing
+                        stepUpload.classList.remove('active');
+                        stepUpload.classList.add('completed');
+                        document.querySelector('.step-line').classList.add('completed');
+                        
+                        const stepAI = document.getElementById('step-ai');
+                        stepAI.classList.add('active');
+                        aiProcessingDetails.style.display = 'block';
+                        
+                        progressBar.style.width = '60%';
+                        progressText.textContent = '60%';
+                        progressMessage.textContent = 'AI analyzing document content...';
+                        
+                        // Simulate AI completion
+                        setTimeout(() => {
+                            stepAI.classList.remove('active');
+                            stepAI.classList.add('completed');
+                            document.querySelectorAll('.step-line')[1].classList.add('completed');
+                            
+                            const stepComplete = document.getElementById('step-complete');
+                            stepComplete.classList.add('active');
+                            
+                            progressBar.style.width = '100%';
+                            progressText.textContent = '100%';
+                            progressMessage.textContent = 'AI processing complete!';
+                            
+                            document.getElementById('ai-stage-title').textContent = 'Processing Complete';
+                            document.getElementById('ai-stage-description').textContent = 'AI summary generated successfully';
+                            document.getElementById('ai-time-remaining').textContent = 'Done!';
+                        }, 3000);
+                    }, 2000);
                     
-                    if (progress >= 90) {
-                        clearInterval(interval);
-                        progressBar.style.width = '100%';
-                        progressText.textContent = 'Processing...';
+                    if (window.DocFlowHub) {
+                        window.DocFlowHub.showInfo('Document will be processed with AI after upload');
                     }
-                }, 200);
-            }
+                } else {
+                    // No AI processing, just show upload progress
+                    setTimeout(() => {
+                        stepUpload.classList.remove('active');
+                        stepUpload.classList.add('completed');
+                        
+                        const stepComplete = document.getElementById('step-complete');
+                        stepComplete.classList.add('active');
+                        
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        progressMessage.textContent = 'Upload complete!';
+                    }, 1500);
+                }
+            });
 
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
@@ -348,7 +603,7 @@
             });
         });
 
-        function clearFile() {
+                    function clearFile() {
             const fileInput = document.getElementById('file-input');
             const selectedFileDiv = document.getElementById('selected-file');
             
@@ -360,5 +615,757 @@
                 window.DocFlowHub.showInfo('File selection cleared');
             }
         }
+
+        // AI Controls Functionality
+        const initAIControls = () => {
+            const aiToggle = document.getElementById('ai-summary-toggle');
+            const aiModelSection = document.getElementById('ai-model-section');
+            const aiQualitySection = document.getElementById('ai-quality-section');
+            const qualitySlider = document.getElementById('quality-slider');
+            const qualityDisplay = document.getElementById('quality-display');
+            const modelSelect = document.getElementById('ai-model-select');
+            const costDescription = document.getElementById('cost-description');
+            const processingEstimate = document.getElementById('processing-estimate');
+
+            if (!aiToggle) return; // AI features not enabled
+
+            // Toggle AI sections based on checkbox
+            const toggleAISections = () => {
+                const isEnabled = aiToggle.checked;
+                aiModelSection.style.opacity = isEnabled ? '1' : '0.5';
+                aiQualitySection.style.opacity = isEnabled ? '1' : '0.5';
+                
+                const inputs = aiModelSection.querySelectorAll('select, input');
+                inputs.forEach(input => input.disabled = !isEnabled);
+                
+                const qualityInputs = aiQualitySection.querySelectorAll('input');
+                qualityInputs.forEach(input => input.disabled = !isEnabled);
+            };
+
+            // Update quality display and cost estimation
+            const updateQualityDisplay = () => {
+                const value = Math.round(qualitySlider.value * 100);
+                qualityDisplay.textContent = value + '%';
+                updateCostEstimation();
+            };
+
+            const updateCostEstimation = () => {
+                if (!aiToggle || !aiToggle.checked) {
+                    // Update cost estimation elements when AI is disabled
+                    const estimatedCost = document.getElementById('estimated-cost');
+                    const estimatedTime = document.getElementById('estimated-time');
+                    const qualityLevel = document.getElementById('quality-level');
+                    const capabilitiesText = document.getElementById('capabilities-text');
+                    
+                    if (estimatedCost) estimatedCost.textContent = 'No AI processing - Free';
+                    if (estimatedTime) estimatedTime.textContent = 'No AI processing';
+                    if (qualityLevel) qualityLevel.textContent = 'N/A';
+                    if (capabilitiesText) capabilitiesText.textContent = 'AI features disabled for this upload';
+                    return;
+                }
+
+                const selectedModel = modelSelect ? modelSelect.value : 'Gpt4oMini';
+                const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
+
+                // Calculate real-time estimates
+                const cost = calculateEstimatedCost(selectedModel, quality);
+                const time = calculateEstimatedTime(selectedModel, quality);
+                const capabilities = getModelCapabilities(selectedModel);
+                const qualityText = getQualityDisplayName(quality);
+
+                // Update UI elements
+                const estimatedCost = document.getElementById('estimated-cost');
+                const estimatedTime = document.getElementById('estimated-time');
+                const qualityLevel = document.getElementById('quality-level');
+                const capabilitiesText = document.getElementById('capabilities-text');
+
+                if (estimatedCost) estimatedCost.textContent = cost;
+                if (estimatedTime) estimatedTime.textContent = time;
+                if (qualityLevel) qualityLevel.textContent = qualityText;
+                if (capabilitiesText) capabilitiesText.textContent = capabilities;
+            };
+
+            // Cost calculation functions
+            const calculateEstimatedCost = (model, quality) => {
+                const tokensPerOperation = 2000;
+                const costPerToken = getCostPerToken(model);
+                const estimatedCost = tokensPerOperation * costPerToken;
+
+                if (estimatedCost < 0.01) return '< $0.01';
+                if (estimatedCost < 0.10) return `≈ $${estimatedCost.toFixed(3)}`;
+                return `≈ $${estimatedCost.toFixed(2)}`;
+            };
+
+            const calculateEstimatedTime = (model, quality) => {
+                const baseTime = getBaseProcessingTime(model);
+                const qualityMultiplier = quality <= 0.3 ? 0.7 : quality <= 0.7 ? 1.0 : 1.4;
+                const estimatedSeconds = baseTime * qualityMultiplier;
+
+                if (estimatedSeconds < 60) return `≈ ${Math.round(estimatedSeconds)} seconds`;
+                return `≈ ${(estimatedSeconds / 60).toFixed(1)} minutes`;
+            };
+
+            const getCostPerToken = (model) => {
+                const costs = {
+                    'Gpt4oMini': 0.00015 / 1000,
+                    'Gpt4o': 0.005 / 1000,
+                    'Gpt41Mini': 0.003 / 1000,
+                    'Gpt41': 0.01 / 1000
+                };
+                return costs[model] || 0.001 / 1000;
+            };
+
+            const getBaseProcessingTime = (model) => {
+                const times = {
+                    'Gpt4oMini': 8,
+                    'Gpt4o': 12,
+                    'Gpt41Mini': 18,
+                    'Gpt41': 25
+                };
+                return times[model] || 15;
+            };
+
+            const getModelCapabilities = (model) => {
+                const capabilities = {
+                    'Gpt4oMini': 'Fast, cost-effective, good for basic summaries',
+                    'Gpt4o': 'Balanced speed and quality, excellent for most documents',
+                    'Gpt41Mini': 'High quality analysis, ideal for important documents',
+                    'Gpt41': 'Highest quality insights, best for complex or critical content'
+                };
+                return capabilities[model] || 'AI-powered document analysis';
+            };
+
+            const getQualityDisplayName = (quality) => {
+                if (quality <= 0.3) return 'Speed Optimized';
+                if (quality <= 0.7) return 'Balanced';
+                return 'Quality Optimized';
+            };
+
+            // Update cost description based on model
+            const updateCostDescription = () => {
+                const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+                const cost = selectedOption.getAttribute('data-cost');
+                costDescription.textContent = cost;
+                updateCostEstimation(); // Update cost estimation when model changes
+            };
+
+            // Event listeners
+            aiToggle.addEventListener('change', () => {
+                toggleAISections();
+                updateCostEstimation(); // Update cost estimation when AI toggle changes
+            });
+            qualitySlider.addEventListener('input', updateQualityDisplay);
+            modelSelect.addEventListener('change', updateCostDescription);
+
+            // Initialize
+            toggleAISections();
+            updateQualityDisplay();
+            updateCostDescription();
+            updateCostEstimation(); // Initialize cost estimation
+
+            // Enhanced form submission with AI processing workflow
+            uploadForm.addEventListener('submit', function(e) {
+                const progressContainer = document.getElementById('upload-progress');
+                const progressSteps = document.getElementById('progress-steps');
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                const progressMessage = document.getElementById('progress-message-text');
+                const progressSpinner = document.getElementById('progress-spinner');
+                const aiProcessingDetails = document.getElementById('ai-processing-details');
+                
+                // Show progress indicators
+                progressContainer.classList.add('show');
+                progressSteps.style.display = 'block';
+                progressSpinner.style.display = 'inline-block';
+                
+                // Update upload step
+                const stepUpload = document.getElementById('step-upload');
+                stepUpload.classList.add('active');
+                progressBar.style.width = '25%';
+                progressText.textContent = '25%';
+                progressMessage.textContent = 'Uploading document...';
+                
+                if (aiToggle && aiToggle.checked) {
+                    // Show AI processing message
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.innerHTML = '<i class="bi bi-robot me-1"></i> Uploading & Processing with AI...';
+                    
+                    // Simulate AI processing stages after a delay
+                    setTimeout(() => {
+                        // File uploaded, start AI processing
+                        stepUpload.classList.remove('active');
+                        stepUpload.classList.add('completed');
+                        document.querySelector('.step-line').classList.add('completed');
+                        
+                        const stepAI = document.getElementById('step-ai');
+                        stepAI.classList.add('active');
+                        aiProcessingDetails.style.display = 'block';
+                        
+                        progressBar.style.width = '60%';
+                        progressText.textContent = '60%';
+                        progressMessage.textContent = 'AI analyzing document content...';
+                        
+                        // Simulate AI completion
+                        setTimeout(() => {
+                            stepAI.classList.remove('active');
+                            stepAI.classList.add('completed');
+                            document.querySelectorAll('.step-line')[1].classList.add('completed');
+                            
+                            const stepComplete = document.getElementById('step-complete');
+                            stepComplete.classList.add('active');
+                            
+                            progressBar.style.width = '100%';
+                            progressText.textContent = '100%';
+                            progressMessage.textContent = 'AI processing complete!';
+                            
+                            document.getElementById('ai-stage-title').textContent = 'Processing Complete';
+                            document.getElementById('ai-stage-description').textContent = 'AI summary generated successfully';
+                            document.getElementById('ai-time-remaining').textContent = 'Done!';
+                        }, 3000);
+                    }, 2000);
+                    
+                    if (window.DocFlowHub) {
+                        window.DocFlowHub.showInfo('Document will be processed with AI after upload');
+                    }
+                } else {
+                    // No AI processing, just show upload progress
+                    setTimeout(() => {
+                        stepUpload.classList.remove('active');
+                        stepUpload.classList.add('completed');
+                        
+                        const stepComplete = document.getElementById('step-complete');
+                        stepComplete.classList.add('active');
+                        
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        progressMessage.textContent = 'Upload complete!';
+                    }, 1500);
+                }
+            });
+        };
+
+        // ============================================================================
+        // AI PROCESSING WORKFLOW ENHANCEMENT - PHASE 3.3: REAL-TIME FEEDBACK
+        // ============================================================================
+
+        // Enhanced Upload Progress with AI Processing Stages
+        const initUploadProgress = () => {
+            const uploadForm = document.getElementById('upload-form');
+            const progressContainer = document.getElementById('upload-progress');
+            const progressSteps = document.getElementById('progress-steps');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progressSpinner = document.getElementById('progress-spinner');
+            const progressMessage = document.getElementById('progress-message-text');
+            const aiProcessingDetails = document.getElementById('ai-processing-details');
+            const aiStageTitle = document.getElementById('ai-stage-title');
+            const aiStageDescription = document.getElementById('ai-stage-description');
+            const aiTimeRemaining = document.getElementById('ai-time-remaining');
+
+            // AI Processing stages configuration
+            const aiStages = [
+                {
+                    name: 'extracting',
+                    title: 'Extracting Content',
+                    description: 'Reading and parsing document content...',
+                    duration: 3000,
+                    progress: 30
+                },
+                {
+                    name: 'analyzing',
+                    title: 'AI Analysis',
+                    description: 'Analyzing content with AI model...',
+                    duration: 8000,
+                    progress: 70
+                },
+                {
+                    name: 'generating',
+                    title: 'Generating Summary',
+                    description: 'Creating intelligent summary and insights...',
+                    duration: 4000,
+                    progress: 95
+                }
+            ];
+
+            // Show upload progress
+            const showUploadProgress = () => {
+                progressContainer.classList.add('show');
+                progressSteps.style.display = 'block';
+                updateStep('upload', 'active');
+                updateProgressBar(0, 'Starting upload...');
+            };
+
+            // Update progress step states
+            const updateStep = (step, state) => {
+                const stepElement = document.getElementById(`step-${step}`);
+                const stepLines = document.querySelectorAll('.step-line');
+                
+                if (stepElement) {
+                    stepElement.className = `step-item ${state}`;
+                }
+
+                // Update step lines for completed steps
+                if (state === 'completed') {
+                    if (step === 'upload' && stepLines[0]) {
+                        stepLines[0].classList.add('completed');
+                    } else if (step === 'ai' && stepLines[1]) {
+                        stepLines[1].classList.add('completed');
+                    }
+                }
+            };
+
+            // Update progress bar and message
+            const updateProgressBar = (percentage, message) => {
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `${Math.round(percentage)}%`;
+                progressMessage.textContent = message;
+            };
+
+            // Show AI processing details
+            const showAIProcessing = () => {
+                updateStep('upload', 'completed');
+                updateStep('ai', 'active');
+                updateProgressBar(25, 'AI processing started...');
+                aiProcessingDetails.style.display = 'block';
+                progressSpinner.style.display = 'inline-block';
+            };
+
+            // Process AI stages with realistic timing
+            const processAIStages = async (selectedModel, quality) => {
+                const baseTime = getBaseProcessingTime(selectedModel || 'Gpt4oMini');
+                const qualityMultiplier = quality <= 0.3 ? 0.7 : quality <= 0.7 ? 1.0 : 1.4;
+                
+                for (let i = 0; i < aiStages.length; i++) {
+                    const stage = aiStages[i];
+                    const adjustedDuration = (stage.duration * qualityMultiplier);
+                    
+                    // Update AI stage display
+                    aiStageTitle.textContent = stage.title;
+                    aiStageDescription.textContent = stage.description;
+                    
+                    // Add stage-specific styling
+                    aiProcessingDetails.className = `ai-processing-details mt-2 ai-stage-${stage.name}`;
+                    
+                    // Update progress and time estimate
+                    updateProgressBar(stage.progress, stage.description);
+                    
+                    // Calculate time remaining
+                    const remainingStages = aiStages.slice(i + 1);
+                    const remainingTime = remainingStages.reduce((total, s) => total + (s.duration * qualityMultiplier), 0);
+                    const timeDisplay = remainingTime > 0 ? `${Math.round(remainingTime / 1000)}s` : 'Almost done!';
+                    aiTimeRemaining.textContent = timeDisplay;
+                    
+                    // Animate progress during stage
+                    await animateStageProgress(stage.progress, adjustedDuration);
+                }
+            };
+
+            // Animate progress within a stage
+            const animateStageProgress = (targetProgress, duration) => {
+                return new Promise(resolve => {
+                    const startProgress = parseInt(progressBar.style.width) || 0;
+                    const progressDiff = targetProgress - startProgress;
+                    const steps = 50;
+                    const stepDuration = duration / steps;
+                    let currentStep = 0;
+
+                    const interval = setInterval(() => {
+                        currentStep++;
+                        const currentProgress = startProgress + (progressDiff * currentStep / steps);
+                        updateProgressBar(currentProgress, aiStageDescription.textContent);
+                        
+                        if (currentStep >= steps) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, stepDuration);
+                });
+            };
+
+            // Complete AI processing
+            const completeAIProcessing = () => {
+                updateStep('ai', 'completed');
+                updateStep('complete', 'active');
+                updateProgressBar(100, 'AI processing complete!');
+                
+                // Update AI processing details to show completion
+                aiStageTitle.textContent = 'Processing Complete';
+                aiStageDescription.textContent = 'AI summary generated successfully';
+                aiTimeRemaining.textContent = 'Done!';
+                
+                // Hide spinner and show checkmark
+                const spinner = aiProcessingDetails.querySelector('.spinner-border');
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    const checkIcon = document.createElement('i');
+                    checkIcon.className = 'bi bi-check-circle-fill text-success';
+                    spinner.parentNode.appendChild(checkIcon);
+                }
+
+                // Auto-hide after delay and redirect
+                setTimeout(() => {
+                    progressMessage.innerHTML = '<i class="bi bi-check-circle me-1 text-success"></i>Upload and AI processing completed successfully!';
+                    progressSpinner.style.display = 'none';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/Documents';
+                    }, 2000);
+                }, 1500);
+            };
+
+            // Handle upload with AI processing
+            const handleUploadWithAI = async (form) => {
+                const aiToggle = document.getElementById('ai-summary-toggle');
+                const modelSelect = document.getElementById('ai-model-select');
+                const qualitySlider = document.getElementById('quality-slider');
+                
+                const aiEnabled = aiToggle && aiToggle.checked;
+                const selectedModel = modelSelect ? modelSelect.value : 'Gpt4oMini';
+                const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
+                
+                showUploadProgress();
+                
+                try {
+                    // Simulate file upload progress
+                    await animateStageProgress(20, 2000);
+                    updateProgressBar(25, 'File uploaded successfully');
+                    
+                    if (aiEnabled) {
+                        showAIProcessing();
+                        await processAIStages(selectedModel, quality);
+                        completeAIProcessing();
+                    } else {
+                        updateStep('upload', 'completed');
+                        updateStep('complete', 'active');
+                        updateProgressBar(100, 'Upload complete!');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/Documents';
+                        }, 1500);
+                    }
+                } catch (error) {
+                    updateProgressBar(0, 'Upload failed. Please try again.');
+                    progressContainer.classList.remove('show');
+                    console.error('Upload error:', error);
+                }
+            };
+
+            // Override form submission for enhanced progress
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleUploadWithAI(this);
+                    
+                    // Also submit the form normally (this will be enhanced in real implementation)
+                    setTimeout(() => {
+                        this.submit();
+                    }, 100);
+                });
+            }
+        };
+
+        // Initialize upload progress system
+        initUploadProgress();
+
+        // Initialize AI controls when page loads
+        initAIControls();
     </script>
-} 
+
+    <!-- Enhanced Upload Progress JavaScript -->
+    <script>
+        // Enhanced Upload Progress System - Phase 3.3: Real-time Feedback
+        const EnhancedUploadProgress = {
+            elements: {},
+            
+            init() {
+                this.cacheElements();
+                this.enhanceFormSubmission();
+                console.log('Enhanced Upload Progress initialized');
+            },
+
+            cacheElements() {
+                this.elements = {
+                    uploadForm: document.getElementById('upload-form'),
+                    progressContainer: document.getElementById('upload-progress'),
+                    progressSteps: document.getElementById('progress-steps'),
+                    progressBar: document.getElementById('progress-bar'),
+                    progressText: document.getElementById('progress-text'),
+                    progressSpinner: document.getElementById('progress-spinner'),
+                    progressMessage: document.getElementById('progress-message-text'),
+                    aiProcessingDetails: document.getElementById('ai-processing-details'),
+                    aiStageTitle: document.getElementById('ai-stage-title'),
+                    aiStageDescription: document.getElementById('ai-stage-description'),
+                    aiTimeRemaining: document.getElementById('ai-time-remaining'),
+                    aiToggle: document.getElementById('ai-summary-toggle'),
+                    submitBtn: document.getElementById('submit-btn')
+                };
+            },
+
+            enhanceFormSubmission() {
+                if (this.elements.uploadForm) {
+                    // Add enhanced progress workflow
+                    this.elements.uploadForm.addEventListener('submit', (e) => {
+                        this.showEnhancedProgress();
+                    });
+                }
+            },
+
+            showEnhancedProgress() {
+                const isAIEnabled = this.elements.aiToggle && this.elements.aiToggle.checked;
+                
+                // Show progress container with animations
+                this.elements.progressContainer.classList.add('show');
+                this.elements.progressSteps.style.display = 'block';
+                this.elements.progressSpinner.style.display = 'inline-block';
+                
+                // Activate upload step
+                const stepUpload = document.getElementById('step-upload');
+                stepUpload.classList.add('active');
+                
+                // Start progress animation
+                this.animateUploadProgress(isAIEnabled);
+            },
+
+            async animateUploadProgress(isAIEnabled) {
+                // Stage 1: Upload
+                await this.animateProgressTo(25, 'Uploading document...', 1500);
+                this.completeStep('upload');
+                
+                if (isAIEnabled) {
+                    // Stage 2: AI Processing
+                    this.startAIProcessing();
+                    await this.animateProgressTo(60, 'AI analyzing content...', 3000);
+                    await this.animateProgressTo(85, 'Generating AI summary...', 2000);
+                    this.completeStep('ai');
+                }
+                
+                // Stage 3: Complete
+                this.activateStep('complete');
+                await this.animateProgressTo(100, 'Processing complete!', 500);
+            },
+
+            async animateProgressTo(targetPercent, message, duration) {
+                const startPercent = parseInt(this.elements.progressBar.style.width) || 0;
+                const steps = 30;
+                const stepDuration = duration / steps;
+                const increment = (targetPercent - startPercent) / steps;
+                
+                for (let i = 0; i <= steps; i++) {
+                    const currentPercent = startPercent + (increment * i);
+                    this.updateProgress(currentPercent, message);
+                    await this.delay(stepDuration);
+                }
+            },
+
+            updateProgress(percent, message) {
+                this.elements.progressBar.style.width = `${percent}%`;
+                this.elements.progressText.textContent = `${Math.round(percent)}%`;
+                this.elements.progressMessage.textContent = message;
+            },
+
+            completeStep(stepName) {
+                const step = document.getElementById(`step-${stepName}`);
+                if (step) {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                }
+                
+                // Update connecting line
+                const lines = document.querySelectorAll('.step-line');
+                if (stepName === 'upload' && lines[0]) {
+                    lines[0].classList.add('completed');
+                } else if (stepName === 'ai' && lines[1]) {
+                    lines[1].classList.add('completed');
+                }
+            },
+
+            activateStep(stepName) {
+                const step = document.getElementById(`step-${stepName}`);
+                if (step) {
+                    step.classList.add('active');
+                }
+            },
+
+            startAIProcessing() {
+                this.activateStep('ai');
+                this.elements.aiProcessingDetails.style.display = 'block';
+                
+                // Animate AI stages
+                this.animateAIStages();
+            },
+
+            async animateAIStages() {
+                const stages = [
+                    { title: 'Extracting Content', desc: 'Reading document content...', time: '25s' },
+                    { title: 'AI Analysis', desc: 'Analyzing with AI model...', time: '15s' },
+                    { title: 'Generating Summary', desc: 'Creating intelligent summary...', time: '5s' }
+                ];
+
+                for (let i = 0; i < stages.length; i++) {
+                    const stage = stages[i];
+                    this.elements.aiStageTitle.textContent = stage.title;
+                    this.elements.aiStageDescription.textContent = stage.desc;
+                    this.elements.aiTimeRemaining.textContent = stage.time;
+                    
+                    // Add stage-specific styling
+                    this.elements.aiProcessingDetails.className = `ai-processing-details mt-2 ai-stage-${i === 0 ? 'extracting' : i === 1 ? 'analyzing' : 'generating'}`;
+                    
+                    await this.delay(2000);
+                }
+
+                // Complete AI processing
+                this.elements.aiStageTitle.textContent = 'Processing Complete';
+                this.elements.aiStageDescription.textContent = 'AI summary generated successfully';
+                this.elements.aiTimeRemaining.textContent = 'Done!';
+                
+                // Replace spinner with success icon
+                const spinner = this.elements.aiProcessingDetails.querySelector('.spinner-border');
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    const checkIcon = document.createElement('i');
+                    checkIcon.className = 'bi bi-check-circle-fill text-success';
+                    checkIcon.style.fontSize = '1.2rem';
+                    spinner.parentNode.appendChild(checkIcon);
+                }
+            },
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        };
+
+        // Initialize enhanced progress when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            EnhancedUploadProgress.init();
+        });
+    </script>
+}
+
+<style>
+    /* Progress Steps Styling */
+    .progress-steps {
+        margin-bottom: 1rem;
+    }
+
+    .step-item {
+        text-align: center;
+        position: relative;
+    }
+
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        border: 2px solid #dee2e6;
+        background: #f8f9fa;
+        color: #6c757d;
+        transition: all 0.3s ease;
+    }
+
+    .step-icon i {
+        font-size: 1.1rem;
+    }
+
+    .step-label {
+        display: block;
+        margin-top: 0.5rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .step-line {
+        flex: 1;
+        height: 2px;
+        background: #dee2e6;
+        margin: 0 1rem;
+        align-self: center;
+        margin-top: -20px;
+        transition: all 0.3s ease;
+    }
+
+    /* Step States */
+    .step-item.active .step-icon {
+        border-color: #0d6efd;
+        background: #0d6efd;
+        color: white;
+    }
+
+    .step-item.active .step-label {
+        color: #0d6efd;
+        font-weight: 600;
+    }
+
+    .step-item.completed .step-icon {
+        border-color: #198754;
+        background: #198754;
+        color: white;
+    }
+
+    .step-item.completed .step-label {
+        color: #198754;
+    }
+
+    .step-line.completed {
+        background: #198754;
+    }
+
+    /* AI Processing Animations */
+    .ai-processing-details {
+        animation: slideIn 0.3s ease;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Progress Enhancements */
+    .upload-progress {
+        border: 1px solid #e3f2fd;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background: #fafafa;
+        display: none;
+    }
+
+    .upload-progress.show {
+        display: block;
+    }
+
+    .progress-message {
+        font-weight: 500;
+    }
+
+    .progress-message i {
+        color: #0d6efd;
+    }
+
+    /* AI Stage Specific Colors */
+    .ai-stage-extracting .step-icon {
+        border-color: #fd7e14;
+        background: #fd7e14;
+        color: white;
+    }
+
+    .ai-stage-analyzing .step-icon {
+        border-color: #6f42c1;
+        background: #6f42c1;
+        color: white;
+    }
+
+    .ai-stage-generating .step-icon {
+        border-color: #20c997;
+        background: #20c997;
+        color: white;
+    }
+</style> 

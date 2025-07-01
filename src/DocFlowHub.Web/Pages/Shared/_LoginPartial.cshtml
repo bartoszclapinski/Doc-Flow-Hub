@@ -19,17 +19,30 @@
             </a>
         </li>
     }
-    <li class="nav-item">
-        <a id="manage" class="nav-link text-dark" asp-page="/Account/Manage/Index" title="Manage" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Manage/Index" ? "page" : null)">
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle text-dark" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-person-circle"></i> Hello @UserManager.GetUserName(User)!
         </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li>
+                <a class="dropdown-item" asp-page="/Account/Manage/Index">
+                    <i class="bi bi-person"></i> Profile
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" asp-page="/Settings/AI">
+                    <i class="bi bi-robot"></i> AI Settings
+        </a>
     </li>
-    <li class="nav-item">
-        <form id="logoutForm" class="form-inline" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
-            <button id="logout" type="submit" class="nav-link btn btn-link text-dark border-0">
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form class="d-inline" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+                    <button type="submit" class="dropdown-item">
                 <i class="bi bi-box-arrow-right"></i> Logout
             </button>
         </form>
+                         </li>
+         </ul>
     </li>
 }
 else

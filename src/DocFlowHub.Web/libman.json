@@ -20,6 +20,13 @@
         "font/fonts/bootstrap-icons.woff",
         "font/fonts/bootstrap-icons.woff2"
       ]
+    },
+    {
+      "library": "Chart.js@4.4.1",
+      "destination": "wwwroot/lib/chart.js/",
+      "files": [
+        "chart.min.js"
+      ]
     }
   ]
 } 

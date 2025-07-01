@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DocFlowHub.Core.Models.AI;
 
 namespace DocFlowHub.Core.Models.Documents.Dto;
 
@@ -20,4 +21,8 @@ public class DocumentDto
     public int? CurrentVersionId { get; set; }
     public List<DocumentVersionDto> Versions { get; set; } = new();
     public List<DocumentCategoryDto> Categories { get; set; } = new();
+    
+    // AI Summary Information
+    public DocumentSummary? AISummary { get; set; }
+    public bool HasAISummary => AISummary != null;
 } 

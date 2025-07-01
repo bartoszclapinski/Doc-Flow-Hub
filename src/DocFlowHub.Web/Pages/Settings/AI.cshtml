@@ -1,0 +1,868 @@
+@page
+@model DocFlowHub.Web.Pages.Settings.AIModel
+@{
+    ViewData["Title"] = "AI Settings";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-robot me-2"></i>@ViewData["Title"]</h2>
+            <p class="text-muted">Configure your AI preferences and manage API settings.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <partial name="_StatusMessage" />
+
+    <form method="post" asp-page-handler="SaveSettings">
+        <div class="row">
+            <!-- Model Selection & API Key -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-gear me-2"></i>Model Configuration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Input.PreferredModel" class="form-label"></label>
+                            <select asp-for="Input.PreferredModel" class="form-select">
+                                @foreach (var modelInfo in DocFlowHub.Web.Pages.Settings.AIModel.GetAvailableModels())
+                                {
+                                    <option value="@modelInfo.Model">@modelInfo.Name - @modelInfo.Description</option>
+                                }
+                            </select>
+                            <div class="form-text">Choose the AI model that best fits your needs and budget.</div>
+                            <span asp-validation-for="Input.PreferredModel" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="Input.UseCustomApiKey" class="form-check-input" type="checkbox" id="useCustomApiKey">
+                                <label asp-for="Input.UseCustomApiKey" class="form-check-label" for="useCustomApiKey">
+                                    Use my own OpenAI API key
+                                </label>
+                            </div>
+                            <div class="form-text">Enable this to use your personal OpenAI API key for better cost control.</div>
+                        </div>
+
+                        <div class="mb-3" id="apiKeySection" style="display: none;">
+                            <label asp-for="Input.CustomApiKey" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="Input.CustomApiKey" type="password" class="form-control" placeholder="sk-...">
+                                <button type="button" class="btn btn-outline-primary" id="testApiKey">
+                                    <i class="bi bi-check-circle"></i> Test
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="toggleApiKey">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Your API key will be encrypted and securely stored.</div>
+                            <span asp-validation-for="Input.CustomApiKey" class="text-danger"></span>
+                            <div id="apiKeyTestResult" class="mt-2"></div>
+                            <div id="connectionStatus" class="mt-2" style="display: none;">
+                                <div class="card card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="fw-bold">Connection Status</small>
+                                        <span id="connectionBadge" class="badge"></span>
+                                    </div>
+                                    <div id="connectionDetails" class="small text-muted"></div>
+                                    <div id="availableModels" class="mt-2" style="display: none;">
+                                        <small class="fw-bold d-block mb-1">Available Models:</small>
+                                        <div id="modelsList" class="small"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Toggles -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-toggles me-2"></i>AI Features
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="Input.SummarizationEnabled" class="form-check-input" type="checkbox" id="summarizationEnabled">
+                                <label asp-for="Input.SummarizationEnabled" class="form-check-label" for="summarizationEnabled">
+                                    Enable AI Document Summarization
+                                </label>
+                            </div>
+                            <div class="form-text">Automatically generate summaries for uploaded documents.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="Input.VersionComparisonEnabled" class="form-check-input" type="checkbox" id="versionComparisonEnabled">
+                                <label asp-for="Input.VersionComparisonEnabled" class="form-check-label" for="versionComparisonEnabled">
+                                    Enable AI Version Comparison
+                                </label>
+                            </div>
+                            <div class="form-text">Use AI to analyze differences between document versions.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="Input.AutoSummarizeOnUpload" class="form-check-input" type="checkbox" id="autoSummarizeOnUpload">
+                                <label asp-for="Input.AutoSummarizeOnUpload" class="form-check-label" for="autoSummarizeOnUpload">
+                                    Auto-generate summaries on upload
+                                </label>
+                            </div>
+                            <div class="form-text">Automatically create summaries when new documents are uploaded.</div>
+                        </div>
+
+                        @if (Model.CurrentSettings != null)
+                        {
+                            <div class="mt-4 p-3 bg-light rounded">
+                                <h6 class="mb-2">Current Status</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small>AI Features:</small>
+                                    <span class="badge @(Model.CurrentSettings.SummarizationEnabled || Model.CurrentSettings.VersionComparisonEnabled ? "bg-success" : "bg-secondary")">
+                                        @(Model.CurrentSettings.SummarizationEnabled || Model.CurrentSettings.VersionComparisonEnabled ? "Active" : "Inactive")
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>Last Updated:</small>
+                                    <small class="text-muted">@(Model.CurrentSettings.UpdatedAt?.ToString("MMM dd, yyyy") ?? "Never")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Performance Settings -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-speedometer2 me-2"></i>Performance Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Input.QualityPreference" class="form-label"></label>
+                            <input asp-for="Input.QualityPreference" type="range" class="form-range" min="0.1" max="1.0" step="0.1" id="qualityRange">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Fast</small>
+                                <small class="text-muted">Balanced</small>
+                                <small class="text-muted">Quality</small>
+                            </div>
+                            <div class="form-text">Current value: <span id="qualityValue">@Model.Input.QualityPreference</span></div>
+                            <span asp-validation-for="Input.QualityPreference" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.MaxTokensPerOperation" class="form-label"></label>
+                            <input asp-for="Input.MaxTokensPerOperation" type="number" class="form-control" min="100" max="10000">
+                            <div class="form-text">Maximum tokens per AI operation. Higher values allow for longer content but cost more.</div>
+                            <span asp-validation-for="Input.MaxTokensPerOperation" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.ComparisonSensitivity" class="form-label"></label>
+                            <input asp-for="Input.ComparisonSensitivity" type="range" class="form-range" min="0.1" max="1.0" step="0.1" id="sensitivityRange">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Low</small>
+                                <small class="text-muted">Medium</small>
+                                <small class="text-muted">High</small>
+                            </div>
+                            <div class="form-text">Current value: <span id="sensitivityValue">@Model.Input.ComparisonSensitivity</span></div>
+                            <span asp-validation-for="Input.ComparisonSensitivity" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cache & Advanced Settings -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-hdd me-2"></i>Cache & Advanced
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Input.CacheDurationHours" class="form-label"></label>
+                            <input asp-for="Input.CacheDurationHours" type="number" class="form-control" min="1" max="48">
+                            <div class="form-text">How long to cache AI responses to reduce costs and improve speed.</div>
+                            <span asp-validation-for="Input.CacheDurationHours" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Cost Estimation</h6>
+                            <div class="p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Model:</span>
+                                    <span id="selectedModel">@DocFlowHub.Core.Models.AI.AIModelHelper.ToDisplayName(Model.Input.PreferredModel)</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Max Tokens:</span>
+                                    <span id="maxTokensDisplay">@Model.Input.MaxTokensPerOperation</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Est. Cost per Request:</span>
+                                    <span class="text-success" id="costEstimate">~$0.01-0.05</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2"></i> Save Settings
+                            </button>
+                            <button type="submit" asp-page-handler="ResetToDefaults" class="btn btn-outline-warning" 
+                                    onclick="return confirm('Are you sure you want to reset all settings to defaults?')">
+                                <i class="bi bi-arrow-clockwise"></i> Reset to Defaults
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    </form>
+
+    <!-- Usage Analytics Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Usage Analytics & Monitoring
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.UsageStatistics != null)
+                    {
+                        <!-- Usage Statistics Summary -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="p-3 bg-primary bg-opacity-10 rounded text-center">
+                                    <h4 class="text-primary mb-1">@Model.UsageStatistics.TotalOperations</h4>
+                                    <small class="text-muted">Total API Calls</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 bg-success bg-opacity-10 rounded text-center">
+                                    <h4 class="text-success mb-1">$@Model.UsageStatistics.TotalCost.ToString("F3")</h4>
+                                    <small class="text-muted">Total Cost</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 bg-info bg-opacity-10 rounded text-center">
+                                    <h4 class="text-info mb-1">@(Model.UsageStatistics.TotalTokensUsed.ToString("N0"))</h4>
+                                    <small class="text-muted">Tokens Used</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 bg-warning bg-opacity-10 rounded text-center">
+                                    <h4 class="text-warning mb-1">@(Model.UsageStatistics.CacheHitRate.ToString("P1"))</h4>
+                                    <small class="text-muted">Cache Hit Rate</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts Section -->
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <h6 class="mb-3">Usage Trends (Last 30 Days)</h6>
+                                <div class="position-relative" style="height: 300px;">
+                                    <canvas id="usageTrendsChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <h6 class="mb-3">Cost Breakdown</h6>
+                                <div class="position-relative" style="height: 300px;">
+                                    <canvas id="costBreakdownChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Statistics -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h6>Operation Types</h6>
+                                <div class="list-group list-group-flush">
+                                    @foreach (var operation in Model.UsageStatistics.OperationTypeBreakdown)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>@operation.Key</span>
+                                            <span class="badge bg-primary rounded-pill">@operation.Value</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Performance Metrics</h6>
+                                <div class="p-3 bg-light rounded">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Average Response Time:</span>
+                                        <span class="fw-bold">@Model.UsageStatistics.AverageResponseTime.TotalMilliseconds.ToString("F0")ms</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Success Rate:</span>
+                                        <span class="fw-bold text-success">@((1 - Model.UsageStatistics.ErrorRate).ToString("P1"))</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Period:</span>
+                                        <span class="fw-bold">@Model.UsageStatistics.PeriodStart.ToString("MMM dd") - @Model.UsageStatistics.PeriodEnd.ToString("MMM dd")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-graph-up text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No Usage Data Available</h5>
+                            <p class="text-muted">Start using AI features to see your analytics here.</p>
+                        </div>
+                    }
+
+                    <!-- Time Period Selector -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <label for="analyticsTimePeriod" class="form-label">Time Period</label>
+                            <select id="analyticsTimePeriod" class="form-select">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-primary" id="refreshAnalytics">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        // Show/hide API key section
+        function toggleApiKeySection() {
+            const useCustomKey = document.getElementById('useCustomApiKey').checked;
+            const apiKeySection = document.getElementById('apiKeySection');
+            apiKeySection.style.display = useCustomKey ? 'block' : 'none';
+        }
+
+        // Initialize API key section visibility
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleApiKeySection();
+            document.getElementById('useCustomApiKey').addEventListener('change', toggleApiKeySection);
+        });
+
+        // Range slider value updates
+        const qualityRange = document.getElementById('qualityRange');
+        const qualityValue = document.getElementById('qualityValue');
+        const sensitivityRange = document.getElementById('sensitivityRange');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+
+        qualityRange?.addEventListener('input', function() {
+            qualityValue.textContent = this.value;
+        });
+
+        sensitivityRange?.addEventListener('input', function() {
+            sensitivityValue.textContent = this.value;
+        });
+
+        // API key toggle visibility
+        document.getElementById('toggleApiKey')?.addEventListener('click', function() {
+            const input = document.querySelector('#Input_CustomApiKey');
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        });
+
+        // Real-time API key validation
+        function validateApiKeyFormat(apiKey) {
+            const resultDiv = document.getElementById('apiKeyTestResult');
+            const testButton = document.getElementById('testApiKey');
+            
+            if (!apiKey) {
+                resultDiv.innerHTML = '';
+                testButton.disabled = false;
+                return;
+            }
+            
+            if (!apiKey.startsWith('sk-')) {
+                resultDiv.innerHTML = '<div class="alert alert-warning alert-sm"><i class="bi bi-info-circle me-1"></i>API key should start with "sk-"</div>';
+                testButton.disabled = true;
+                return false;
+            }
+            
+            if (apiKey.length < 20) {
+                resultDiv.innerHTML = '<div class="alert alert-warning alert-sm"><i class="bi bi-info-circle me-1"></i>API key appears to be too short</div>';
+                testButton.disabled = true;
+                return false;
+            }
+            
+            if (apiKey.length > 200) {
+                resultDiv.innerHTML = '<div class="alert alert-warning alert-sm"><i class="bi bi-exclamation-triangle me-1"></i>API key appears to be too long</div>';
+                testButton.disabled = true;
+                return false;
+            }
+            
+            // Valid format
+            resultDiv.innerHTML = '<div class="alert alert-info alert-sm"><i class="bi bi-check-circle me-1"></i>API key format looks valid. Click "Test" to verify.</div>';
+            testButton.disabled = false;
+            return true;
+        }
+
+        // Add real-time validation to API key input
+        document.querySelector('#Input_CustomApiKey')?.addEventListener('input', function() {
+            clearTimeout(this.validationTimeout);
+            this.validationTimeout = setTimeout(() => {
+                validateApiKeyFormat(this.value);
+            }, 500); // Debounce for 500ms
+        });
+
+        // Clear connection status when API key changes
+        document.querySelector('#Input_CustomApiKey')?.addEventListener('input', function() {
+            document.getElementById('connectionStatus').style.display = 'none';
+        });
+
+        // Enhanced API key testing with detailed feedback
+        document.getElementById('testApiKey')?.addEventListener('click', async function() {
+            const apiKey = document.querySelector('#Input_CustomApiKey').value;
+            const button = this;
+            const resultDiv = document.getElementById('apiKeyTestResult');
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusBadge = document.getElementById('connectionBadge');
+            const detailsDiv = document.getElementById('connectionDetails');
+            const modelsDiv = document.getElementById('availableModels');
+            const modelsList = document.getElementById('modelsList');
+            
+            if (!apiKey) {
+                resultDiv.innerHTML = '<div class="alert alert-warning alert-sm"><i class="bi bi-exclamation-triangle me-1"></i>Please enter an API key first.</div>';
+                statusDiv.style.display = 'none';
+                return;
+            }
+
+            // Show enhanced loading state
+            button.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Testing Connection...';
+            button.disabled = true;
+            resultDiv.innerHTML = '<div class="alert alert-info alert-sm"><i class="bi bi-hourglass-split me-1"></i>Validating API key and checking model availability...</div>';
+            statusDiv.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('Input.CustomApiKey', apiKey);
+                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+                const response = await fetch('/Settings/AI?handler=TestApiKey', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Success state with enhanced feedback
+                    resultDiv.innerHTML = `<div class="alert alert-success alert-sm"><i class="bi bi-check-circle me-1"></i>${result.message}</div>`;
+                    
+                    // Show connection status
+                    statusDiv.style.display = 'block';
+                    statusBadge.className = 'badge bg-success';
+                    statusBadge.innerHTML = '<i class="bi bi-wifi me-1"></i>Connected';
+                    detailsDiv.textContent = `${result.details} (Tested at ${result.timestamp})`;
+                    
+                    // Show available models if provided
+                    if (result.availableModels && result.availableModels.length > 0) {
+                        modelsDiv.style.display = 'block';
+                        const modelTags = result.availableModels.map(model => 
+                            `<span class="badge ${model.isRecommended ? 'bg-primary' : 'bg-secondary'} me-1 mb-1">
+                                ${model.displayName}${model.isRecommended ? ' ⭐' : ''}
+                            </span>`
+                        ).join('');
+                        modelsList.innerHTML = modelTags;
+                    } else {
+                        modelsDiv.style.display = 'none';
+                    }
+                } else {
+                    // Error state with detailed feedback
+                    resultDiv.innerHTML = `<div class="alert alert-danger alert-sm"><i class="bi bi-x-circle me-1"></i>${result.message}</div>`;
+                    
+                    // Show connection status
+                    statusDiv.style.display = 'block';
+                    statusBadge.className = 'badge bg-danger';
+                    statusBadge.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Failed';
+                    detailsDiv.textContent = result.details || 'Connection failed';
+                    modelsDiv.style.display = 'none';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-danger alert-sm"><i class="bi bi-exclamation-triangle me-1"></i>Network error: ${error.message}</div>`;
+                
+                // Show error status
+                statusDiv.style.display = 'block';
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Error';
+                detailsDiv.textContent = 'Unable to connect to validation service';
+                modelsDiv.style.display = 'none';
+            } finally {
+                button.innerHTML = '<i class="bi bi-check-circle"></i> Test';
+                button.disabled = false;
+            }
+        });
+
+        // Update cost estimation when model or tokens change
+        function updateCostEstimation() {
+            const model = document.querySelector('#Input_PreferredModel').value;
+            const tokens = document.querySelector('#Input_MaxTokensPerOperation').value;
+            
+            document.getElementById('selectedModel').textContent = document.querySelector('#Input_PreferredModel option:checked').text.split(' - ')[0];
+            document.getElementById('maxTokensDisplay').textContent = tokens;
+            
+            // Simple cost estimation based on model and tokens
+            let costEstimate = '$0.01-0.05';
+            if (model.includes('Gpt41')) {
+                costEstimate = '$0.03-0.10';
+            } else if (model.includes('Gpt4o') && !model.includes('Mini')) {
+                costEstimate = '$0.02-0.08';
+            }
+            
+            document.getElementById('costEstimate').textContent = `~${costEstimate}`;
+        }
+
+        document.querySelector('#Input_PreferredModel')?.addEventListener('change', updateCostEstimation);
+        document.querySelector('#Input_MaxTokensPerOperation')?.addEventListener('input', updateCostEstimation);
+
+        // Enhanced styling for API key testing interface
+        const style = document.createElement('style');
+        style.textContent = `
+            .spin { animation: spin 1s linear infinite; }
+            @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .alert-sm { padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
+            
+            #connectionStatus .card {
+                border: 1px solid #dee2e6;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            }
+            
+            #connectionStatus .badge {
+                animation: fadeInScale 0.3s ease-in-out;
+            }
+            
+            @@keyframes fadeInScale {
+                from { opacity: 0; transform: scale(0.8); }
+                to { opacity: 1; transform: scale(1); }
+            }
+            
+            #availableModels .badge {
+                transition: transform 0.2s ease-in-out;
+            }
+            
+            #availableModels .badge:hover {
+                transform: scale(1.05);
+            }
+            
+            .test-progress {
+                height: 4px;
+                background: linear-gradient(90deg, #007bff, #0056b3);
+                animation: progressBar 2s ease-in-out infinite;
+            }
+            
+            @@keyframes progressBar {
+                0% { width: 0%; }
+                50% { width: 70%; }
+                100% { width: 100%; }
+            }
+            
+            #testApiKey:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+            
+            .status-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 6px;
+            }
+            
+            .status-connected {
+                background-color: #28a745;
+                animation: pulse 2s infinite;
+            }
+            
+            .status-failed {
+                background-color: #dc3545;
+            }
+            
+            .status-testing {
+                background-color: #ffc107;
+                animation: blink 1s infinite;
+            }
+            
+            @@keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+                70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+            }
+            
+            @@keyframes blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ============================================================================
+        // USAGE ANALYTICS FUNCTIONALITY
+        // ============================================================================
+
+        let usageTrendsChart = null;
+        let costBreakdownChart = null;
+
+        // Initialize analytics charts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('usageTrendsChart')) {
+                initializeAnalyticsCharts();
+            }
+        });
+
+        // Initialize Chart.js charts
+        function initializeAnalyticsCharts() {
+            const usageTrendsCtx = document.getElementById('usageTrendsChart');
+            const costBreakdownCtx = document.getElementById('costBreakdownChart');
+
+            if (usageTrendsCtx) {
+                usageTrendsChart = new Chart(usageTrendsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'AI Usage Trends'
+                            },
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                position: 'left'
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            if (costBreakdownCtx) {
+                costBreakdownChart = new Chart(costBreakdownCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Cost by Operation Type'
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Load initial data
+            loadAnalyticsData(30);
+        }
+
+        // Load analytics data via AJAX
+        async function loadAnalyticsData(days) {
+            const refreshButton = document.getElementById('refreshAnalytics');
+            
+            try {
+                // Show loading state
+                if (refreshButton) {
+                    refreshButton.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Loading...';
+                    refreshButton.disabled = true;
+                }
+
+                // Load usage trends
+                await loadUsageTrends(days);
+                
+                // Load cost breakdown
+                await loadCostBreakdown(days);
+
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                showAnalyticsError('Failed to load analytics data. Please try again.');
+            } finally {
+                // Reset loading state
+                if (refreshButton) {
+                    refreshButton.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh Data';
+                    refreshButton.disabled = false;
+                }
+            }
+        }
+
+        // Load usage trends chart data
+        async function loadUsageTrends(days) {
+            try {
+                const response = await fetch(`/Settings/AI?handler=UsageTrends&days=${days}`);
+                const result = await response.json();
+
+                if (result.success && result.data && usageTrendsChart) {
+                    usageTrendsChart.data = result.data;
+                    usageTrendsChart.update('active');
+                } else {
+                    console.warn('No usage trends data available');
+                }
+            } catch (error) {
+                console.error('Error loading usage trends:', error);
+            }
+        }
+
+        // Load cost breakdown chart data
+        async function loadCostBreakdown(days) {
+            try {
+                const response = await fetch(`/Settings/AI?handler=CostBreakdown&days=${days}`);
+                const result = await response.json();
+
+                if (result.success && result.data && costBreakdownChart) {
+                    costBreakdownChart.data = result.data;
+                    costBreakdownChart.update('active');
+                } else {
+                    console.warn('No cost breakdown data available');
+                }
+            } catch (error) {
+                console.error('Error loading cost breakdown:', error);
+            }
+        }
+
+        // Show analytics error message
+        function showAnalyticsError(message) {
+            const analyticsSection = document.querySelector('.card-body');
+            if (analyticsSection) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-warning alert-dismissible fade show';
+                errorDiv.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                analyticsSection.insertBefore(errorDiv, analyticsSection.firstChild);
+            }
+        }
+
+        // Time period selector event handler
+        document.getElementById('analyticsTimePeriod')?.addEventListener('change', function() {
+            const days = parseInt(this.value);
+            loadAnalyticsData(days);
+        });
+
+        // Refresh button event handler
+        document.getElementById('refreshAnalytics')?.addEventListener('click', function() {
+            const days = parseInt(document.getElementById('analyticsTimePeriod').value);
+            loadAnalyticsData(days);
+        });
+
+        // Enhanced styles for analytics
+        const analyticsStyle = document.createElement('style');
+        analyticsStyle.textContent = `
+            .analytics-metric {
+                transition: transform 0.2s ease-in-out;
+            }
+            
+            .analytics-metric:hover {
+                transform: translateY(-2px);
+            }
+            
+            .chart-container {
+                position: relative;
+                height: 300px;
+                margin: 1rem 0;
+            }
+            
+            .analytics-loading {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 200px;
+                color: #6c757d;
+            }
+            
+            .analytics-empty {
+                text-align: center;
+                padding: 3rem 0;
+                color: #6c757d;
+            }
+            
+            #refreshAnalytics.loading {
+                pointer-events: none;
+                opacity: 0.7;
+            }
+            
+            .metric-card {
+                border-left: 4px solid transparent;
+                transition: border-color 0.3s ease;
+            }
+            
+            .metric-card:hover {
+                border-left-color: var(--bs-primary);
+            }
+        `;
+        document.head.appendChild(analyticsStyle);
+    </script>
+} 

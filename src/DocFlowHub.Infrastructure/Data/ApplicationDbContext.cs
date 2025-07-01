@@ -23,6 +23,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     
     // AI-related entities
     public DbSet<DocumentSummary> DocumentSummaries { get; set; }
+    public DbSet<VersionComparison> VersionComparisons { get; set; }
+    public DbSet<AISettings> AISettings { get; set; }
+    public DbSet<AIUsageLog> AIUsageLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -58,5 +61,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         
         // Apply AI-related configurations
         builder.ApplyConfiguration(new DocumentSummaryConfiguration());
+        builder.ApplyConfiguration(new VersionComparisonConfiguration());
+        builder.ApplyConfiguration(new AISettingsConfiguration());
+        builder.ApplyConfiguration(new AIUsageLogConfiguration());
     }
 } 

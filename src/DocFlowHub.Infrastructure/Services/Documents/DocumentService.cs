@@ -21,18 +21,18 @@ public class DocumentService : IDocumentService
 {
     private readonly ApplicationDbContext _context;
     private readonly IDocumentStorageService _storageService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<DocumentService> _logger;
 
     public DocumentService(
         ApplicationDbContext context,
         IDocumentStorageService storageService,
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<DocumentService> logger)
     {
         _context = context;
         _storageService = storageService;
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
     }
 
@@ -48,7 +48,18 @@ public class DocumentService : IDocumentService
         if (document == null)
             return ServiceResult<DocumentDto>.Failure("Document not found");
 
-        return ServiceResult<DocumentDto>.Success(document.ToDto());
+        var documentDto = document.ToDto();
+
+        // Load AI summary if available
+        var aiSummary = await _context.DocumentSummaries
+            .FirstOrDefaultAsync(ds => ds.DocumentId == id);
+        
+        if (aiSummary != null)
+        {
+            documentDto.AISummary = aiSummary;
+        }
+
+        return ServiceResult<DocumentDto>.Success(documentDto);
     }
 
     public async Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(DocumentFilter filter)
@@ -313,11 +324,18 @@ public class DocumentService : IDocumentService
                     _logger.LogInformation("Starting AI summary generation for document {DocumentId}", document.Id);
                     
                     // Create a new scope to get fresh services for background processing
-                    using var scope = _serviceProvider.CreateScope();
+                    using var scope = _serviceScopeFactory.CreateScope();
                     var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
                     
-                    await summaryService.RegenerateSummaryAsync(document.Id);
-                    _logger.LogInformation("AI summary generated successfully for document {DocumentId}", document.Id);
+                    var summaryResult = await summaryService.RegenerateSummaryAsync(document.Id);
+                    if (summaryResult.Succeeded)
+                    {
+                        _logger.LogInformation("AI summary generated successfully for document {DocumentId}", document.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AI summary generation failed for document {DocumentId}: {Error}", document.Id, summaryResult.Error);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -404,7 +422,7 @@ public class DocumentService : IDocumentService
                     _logger.LogInformation("Starting AI summary generation for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
                     
                     // Create a new scope to get fresh services for background processing
-                    using var scope = _serviceProvider.CreateScope();
+                    using var scope = _serviceScopeFactory.CreateScope();
                     var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
                     
                     await summaryService.RegenerateSummaryAsync(document.Id);
@@ -578,7 +596,7 @@ public class DocumentService : IDocumentService
                     _logger.LogInformation("Starting AI summary generation for document {DocumentId} version {VersionNumber}", document.Id, versionNumber);
                     
                     // Create a new scope to get fresh services for background processing
-                    using var scope = _serviceProvider.CreateScope();
+                    using var scope = _serviceScopeFactory.CreateScope();
                     var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
                     
                     await summaryService.RegenerateSummaryAsync(document.Id);

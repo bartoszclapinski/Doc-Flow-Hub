@@ -4,6 +4,7 @@ using DocFlowHub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DocFlowHub.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250701100655_AddAISettings")]
+    partial class AddAISettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -216,102 +219,6 @@ namespace DocFlowHub.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_AISettings_QualityPreference", "[QualityPreference] >= 0.0 AND [QualityPreference] <= 1.0");
                         });
-                });
-
-            modelBuilder.Entity("DocFlowHub.Core.Models.AI.AIUsageLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AIModel")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<int?>("DocumentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<decimal>("EstimatedCost")
-                        .HasColumnType("decimal(10,6)");
-
-                    b.Property<int>("InputSize")
-                        .HasColumnType("int");
-
-                    b.Property<string>("IpAddress")
-                        .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
-
-                    b.Property<bool>("IsSuccess")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Metadata")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OperationType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("OutputSize")
-                        .HasColumnType("int");
-
-                    b.Property<double?>("QualitySetting")
-                        .HasColumnType("float");
-
-                    b.Property<TimeSpan>("ResponseTime")
-                        .HasColumnType("time");
-
-                    b.Property<bool>("ServedFromCache")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<int>("TokensUsed")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserAgent")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AIModel")
-                        .HasDatabaseName("IX_AIUsageLogs_AIModel");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_AIUsageLogs_CreatedAt");
-
-                    b.HasIndex("DocumentId")
-                        .HasDatabaseName("IX_AIUsageLogs_DocumentId")
-                        .HasFilter("[DocumentId] IS NOT NULL");
-
-                    b.HasIndex("OperationType")
-                        .HasDatabaseName("IX_AIUsageLogs_OperationType");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_AIUsageLogs_UserId");
-
-                    b.HasIndex("UserId", "CreatedAt")
-                        .HasDatabaseName("IX_AIUsageLogs_UserId_CreatedAt");
-
-                    b.ToTable("AIUsageLogs", (string)null);
                 });
 
             modelBuilder.Entity("DocFlowHub.Core.Models.AI.DocumentSummary", b =>
@@ -806,20 +713,6 @@ namespace DocFlowHub.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("DocFlowHub.Core.Models.AI.AIUsageLog", b =>
-                {
-                    b.HasOne("DocFlowHub.Core.Models.Documents.Document", null)
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("DocFlowHub.Core.Identity.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("DocFlowHub.Core.Models.Documents.Document", b =>
