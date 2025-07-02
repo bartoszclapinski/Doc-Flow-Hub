@@ -98,6 +98,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Projects/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Projects/Index" ? "page" : null)">
+                                <i class="bi bi-kanban"></i> Projects
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-page="/Teams/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Teams/Index" ? "page" : null)">
                                 <i class="bi bi-people"></i> Teams
                             </a>

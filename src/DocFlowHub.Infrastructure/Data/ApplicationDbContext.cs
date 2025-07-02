@@ -2,6 +2,7 @@ using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Models;
 using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Projects;
 using DocFlowHub.Infrastructure.Data.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentVersion> DocumentVersions { get; set; }
     public DbSet<DocumentCategory> DocumentCategories { get; set; }
+    
+    // Project organization entities
+    public DbSet<Project> Projects { get; set; }
+    public DbSet<Folder> Folders { get; set; }
     
     // AI-related entities
     public DbSet<DocumentSummary> DocumentSummaries { get; set; }
@@ -58,6 +63,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new DocumentConfiguration());
         builder.ApplyConfiguration(new DocumentVersionConfiguration());
         builder.ApplyConfiguration(new DocumentCategoryConfiguration());
+        
+        // Apply project organization configurations
+        builder.ApplyConfiguration(new ProjectConfiguration());
+        builder.ApplyConfiguration(new FolderConfiguration());
         
         // Apply AI-related configurations
         builder.ApplyConfiguration(new DocumentSummaryConfiguration());
