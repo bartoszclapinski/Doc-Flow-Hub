@@ -124,12 +124,16 @@ public class FolderService : IFolderService
             if (folder == null)
                 return ServiceResult<FolderDto>.Failure("Folder not found");
 
+            // Store the old name and path before updating
+            var oldName = folder.Name;
+            var nameChanged = oldName != request.Name;
+
             folder.Name = request.Name;
             folder.Description = request.Description;
             folder.UpdatedAt = DateTime.UtcNow;
 
             // If name changed, update path for this folder and all its children
-            if (folder.Name != request.Name)
+            if (nameChanged)
             {
                 var oldPath = folder.Path;
                 var newPath = folder.Parent != null ? $"{folder.Parent.Path}/{request.Name}" : $"/{request.Name}";
