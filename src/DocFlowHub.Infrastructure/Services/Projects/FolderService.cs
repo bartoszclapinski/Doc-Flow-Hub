@@ -73,9 +73,16 @@ public class FolderService : IFolderService
             _context.Folders.Add(folder);
             await _context.SaveChangesAsync();
 
+            // Reload folder with navigation properties for proper DTO conversion
+            var folderWithNavigationProperties = await _context.Folders
+                .Include(f => f.Project)
+                .Include(f => f.CreatedByUser)
+                .Include(f => f.Parent)
+                .FirstOrDefaultAsync(f => f.Id == folder.Id);
+
             _logger.LogInformation("Folder {FolderName} created successfully in project {ProjectId} by user {UserId}", request.Name, request.ProjectId, userId);
 
-            return ServiceResult<FolderDto>.Success(await ConvertToFolderDtoAsync(folder));
+            return ServiceResult<FolderDto>.Success(await ConvertToFolderDtoAsync(folderWithNavigationProperties!));
         }
         catch (Exception ex)
         {
@@ -377,7 +384,7 @@ public class FolderService : IFolderService
                     return ServiceResult.Failure("Target parent folder not found");
 
                 // Prevent moving folder into itself or its descendants
-                if (newParent.Path.StartsWith(folder.Path))
+                if (newParent.Path == folder.Path || newParent.Path.StartsWith(folder.Path + "/"))
                     return ServiceResult.Failure("Cannot move folder into itself or its descendant");
             }
 

@@ -50,9 +50,14 @@ public class ProjectService : IProjectService
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
+            // Reload project with navigation properties for proper DTO conversion
+            var projectWithNavigationProperties = await _context.Projects
+                .Include(p => p.Owner)
+                .FirstOrDefaultAsync(p => p.Id == project.Id);
+
             _logger.LogInformation("Project {ProjectName} created successfully for user {UserId}", request.Name, ownerId);
 
-            return ServiceResult<ProjectDto>.Success(await ConvertToProjectDtoAsync(project));
+            return ServiceResult<ProjectDto>.Success(await ConvertToProjectDtoAsync(projectWithNavigationProperties!));
         }
         catch (Exception ex)
         {
