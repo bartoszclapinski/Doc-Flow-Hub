@@ -53,7 +53,7 @@
                                     </label>
                                     <div class="d-flex align-items-center">
                                         <input asp-for="Color" type="color" class="form-control form-control-color me-2" style="width: 50px; height: 38px;" />
-                                        <input asp-for="Color" type="text" class="form-control flex-grow-1" placeholder="#0d6efd" />
+                                        <input type="text" id="ColorText" name="ColorText" class="form-control flex-grow-1" placeholder="#0d6efd" />
                                     </div>
                                     <span asp-validation-for="Color" class="text-danger"></span>
                                 </div>
@@ -195,7 +195,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const nameInput = document.getElementById('Name');
     const descriptionInput = document.getElementById('Description');
-    const colorInputs = document.querySelectorAll('input[name="Color"]');
+    const colorInput = document.querySelector('input[name="Color"]');
+    const colorTextInput = document.getElementById('ColorText');
     const iconInputs = document.querySelectorAll('input[name="Icon"]');
     
     const previewName = document.getElementById('preview-name');
@@ -211,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
         previewDescription.textContent = descriptionInput.value || 'Project description will appear here...';
         
         // Update color
-        const colorValue = colorInputs[0].value;
+        const colorValue = colorInput.value;
         previewIcon.style.color = colorValue;
         
         // Update icon
@@ -222,15 +223,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Sync color inputs
-    colorInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            colorInputs.forEach(other => {
-                if (other !== this) {
-                    other.value = this.value;
-                }
-            });
-            updatePreview();
-        });
+    colorInput.addEventListener('input', function() {
+        colorTextInput.value = this.value;
+        updatePreview();
+    });
+    
+    colorTextInput.addEventListener('input', function() {
+        colorInput.value = this.value;
+        updatePreview();
     });
     
     // Listen for input changes

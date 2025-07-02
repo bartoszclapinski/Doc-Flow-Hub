@@ -333,7 +333,7 @@
                                     @if (Model.Projects.PageNumber > 1)
                                     {
                                         <li class="page-item">
-                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc")?pageNumber=@(Model.Projects.PageNumber - 1)">
+                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", Model.Projects.PageNumber - 1)">
                                                 <i class="bi bi-chevron-left"></i>
                                             </a>
                                         </li>
@@ -342,14 +342,14 @@
                                     @for (int i = Math.Max(1, Model.Projects.PageNumber - 2); i <= Math.Min(Model.Projects.TotalPages, Model.Projects.PageNumber + 2); i++)
                                     {
                                         <li class="page-item @(i == Model.Projects.PageNumber ? "active" : "")">
-                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc")?pageNumber=@i">@i</a>
+                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", i)">@i</a>
                                         </li>
                                     }
 
                                     @if (Model.Projects.PageNumber < Model.Projects.TotalPages)
                                     {
                                         <li class="page-item">
-                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc")?pageNumber=@(Model.Projects.PageNumber + 1)">
+                                            <a class="page-link" href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", Model.Projects.PageNumber + 1)">
                                                 <i class="bi bi-chevron-right"></i>
                                             </a>
                                         </li>

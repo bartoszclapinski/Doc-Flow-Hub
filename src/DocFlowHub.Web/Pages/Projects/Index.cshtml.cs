@@ -147,14 +147,14 @@ public class IndexModel : PageModel
                                       Filter.SortBy == "updatedat" && Filter.SortDescending ? "sort-desc" : "";
     }
 
-    public string GetSortUrl(string sortBy, string sortDirection)
+    public string GetSortUrl(string sortBy, string sortDirection, int? pageNumber = null)
     {
         return Url.Page("/Projects/Index", new { 
             Filter.SearchTerm, 
             Filter.IsActive,
             Filter.CreatedAfter,
             Filter.CreatedBefore,
-            Filter.PageNumber,
+            PageNumber = pageNumber ?? Filter.PageNumber,
             Filter.PageSize,
             SortBy = sortBy, 
             SortDirection = sortDirection 
