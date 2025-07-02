@@ -1,4 +1,5 @@
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Projects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -42,6 +43,16 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .WithMany()
             .HasForeignKey(d => d.TeamId)
             .OnDelete(DeleteBehavior.SetNull);
+            
+        builder.HasOne(d => d.Project)
+            .WithMany(p => p.Documents)
+            .HasForeignKey(d => d.ProjectId)
+            .OnDelete(DeleteBehavior.SetNull);
+            
+        builder.HasOne(d => d.Folder)
+            .WithMany(f => f.Documents)
+            .HasForeignKey(d => d.FolderId)
+            .OnDelete(DeleteBehavior.Restrict);
             
         builder.HasOne(d => d.CurrentVersion)
             .WithMany()

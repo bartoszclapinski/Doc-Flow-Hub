@@ -9,6 +9,7 @@ using DocFlowHub.Infrastructure.Services.Storage;
 using DocFlowHub.Infrastructure.Services.Profile;
 using DocFlowHub.Infrastructure.Services.Role;
 using DocFlowHub.Infrastructure.Services.AI;
+using DocFlowHub.Infrastructure.Services.Projects;
 
 namespace DocFlowHub.Infrastructure;
 
@@ -29,6 +30,10 @@ public static class DependencyInjection
         
         // Team Services
         services.AddScoped<ITeamService, TeamService>();
+        
+        // Project and Folder Services
+        services.AddScoped<IProjectService, ProjectService>();
+        services.AddScoped<IFolderService, FolderService>();
         
         // Profile Services
         services.AddScoped<IProfileService, ProfileService>();
