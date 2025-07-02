@@ -47,7 +47,7 @@ public class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.HasOne(d => d.Project)
             .WithMany(p => p.Documents)
             .HasForeignKey(d => d.ProjectId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
             
         builder.HasOne(d => d.Folder)
             .WithMany(f => f.Documents)
