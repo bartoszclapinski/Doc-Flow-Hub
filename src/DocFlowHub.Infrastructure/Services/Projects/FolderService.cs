@@ -892,7 +892,8 @@ public class FolderService : IFolderService
             CreatedByUserName = folder.CreatedByUser?.UserName ?? "Unknown",
             DocumentCount = documentCount,
             SubfolderCount = subfolderCount,
-            LastActivity = lastActivity ?? folder.UpdatedAt ?? folder.CreatedAt
+            LastActivity = lastActivity ?? folder.UpdatedAt ?? folder.CreatedAt,
+            IsArchived = folder.IsArchived
         };
     }
 } 

@@ -522,24 +522,15 @@ public class UploadModel : PageModel
             Folders = new List<FolderDto>();
             return;
         }
-        // Flatten hierarchy for dropdown display
-        var flattened = new List<FolderDto>();
-        void Flatten(IEnumerable<FolderDto> list, int depth)
-        {
-            foreach (var f in list.OrderBy(x => x.Name))
+        // Apply indentation based on folder level for dropdown display
+        Folders = foldersResult.Data
+            .OrderBy(f => f.Path) // Order by path to maintain hierarchy order
+            .Select(f => new FolderDto
             {
-                var clone = new FolderDto
-                {
-                    Id = f.Id,
-                    Name = new string('›', depth) + " " + f.Name // use chevron character for indentation
-                };
-                flattened.Add(clone);
-                if (f.Children?.Any() == true)
-                    Flatten(f.Children, depth + 1);
-            }
-        }
-        Flatten(foldersResult.Data, 0);
-        Folders = flattened;
+                Id = f.Id,
+                Name = new string('›', f.Level) + " " + f.Name // use chevron character for indentation based on level
+            })
+            .ToList();
     }
 
     public async Task<JsonResult> OnGetFoldersAsync(int projectId)

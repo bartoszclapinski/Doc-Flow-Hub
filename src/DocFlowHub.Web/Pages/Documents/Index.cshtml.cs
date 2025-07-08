@@ -408,16 +408,14 @@ public class IndexModel : PageModel
             Folders = new List<FolderDto>();
             return;
         }
-        var flat = new List<FolderDto>();
-        void Flatten(IEnumerable<FolderDto> list, int depth)
-        {
-            foreach (var f in list.OrderBy(x => x.Name))
-            {
-                flat.Add(new FolderDto { Id = f.Id, Name = new string('›', depth) + " " + f.Name });
-                if (f.Children?.Any() == true) Flatten(f.Children, depth + 1);
-            }
-        }
-        Flatten(result.Data, 0);
-        Folders = flat;
+        // Apply indentation based on folder level for dropdown display
+        Folders = result.Data
+            .OrderBy(f => f.Path) // Order by path to maintain hierarchy order
+            .Select(f => new FolderDto 
+            { 
+                Id = f.Id, 
+                Name = new string('›', f.Level) + " " + f.Name // use chevron character for indentation based on level
+            })
+            .ToList();
     }
 } 
