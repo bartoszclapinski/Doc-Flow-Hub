@@ -396,13 +396,13 @@ public class IndexModel : PageModel
 
     private async Task LoadFoldersAsync(string userId)
     {
-        if (ProjectId <= 0)
+        if (!ProjectId.HasValue || ProjectId.Value <= 0)
         {
             Folders = new List<FolderDto>();
             return;
         }
 
-        var result = await _folderService.GetProjectFoldersAsync(ProjectId!.Value, userId);
+        var result = await _folderService.GetProjectFoldersAsync(ProjectId.Value, userId);
         if (!result.Succeeded)
         {
             Folders = new List<FolderDto>();

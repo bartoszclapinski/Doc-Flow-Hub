@@ -9,7 +9,6 @@ using System.Security.Claims;
 namespace DocFlowHub.Web.Pages.Folders;
 
 [Authorize]
-[IgnoreAntiforgeryToken]
 public class IndexModel : PageModel
 {
     private readonly IFolderService _folderService;
