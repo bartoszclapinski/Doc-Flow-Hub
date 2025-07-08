@@ -1,0 +1,555 @@
+@page
+@model DocFlowHub.Web.Pages.Folders.DetailsModel
+@{
+    ViewData["Title"] = $"Folder: {Model.Folder?.Name}";
+}
+
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a asp-page="/Index" class="text-decoration-none">
+                    <i class="bi bi-house-door me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a asp-page="/Projects/Index" class="text-decoration-none">
+                    <i class="bi bi-kanban me-1"></i>Projects
+                </a>
+            </li>
+            @if (Model.Project != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="text-decoration-none">
+                        <i class="bi bi-@Model.Project.Icon me-1"></i>@Model.Project.Name
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="text-decoration-none">
+                        <i class="bi bi-folder me-1"></i>Folders
+                    </a>
+                </li>
+            }
+            @if (Model.Folder != null && Model.FolderPath.Any())
+            {
+                @foreach (var pathItem in Model.FolderPath)
+                {
+                    <li class="breadcrumb-item">
+                        <a asp-page="/Folders/Details" asp-route-id="@pathItem.Id" class="text-decoration-none">
+                            <i class="bi bi-folder me-1"></i>@pathItem.Name
+                        </a>
+                    </li>
+                }
+            }
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-folder me-1"></i>@Model.Folder?.Name
+            </li>
+        </ol>
+    </nav>
+
+    @if (Model.Folder == null)
+    {
+        <!-- Error State -->
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
+            </div>
+            <h4 class="text-muted mb-2">Folder not found</h4>
+            <p class="text-muted mb-4">
+                The folder you're looking for doesn't exist or you don't have access to it.
+            </p>
+            <a asp-page="/Projects/Index" class="btn btn-primary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Projects
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Folder Header -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-folder-fill text-warning me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h1 class="h2 mb-1">@Model.Folder.Name</h1>
+                        @if (!string.IsNullOrEmpty(Model.Folder.Description))
+                        {
+                            <p class="text-muted mb-0">@Model.Folder.Description</p>
+                        }
+                    </div>
+                </div>
+                <div class="text-muted small">
+                    <span class="me-3">
+                        <i class="bi bi-calendar me-1"></i>Created @Model.Folder.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                    </span>
+                    @if (Model.Folder.UpdatedAt.HasValue)
+                    {
+                        <span>
+                            <i class="bi bi-clock me-1"></i>Modified @Model.Folder.UpdatedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                        </span>
+                    }
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-page="/Folders/Edit" asp-route-id="@Model.Folder.Id" class="btn btn-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit Folder
+                </a>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" asp-page="/Folders/Create" asp-route-projectId="@Model.Folder.ProjectId" asp-route-parentFolderId="@Model.Folder.Id">
+                                <i class="bi bi-folder-plus"></i>Create Subfolder
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" asp-page="/Documents/Upload" asp-route-projectId="@Model.Folder.ProjectId" asp-route-folderId="@Model.Folder.Id">
+                                <i class="bi bi-upload"></i>Upload Document
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        @if (Model.Folder.IsArchived)
+                        {
+                            <li>
+                                <form method="post" asp-page-handler="Restore" style="display: inline;">
+                                    <input type="hidden" name="id" value="@Model.Folder.Id" />
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-arrow-clockwise"></i>Restore Folder
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li>
+                                <form method="post" asp-page-handler="Archive" style="display: inline;">
+                                    <input type="hidden" name="id" value="@Model.Folder.Id" />
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-archive"></i>Archive Folder
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        <li>
+                            <button type="button" class="dropdown-item text-danger btn-delete-folder" 
+                                    data-folder-id="@Model.Folder.Id" data-folder-name="@Model.Folder.Name">
+                                <i class="bi bi-trash"></i>Delete Folder
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="h3 mb-0 text-primary">@Model.TotalDocuments</div>
+                        <div class="text-muted">Documents</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="h3 mb-0 text-info">@Model.TotalSubfolders</div>
+                        <div class="text-muted">Subfolders</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="h3 mb-0 text-success">@Model.FormatFileSize(Model.TotalSize)</div>
+                        <div class="text-muted">Folder Size</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="h3 mb-0 text-warning">@Model.FolderPath.Count()</div>
+                        <div class="text-muted">Path Depth</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Tabs -->
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="folderTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="documents-tab" data-bs-toggle="tab" 
+                                data-bs-target="#documents" type="button" role="tab">
+                            <i class="bi bi-file-earmark me-1"></i>Documents (@Model.Folder.DocumentCount)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="subfolders-tab" data-bs-toggle="tab" 
+                                data-bs-target="#subfolders" type="button" role="tab">
+                            <i class="bi bi-folder me-1"></i>Subfolders (@Model.Folder.Children?.Count())
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="details-tab" data-bs-toggle="tab" 
+                                data-bs-target="#details" type="button" role="tab">
+                            <i class="bi bi-info-circle me-1"></i>Details
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="folderTabsContent">
+                    <!-- Documents Tab -->
+                    <div class="tab-pane fade show active" id="documents" role="tabpanel">
+                        @if (Model.Documents.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Document</th>
+                                            <th>Type</th>
+                                            <th>Size</th>
+                                            <th>Modified</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var document in Model.Documents)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-file-earmark me-2 text-muted"></i>
+                                                        <div>
+                                                            <div class="fw-medium">@document.Title</div>
+                                                            @if (!string.IsNullOrEmpty(document.Description))
+                                                            {
+                                                                <small class="text-muted">@document.Description</small>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary">@document.FileType</span>
+                                                </td>
+                                                <td>@(document.FileSize / 1024) KB</td>
+                                                <td>@document.UpdatedAt?.ToString("MMM dd, yyyy")</td>
+                                                <td>
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                                                data-bs-toggle="dropdown">
+                                                            <i class="bi bi-three-dots"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li>
+                                                                <a class="dropdown-item" asp-page="/Documents/Details" asp-route-id="@document.Id">
+                                                                    <i class="bi bi-eye"></i>View
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" asp-page="/Documents/Edit" asp-route-id="@document.Id">
+                                                                    <i class="bi bi-pencil"></i>Edit
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-file-earmark display-4 text-muted mb-3"></i>
+                                <h5 class="text-muted">No documents in this folder</h5>
+                                <p class="text-muted mb-3">Upload documents to get started.</p>
+                                <a asp-page="/Documents/Upload" asp-route-projectId="@Model.Folder.ProjectId" asp-route-folderId="@Model.Folder.Id" 
+                                   class="btn btn-primary">
+                                    <i class="bi bi-upload me-1"></i>Upload Document
+                                </a>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Subfolders Tab -->
+                    <div class="tab-pane fade" id="subfolders" role="tabpanel">
+                        @if (Model.Folder.Children?.Any() == true)
+                        {
+                            <div class="row">
+                                @foreach (var subfolder in Model.Folder.Children)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="bi bi-folder-fill text-warning me-2"></i>
+                                                    <h6 class="mb-0">@subfolder.Name</h6>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(subfolder.Description))
+                                                {
+                                                    <p class="text-muted small mb-2">@subfolder.Description</p>
+                                                }
+                                                <div class="text-muted small mb-3">
+                                                    <span class="me-2">
+                                                        <i class="bi bi-file-earmark me-1"></i>@subfolder.DocumentCount docs
+                                                    </span>
+                                                    <span>
+                                                        <i class="bi bi-folder me-1"></i>@subfolder.Children?.Count() subfolders
+                                                    </span>
+                                                </div>
+                                                <div class="d-flex gap-1">
+                                                    <a asp-page="/Folders/Details" asp-route-id="@subfolder.Id" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i>View
+                                                    </a>
+                                                    <a asp-page="/Folders/Edit" asp-route-id="@subfolder.Id" 
+                                                       class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-pencil"></i>Edit
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-folder display-4 text-muted mb-3"></i>
+                                <h5 class="text-muted">No subfolders</h5>
+                                <p class="text-muted mb-3">Create subfolders to organize your content.</p>
+                                <a asp-page="/Folders/Create" asp-route-projectId="@Model.Folder.ProjectId" asp-route-parentFolderId="@Model.Folder.Id" 
+                                   class="btn btn-primary">
+                                    <i class="bi bi-folder-plus me-1"></i>Create Subfolder
+                                </a>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Details Tab -->
+                    <div class="tab-pane fade" id="details" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Folder Information</h6>
+                                <dl class="row">
+                                    <dt class="col-sm-4">Name</dt>
+                                    <dd class="col-sm-8">@Model.Folder.Name</dd>
+                                    
+                                    <dt class="col-sm-4">Description</dt>
+                                    <dd class="col-sm-8">
+                                        @(string.IsNullOrEmpty(Model.Folder.Description) ? "No description" : Model.Folder.Description)
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Created</dt>
+                                    <dd class="col-sm-8">@Model.Folder.CreatedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")</dd>
+                                    
+                                    <dt class="col-sm-4">Modified</dt>
+                                    <dd class="col-sm-8">
+                                        @(Model.Folder.UpdatedAt?.ToString("MMMM dd, yyyy 'at' h:mm tt") ?? "Never")
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Hierarchy Information</h6>
+                                <dl class="row">
+                                    <dt class="col-sm-4">Project</dt>
+                                    <dd class="col-sm-8">
+                                        <a asp-page="/Projects/Details" asp-route-id="@Model.Project?.Id" class="text-decoration-none">
+                                            @Model.Project?.Name
+                                        </a>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Level</dt>
+                                    <dd class="col-sm-8">@Model.Folder.Level</dd>
+                                    
+                                    <dt class="col-sm-4">Path</dt>
+                                    <dd class="col-sm-8">
+                                        <small class="text-muted">@Model.Folder.Path</small>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Status</dt>
+                                    <dd class="col-sm-8">
+                                        @if (Model.Folder.IsArchived)
+                                        {
+                                            <span class="badge bg-warning">Archived</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Delete Folder
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the folder <strong id="folderName"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-page-handler="Delete" style="display: inline;">
+                    <input type="hidden" id="folderIdToDelete" name="id" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete Folder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Delete confirmation
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.btn-delete-folder')) {
+                    e.preventDefault();
+                    const button = e.target.closest('.btn-delete-folder');
+                    const folderId = button.dataset.folderId;
+                    const folderName = button.dataset.folderName;
+                    
+                    document.getElementById('folderIdToDelete').value = folderId;
+                    document.getElementById('folderName').textContent = folderName;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                    modal.show();
+                }
+            });
+        });
+    </script>
+}
+
+<style>
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+        color: #6c757d;
+    }
+
+    .card {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        padding: 0.75rem 1rem;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: transparent;
+        border-bottom: 2px solid #0d6efd;
+    }
+
+    .nav-tabs .nav-link:hover {
+        border-color: transparent;
+        color: #0d6efd;
+    }
+
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item i {
+        width: 1rem;
+        margin-right: 0.5rem;
+    }
+
+    .alert {
+        border: none;
+        border-radius: 0.375rem;
+    }
+
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+    }
+
+    .btn {
+        border-radius: 0.375rem;
+        font-weight: 500;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    @@media (max-width: 768px) {
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+    }
+</style>

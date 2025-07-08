@@ -66,22 +66,22 @@ public class ProjectService : IProjectService
         }
     }
 
-    public async Task<ServiceResult<ProjectDto>> GetProjectByIdAsync(int id)
+    public async Task<ServiceResult<ProjectDto>> GetProjectByIdAsync(int id, string userId)
     {
         try
         {
             var project = await _context.Projects
                 .Include(p => p.Owner)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
 
             if (project == null)
-                return ServiceResult<ProjectDto>.Failure("Project not found");
+                return ServiceResult<ProjectDto>.Failure("Project not found or you don't have access to it");
 
             return ServiceResult<ProjectDto>.Success(await ConvertToProjectDtoAsync(project));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting project {ProjectId}", id);
+            _logger.LogError(ex, "Error getting project {ProjectId} for user {UserId}", id, userId);
             return ServiceResult<ProjectDto>.Failure("An error occurred while getting the project");
         }
     }

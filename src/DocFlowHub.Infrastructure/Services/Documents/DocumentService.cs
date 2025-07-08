@@ -62,7 +62,7 @@ public class DocumentService : IDocumentService
         return ServiceResult<DocumentDto>.Success(documentDto);
     }
 
-    public async Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(DocumentFilter filter)
+    public async Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(string userId, DocumentFilter filter)
     {
         var query = _context.Documents
             .Include(d => d.Versions)
@@ -70,6 +70,19 @@ public class DocumentService : IDocumentService
             .Include(d => d.Team)
             .Include(d => d.Owner)
             .AsQueryable();
+
+        // Only include documents the user has access to:
+        // 1. Documents owned by the user
+        // 2. Documents shared with teams where the user is a member
+        var userTeamIds = await _context.TeamMembers
+            .Where(tm => tm.UserId == userId)
+            .Select(tm => tm.TeamId)
+            .ToListAsync();
+
+        query = query.Where(d => 
+            d.OwnerId == userId || // User owns the document
+            (d.TeamId.HasValue && userTeamIds.Contains(d.TeamId.Value)) // Document is shared with user's team
+        );
 
         if (!string.IsNullOrEmpty(filter.SearchTerm))
         {
@@ -89,6 +102,11 @@ public class DocumentService : IDocumentService
                 d.Categories.Any(c => c.Id == filter.CategoryId));
         }
 
+        if (filter.FolderId.HasValue)
+        {
+            query = query.Where(d => d.FolderId == filter.FolderId.Value);
+        }
+
         if (!string.IsNullOrEmpty(filter.OwnerId))
         {
             query = query.Where(d => d.OwnerId == filter.OwnerId);
@@ -97,6 +115,18 @@ public class DocumentService : IDocumentService
         if (filter.TeamId.HasValue)
         {
             query = query.Where(d => d.TeamId == filter.TeamId);
+        }
+
+        if (filter.ProjectId.HasValue)
+        {
+            if (filter.ProjectId.Value == 0)
+            {
+                query = query.Where(d => d.ProjectId == null);
+            }
+            else if (filter.ProjectId.Value > 0)
+            {
+                query = query.Where(d => d.ProjectId == filter.ProjectId.Value);
+            }
         }
 
         if (!filter.IncludeDeleted)
@@ -122,7 +152,7 @@ public class DocumentService : IDocumentService
     public async Task<ServiceResult<IEnumerable<DocumentDto>>> GetUserDocumentsAsync(string userId, DocumentFilter filter)
     {
         filter.OwnerId = userId;
-        var result = await GetDocumentsAsync(filter);
+        var result = await GetDocumentsAsync(userId, filter);
         if (!result.Succeeded)
             return ServiceResult<IEnumerable<DocumentDto>>.Failure(result.Error!);
 
@@ -171,6 +201,16 @@ public class DocumentService : IDocumentService
         {
             query = query.Where(d => 
                 d.Categories.Any(c => c.Id == filter.CategoryId));
+        }
+
+        if (filter.FolderId.HasValue)
+        {
+            query = query.Where(d => d.FolderId == filter.FolderId.Value);
+        }
+
+        if (filter.ProjectId.HasValue)
+        {
+            query = query.Where(d => d.ProjectId == filter.ProjectId.Value);
         }
 
         // If OwnerId filter is specified, further restrict to only owned documents
@@ -285,7 +325,9 @@ public class DocumentService : IDocumentService
                 FileSize = file.Length,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
+                IsDeleted = false,
+                ProjectId = request.ProjectId,
+                FolderId = request.FolderId
             };
 
             _context.Documents.Add(document);
@@ -785,6 +827,159 @@ public class DocumentService : IDocumentService
             await transaction.RollbackAsync();
             return ServiceResult<DocumentDto>.Failure($"Error uploading new version: {ex.Message}");
         }
+    }
+
+    public async Task<ServiceResult<DocumentDto>> MoveDocumentAsync(MoveDocumentRequest request)
+    {
+        // Validate request
+        var document = await _context.Documents
+            .Include(d => d.Owner)
+            .Include(d => d.Team)
+            .Include(d => d.Versions)
+            .FirstOrDefaultAsync(d => d.Id == request.DocumentId);
+
+        if (document == null)
+            return ServiceResult<DocumentDto>.Failure("Document not found");
+
+        // Basic authorization: only owner can move for now (future: team roles)
+        if (document.OwnerId != request.UserId)
+            return ServiceResult<DocumentDto>.Failure("Not authorized to move this document");
+
+        // Validate target project access if specified
+        if (request.ProjectId.HasValue)
+        {
+            var targetProject = await _context.Projects
+                .FirstOrDefaultAsync(p => p.Id == request.ProjectId.Value && p.IsActive);
+            
+            if (targetProject == null)
+                return ServiceResult<DocumentDto>.Failure("Target project not found or is not active");
+            
+            // Check if user owns the target project (for now, only owner can move documents to project)
+            // TODO: Add team sharing validation when ProjectTeamShares is implemented
+            if (targetProject.OwnerId != request.UserId)
+                return ServiceResult<DocumentDto>.Failure("You don't have access to the target project");
+        }
+
+        // Validate target folder access if specified  
+        if (request.FolderId.HasValue)
+        {
+            var targetFolder = await _context.Folders
+                .Include(f => f.Project)
+                .FirstOrDefaultAsync(f => f.Id == request.FolderId.Value && !f.IsArchived);
+            
+            if (targetFolder == null)
+                return ServiceResult<DocumentDto>.Failure("Target folder not found or is archived");
+            
+            // Check if user owns the folder's project (for now, only owner can move documents to folder)
+            // TODO: Add team sharing validation when ProjectTeamShares is implemented
+            if (targetFolder.Project.OwnerId != request.UserId)
+                return ServiceResult<DocumentDto>.Failure("You don't have access to the target folder");
+            
+            // If both project and folder are specified, ensure folder belongs to the project
+            if (request.ProjectId.HasValue && targetFolder.ProjectId != request.ProjectId.Value)
+                return ServiceResult<DocumentDto>.Failure("Target folder does not belong to the specified project");
+        }
+
+        var hasChanges = false;
+
+        if (document.ProjectId != request.ProjectId)
+        {
+            document.ProjectId = request.ProjectId;
+            hasChanges = true;
+        }
+
+        if (document.FolderId != request.FolderId)
+        {
+            document.FolderId = request.FolderId;
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            document.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        return ServiceResult<DocumentDto>.Success(document.ToDto());
+    }
+
+    public async Task<ServiceResult<PagedResult<DocumentDto>>> GetAllDocumentsForAdminAsync(DocumentFilter filter)
+    {
+        var query = _context.Documents
+            .Include(d => d.Versions)
+            .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
+            .AsQueryable();
+
+        // Admin method - no access control filtering, returns ALL documents
+        
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            query = query.Where(d => 
+                d.Title.Contains(filter.SearchTerm) || 
+                d.Description.Contains(filter.SearchTerm));
+        }
+
+        if (!string.IsNullOrEmpty(filter.FileType))
+        {
+            query = query.Where(d => d.FileType == filter.FileType);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(d => 
+                d.Categories.Any(c => c.Id == filter.CategoryId));
+        }
+
+        if (filter.FolderId.HasValue)
+        {
+            query = query.Where(d => d.FolderId == filter.FolderId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(filter.OwnerId))
+        {
+            query = query.Where(d => d.OwnerId == filter.OwnerId);
+        }
+
+        if (filter.TeamId.HasValue)
+        {
+            query = query.Where(d => d.TeamId == filter.TeamId);
+        }
+
+        if (filter.ProjectId.HasValue)
+        {
+            if (filter.ProjectId.Value == 0)
+            {
+                query = query.Where(d => d.ProjectId == null);
+            }
+            else if (filter.ProjectId.Value > 0)
+            {
+                query = query.Where(d => d.ProjectId == filter.ProjectId.Value);
+            }
+        }
+
+        if (!filter.IncludeDeleted)
+        {
+            query = query.Where(d => !d.IsDeleted);
+        }
+
+        // Apply sorting
+        query = ApplySorting(query, filter.SortBy, filter.SortDirection);
+
+        var totalItems = await query.CountAsync();
+        var items = await query
+            .Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<DocumentDto>>.Success(new PagedResult<DocumentDto>
+        {
+            Items = items.Select(d => d.ToDto()),
+            TotalItems = totalItems,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize
+        });
     }
 
     private static IQueryable<Document> ApplySorting(IQueryable<Document> query, string? sortBy, string? sortDirection)

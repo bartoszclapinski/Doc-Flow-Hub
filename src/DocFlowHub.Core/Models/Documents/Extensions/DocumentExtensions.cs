@@ -24,7 +24,9 @@ public static class DocumentExtensions
             IsDeleted = document.IsDeleted,
             CurrentVersionId = document.Versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault()?.Id,
             Versions = document.Versions.Select(v => v.ToDto()).ToList(),
-            Categories = document.Categories.Select(c => c.ToDto()).ToList()
+            Categories = document.Categories.Select(c => c.ToDto()).ToList(),
+            ProjectId = document.ProjectId,
+            FolderId = document.FolderId
         };
     }
 

@@ -36,6 +36,9 @@ public class Folder
 
     public DateTime? UpdatedAt { get; set; }
 
+    // Status
+    public bool IsArchived { get; set; } = false;
+
     // Navigation properties
     public string CreatedByUserId { get; set; } = string.Empty;
     public virtual ApplicationUser CreatedByUser { get; set; } = null!;

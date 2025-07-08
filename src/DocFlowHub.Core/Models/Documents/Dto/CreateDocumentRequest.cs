@@ -11,4 +11,6 @@ public class CreateDocumentRequest
     public int? TeamId { get; set; }
     public List<int> CategoryIds { get; set; } = new();
     public string OwnerId { get; set; } = string.Empty;
+    public int? ProjectId { get; set; }
+    public int? FolderId { get; set; }
 } 

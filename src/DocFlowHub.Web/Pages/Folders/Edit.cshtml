@@ -1,0 +1,442 @@
+@page
+@model DocFlowHub.Web.Pages.Folders.EditModel
+@{
+    ViewData["Title"] = $"Edit Folder: {Model.Folder?.Name}";
+}
+
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a asp-page="/Index" class="text-decoration-none">
+                    <i class="bi bi-house-door me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a asp-page="/Projects/Index" class="text-decoration-none">
+                    <i class="bi bi-kanban me-1"></i>Projects
+                </a>
+            </li>
+            @if (Model.Project != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="text-decoration-none">
+                        <i class="bi bi-@Model.Project.Icon me-1"></i>@Model.Project.Name
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="text-decoration-none">
+                        <i class="bi bi-folder me-1"></i>Folders
+                    </a>
+                </li>
+            }
+            @if (Model.Folder != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id" class="text-decoration-none">
+                        <i class="bi bi-folder me-1"></i>@Model.Folder.Name
+                    </a>
+                </li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </li>
+        </ol>
+    </nav>
+
+    @if (Model.Folder == null)
+    {
+        <!-- Error State -->
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
+            </div>
+            <h4 class="text-muted mb-2">Folder not found</h4>
+            <p class="text-muted mb-4">
+                The folder you're trying to edit doesn't exist or you don't have access to it.
+            </p>
+            <a asp-page="/Projects/Index" class="btn btn-primary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Projects
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-1">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Folder
+                </h1>
+                <p class="text-muted mb-0">
+                    Updating folder <strong>@Model.Folder.Name</strong>
+                </p>
+            </div>
+            <div>
+                <a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Folder
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Edit Folder Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-folder me-2"></i>Folder Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="editFolderForm">
+                            <input type="hidden" asp-for="Id" />
+                            
+                            <div class="mb-3">
+                                <label asp-for="Name" class="form-label">Folder Name <span class="text-danger">*</span></label>
+                                <input asp-for="Name" class="form-control" placeholder="Enter folder name..." 
+                                       maxlength="100" required />
+                                <div class="form-text">
+                                    Choose a descriptive name for your folder (max 100 characters).
+                                </div>
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="Description" class="form-label">Description</label>
+                                <textarea asp-for="Description" class="form-control" rows="3" 
+                                          placeholder="Optional description of this folder..." 
+                                          maxlength="500"></textarea>
+                                <div class="form-text">
+                                    Provide additional context about this folder (max 500 characters).
+                                </div>
+                                <span asp-validation-for="Description" class="text-danger"></span>
+                            </div>
+
+                            @if (Model.AvailableParentFolders.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Parent Folder</label>
+                                    <div class="form-control" style="height: auto; min-height: 120px;">
+                                        <div class="mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="parentFolderSelection" 
+                                                       id="noParent" value="none" 
+                                                       @(Model.ParentFolderId == null ? "checked" : "") />
+                                                <label class="form-check-label" for="noParent">
+                                                    <i class="bi bi-folder me-1"></i>Move to root level
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        @foreach (var folder in Model.AvailableParentFolders)
+                                        {
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="parentFolderSelection" 
+                                                       id="parent_@folder.Id" value="@folder.Id" 
+                                                       @(Model.ParentFolderId == folder.Id ? "checked" : "") />
+                                                <label class="form-check-label" for="parent_@folder.Id">
+                                                    <i class="bi bi-folder me-1"></i>@folder.Name
+                                                    @if (!string.IsNullOrEmpty(folder.Description))
+                                                    {
+                                                        <small class="text-muted d-block ms-4">@folder.Description</small>
+                                                    }
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="form-text">
+                                        Select where to move this folder in the hierarchy.
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-1"></i>Save Changes
+                                </button>
+                                <a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id" 
+                                   class="btn btn-outline-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Preview Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-eye me-2"></i>Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="folderPreview">
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-folder display-4"></i>
+                                <p class="mt-2">Enter folder details to see preview</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Folder Info -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Current Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Name</dt>
+                            <dd class="col-sm-8">@Model.Folder.Name</dd>
+                            
+                            <dt class="col-sm-4">Description</dt>
+                            <dd class="col-sm-8">
+                                @(string.IsNullOrEmpty(Model.Folder.Description) ? "No description" : Model.Folder.Description)
+                            </dd>
+                            
+                            <dt class="col-sm-4">Created</dt>
+                            <dd class="col-sm-8">@Model.Folder.CreatedAt.ToString("MMM dd, yyyy")</dd>
+                            
+                            <dt class="col-sm-4">Modified</dt>
+                            <dd class="col-sm-8">
+                                @(Model.Folder.UpdatedAt?.ToString("MMM dd, yyyy") ?? "Never")
+                            </dd>
+                            
+                            <dt class="col-sm-4">Level</dt>
+                            <dd class="col-sm-8">@Model.Folder.Level</dd>
+                            
+                            <dt class="col-sm-4">Documents</dt>
+                            <dd class="col-sm-8">@Model.Folder.DocumentCount</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Project Info Card -->
+                @if (Model.Project != null)
+                {
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Project Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    <i class="bi bi-@Model.Project.Icon" style="color: @Model.Project.Color; font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">@Model.Project.Name</h6>
+                                    <small class="text-muted">@Model.Project.Description</small>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <div class="h5 mb-0 text-primary">@Model.Project.DocumentCount</div>
+                                        <small class="text-muted">Documents</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="h5 mb-0 text-info">@Model.Project.FolderCount</div>
+                                    <small class="text-muted">Folders</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const nameInput = document.getElementById('Name');
+            const descriptionInput = document.getElementById('Description');
+            const previewDiv = document.getElementById('folderPreview');
+            const parentFolderSelection = document.querySelectorAll('input[name="parentFolderSelection"]');
+            const parentFolderIdInput = document.getElementById('ParentFolderId');
+
+            function updatePreview() {
+                const name = nameInput.value.trim();
+                const description = descriptionInput.value.trim();
+                const selectedParent = document.querySelector('input[name="parentFolderSelection"]:checked');
+
+                if (name) {
+                    let previewHtml = `
+                        <div class="folder-preview">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-folder-fill text-warning me-2" style="font-size: 1.2rem;"></i>
+                                <strong>${name}</strong>
+                            </div>
+                    `;
+
+                    if (description) {
+                        previewHtml += `<p class="text-muted small mb-2">${description}</p>`;
+                    }
+
+                    if (selectedParent && selectedParent.value !== 'none') {
+                        const parentLabel = selectedParent.nextElementSibling.textContent.trim();
+                        previewHtml += `
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-arrow-up me-1"></i>Will be moved to: <strong>${parentLabel}</strong>
+                            </div>
+                        `;
+                    } else {
+                        previewHtml += `
+                            <div class="alert alert-success small mb-0">
+                                <i class="bi bi-check-circle me-1"></i>Will be at root level
+                            </div>
+                        `;
+                    }
+
+                    previewHtml += '</div>';
+                    previewDiv.innerHTML = previewHtml;
+                } else {
+                    previewDiv.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-folder display-4"></i>
+                            <p class="mt-2">Enter folder details to see preview</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Update preview on input changes
+            nameInput.addEventListener('input', updatePreview);
+            descriptionInput.addEventListener('input', updatePreview);
+
+            // Update parent folder selection
+            parentFolderSelection.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'none') {
+                        parentFolderIdInput.value = '';
+                    } else {
+                        parentFolderIdInput.value = this.value;
+                    }
+                    updatePreview();
+                });
+            });
+
+            // Initial preview update
+            updatePreview();
+
+            // Form validation
+            const form = document.getElementById('editFolderForm');
+            form.addEventListener('submit', function(e) {
+                const name = nameInput.value.trim();
+                if (!name) {
+                    e.preventDefault();
+                    nameInput.focus();
+                    return false;
+                }
+            });
+        });
+    </script>
+}
+
+<style>
+    .folder-preview {
+        padding: 1rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        background-color: #f8f9fa;
+    }
+
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+        padding-left: 0.25rem;
+    }
+
+    .form-check-input:checked + .form-check-label {
+        font-weight: 500;
+    }
+
+    .alert {
+        border: none;
+        border-radius: 0.375rem;
+        margin-bottom: 0;
+    }
+
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+        color: #6c757d;
+    }
+
+    .card {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 1.25rem;
+    }
+
+    .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .btn {
+        border-radius: 0.375rem;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .btn-primary:hover {
+        background-color: #0b5ed7;
+        border-color: #0a58ca;
+    }
+
+    dl.row dt {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    dl.row dd {
+        color: #6c757d;
+    }
+
+    @@media (max-width: 991.98px) {
+        .col-lg-4 {
+            margin-top: 1.5rem;
+        }
+    }
+</style>

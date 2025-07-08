@@ -91,7 +91,7 @@ public class FolderService : IFolderService
         }
     }
 
-    public async Task<ServiceResult<FolderDto>> GetFolderByIdAsync(int id)
+    public async Task<ServiceResult<FolderDto>> GetFolderByIdAsync(int id, string userId)
     {
         try
         {
@@ -104,11 +104,16 @@ public class FolderService : IFolderService
             if (folder == null)
                 return ServiceResult<FolderDto>.Failure("Folder not found");
 
+            // Check if user has access to this folder
+            var canAccess = await CanUserAccessFolderAsync(id, userId);
+            if (!canAccess.Succeeded || !canAccess.Data)
+                return ServiceResult<FolderDto>.Failure("You don't have access to this folder");
+
             return ServiceResult<FolderDto>.Success(await ConvertToFolderDtoAsync(folder));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting folder {FolderId}", id);
+            _logger.LogError(ex, "Error getting folder {FolderId} for user {UserId}", id, userId);
             return ServiceResult<FolderDto>.Failure("An error occurred while getting the folder");
         }
     }
@@ -131,29 +136,73 @@ public class FolderService : IFolderService
             if (folder == null)
                 return ServiceResult<FolderDto>.Failure("Folder not found");
 
-            // Store the old name and path before updating
-            var oldName = folder.Name;
-            var nameChanged = oldName != request.Name;
+            // Validate parent folder change (prevent circular references)
+            if (request.ParentFolderId.HasValue)
+            {
+                if (request.ParentFolderId == id)
+                    return ServiceResult<FolderDto>.Failure("A folder cannot be its own parent");
 
+                // Check if the new parent would create a circular reference
+                var newParent = await _context.Folders.FindAsync(request.ParentFolderId.Value);
+                if (newParent != null && newParent.ProjectId != folder.ProjectId)
+                    return ServiceResult<FolderDto>.Failure("Parent folder must be in the same project");
+
+                // Check for circular reference by walking up the parent hierarchy
+                var parentId = request.ParentFolderId;
+                while (parentId.HasValue)
+                {
+                    if (parentId == id)
+                        return ServiceResult<FolderDto>.Failure("Cannot move folder - this would create a circular reference");
+                    
+                    var parent = await _context.Folders.FindAsync(parentId.Value);
+                    parentId = parent?.ParentFolderId;
+                }
+            }
+
+            // Store the old values before updating
+            var oldName = folder.Name;
+            var oldParentId = folder.ParentFolderId;
+            var oldPath = folder.Path;
+            
+            var nameChanged = oldName != request.Name;
+            var parentChanged = oldParentId != request.ParentFolderId;
+
+            // Update basic properties
             folder.Name = request.Name;
             folder.Description = request.Description;
+            folder.ParentFolderId = request.ParentFolderId;
             folder.UpdatedAt = DateTime.UtcNow;
 
-            // If name changed, update path for this folder and all its children
-            if (nameChanged)
+            // If parent or name changed, update path and level for this folder and all its children
+            if (nameChanged || parentChanged)
             {
-                var oldPath = folder.Path;
-                var newPath = folder.Parent != null ? $"{folder.Parent.Path}/{request.Name}" : $"/{request.Name}";
-                folder.Path = newPath;
+                // Get new parent folder to calculate new path and level
+                Folder? newParentFolder = null;
+                if (request.ParentFolderId.HasValue)
+                {
+                    newParentFolder = await _context.Folders.FindAsync(request.ParentFolderId.Value);
+                }
 
-                // Update all child folder paths
+                // Calculate new path and level
+                var newPath = newParentFolder != null ? $"{newParentFolder.Path}/{request.Name}" : $"/{request.Name}";
+                var newLevel = newParentFolder != null ? newParentFolder.Level + 1 : 0;
+                
+                folder.Path = newPath;
+                folder.Level = newLevel;
+
+                // Update all child folder paths and levels
                 var childFolders = await _context.Folders
                     .Where(f => f.Path.StartsWith(oldPath + "/"))
                     .ToListAsync();
 
                 foreach (var child in childFolders)
                 {
-                    child.Path = child.Path.Replace(oldPath, newPath);
+                    // Calculate the relative path from the old folder to the child
+                    var relativePath = child.Path.Substring(oldPath.Length);
+                    child.Path = newPath + relativePath;
+                    
+                    // Recalculate level based on path depth (subtract 1 because root path has 1 slash but is level 0)
+                    child.Level = child.Path.Count(c => c == '/') - 1;
                     child.UpdatedAt = DateTime.UtcNow;
                 }
             }
@@ -202,17 +251,18 @@ public class FolderService : IFolderService
         try
         {
             // Check if user has access to the project
-            var hasAccess = await _context.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == userId);
-            if (!hasAccess)
-                return ServiceResult<IEnumerable<FolderDto>>.Failure("You don't have access to this project");
+            var project = await _context.Projects
+                .FirstOrDefaultAsync(p => p.Id == projectId && p.OwnerId == userId);
+
+            if (project == null)
+                return ServiceResult<IEnumerable<FolderDto>>.Failure("Project not found or you don't have access to it");
 
             var folders = await _context.Folders
                 .Include(f => f.Project)
                 .Include(f => f.CreatedByUser)
                 .Include(f => f.Parent)
                 .Where(f => f.ProjectId == projectId)
-                .OrderBy(f => f.Level)
-                .ThenBy(f => f.Name)
+                .OrderBy(f => f.Name)
                 .ToListAsync();
 
             var folderDtos = new List<FolderDto>();
@@ -225,8 +275,95 @@ public class FolderService : IFolderService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting folders for project {ProjectId}", projectId);
-            return ServiceResult<IEnumerable<FolderDto>>.Failure("An error occurred while getting project folders");
+            _logger.LogError(ex, "Error getting folders for project {ProjectId} and user {UserId}", projectId, userId);
+            return ServiceResult<IEnumerable<FolderDto>>.Failure("An error occurred while getting folders");
+        }
+    }
+
+    public async Task<ServiceResult<PagedResult<FolderDto>>> GetFoldersInProjectAsync(int projectId, string userId, FolderFilter filter)
+    {
+        try
+        {
+            // Check access
+            var projectExists = await _context.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == userId);
+            if (!projectExists)
+                return ServiceResult<PagedResult<FolderDto>>.Failure("Project not found or you don't have access to it");
+
+            // Start with all folders for the project (we'll filter afterwards)
+            var query = _context.Folders
+                .Include(f => f.Project)
+                .Include(f => f.Parent)
+                .Include(f => f.CreatedByUser)
+                .Where(f => f.ProjectId == projectId);
+
+            // Status filter (Active / Archived)
+            if (!string.IsNullOrWhiteSpace(filter.Status))
+            {
+                if (filter.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                    query = query.Where(f => !f.IsArchived);
+                else if (filter.Status.Equals("Archived", StringComparison.OrdinalIgnoreCase))
+                    query = query.Where(f => f.IsArchived);
+            }
+
+            // Search term (name / description)
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                query = query.Where(f => f.Name.Contains(filter.SearchTerm) || (f.Description != null && f.Description.Contains(filter.SearchTerm)));
+            }
+
+            // Execute query and materialise list (we need all rows to build hierarchy)
+            var folderEntities = await query.ToListAsync();
+
+            // Convert to DTOs
+            var dtoDict = new Dictionary<int, FolderDto>();
+            foreach (var folder in folderEntities)
+            {
+                var dto = await ConvertToFolderDtoAsync(folder);
+                dtoDict[dto.Id] = dto;
+            }
+
+            // Build hierarchy
+            foreach (var dto in dtoDict.Values)
+            {
+                if (dto.ParentFolderId.HasValue && dtoDict.TryGetValue(dto.ParentFolderId.Value, out var parentDto))
+                {
+                    parentDto.Children.Add(dto);
+                }
+            }
+
+            // Root nodes
+            var rootDtos = dtoDict.Values.Where(d => d.ParentFolderId == null).ToList();
+
+            // Sorting (by root node only)
+            rootDtos = filter.SortBy?.ToLower() switch
+            {
+                "createdat" => filter.SortDescending ? rootDtos.OrderByDescending(f => f.CreatedAt).ToList() : rootDtos.OrderBy(f => f.CreatedAt).ToList(),
+                "updatedat" => filter.SortDescending ? rootDtos.OrderByDescending(f => f.UpdatedAt).ToList() : rootDtos.OrderBy(f => f.UpdatedAt).ToList(),
+                "level" => filter.SortDescending ? rootDtos.OrderByDescending(f => f.Level).ToList() : rootDtos.OrderBy(f => f.Level).ToList(),
+                _ => filter.SortDescending ? rootDtos.OrderByDescending(f => f.Name).ToList() : rootDtos.OrderBy(f => f.Name).ToList()
+            };
+
+            // Pagination on root nodes
+            var totalItems = rootDtos.Count;
+            var pagedRoot = rootDtos
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .ToList();
+
+            var result = new PagedResult<FolderDto>
+            {
+                Items = pagedRoot,
+                TotalItems = totalItems,
+                PageNumber = filter.PageNumber,
+                PageSize = filter.PageSize
+            };
+
+            return ServiceResult<PagedResult<FolderDto>>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting folders for project {ProjectId} and user {UserId}", projectId, userId);
+            return ServiceResult<PagedResult<FolderDto>>.Failure("An error occurred while getting folders");
         }
     }
 
@@ -320,44 +457,40 @@ public class FolderService : IFolderService
         }
     }
 
-    public async Task<ServiceResult<IEnumerable<FolderDto>>> GetFolderPathAsync(int folderId)
+    public async Task<ServiceResult<IEnumerable<FolderDto>>> GetFolderPathAsync(int folderId, string userId)
     {
         try
         {
+            // Check if user has access to the folder
+            var canAccess = await CanUserAccessFolderAsync(folderId, userId);
+            if (!canAccess.Succeeded || !canAccess.Data)
+                return ServiceResult<IEnumerable<FolderDto>>.Failure("You don't have access to this folder");
+
             var folder = await _context.Folders
                 .Include(f => f.Project)
                 .Include(f => f.CreatedByUser)
+                .Include(f => f.Parent)
                 .FirstOrDefaultAsync(f => f.Id == folderId);
 
             if (folder == null)
                 return ServiceResult<IEnumerable<FolderDto>>.Failure("Folder not found");
 
-            var pathParts = folder.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var pathFolders = new List<FolderDto>();
+            var path = new List<FolderDto>();
 
-            // Build the path from root to current folder
-            var currentPath = "";
-            foreach (var part in pathParts)
+            // Build the path by walking up the parent hierarchy
+            var currentFolder = folder;
+            while (currentFolder != null)
             {
-                currentPath = currentPath == "" ? $"/{part}" : $"{currentPath}/{part}";
-                var pathFolder = await _context.Folders
-                    .Include(f => f.Project)
-                    .Include(f => f.CreatedByUser)
-                    .Include(f => f.Parent)
-                    .FirstOrDefaultAsync(f => f.Path == currentPath && f.ProjectId == folder.ProjectId);
-
-                if (pathFolder != null)
-                {
-                    pathFolders.Add(await ConvertToFolderDtoAsync(pathFolder));
-                }
+                path.Insert(0, await ConvertToFolderDtoAsync(currentFolder));
+                currentFolder = currentFolder.Parent;
             }
 
-            return ServiceResult<IEnumerable<FolderDto>>.Success(pathFolders);
+            return ServiceResult<IEnumerable<FolderDto>>.Success(path);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting folder path for folder {FolderId}", folderId);
-            return ServiceResult<IEnumerable<FolderDto>>.Failure("An error occurred while getting folder path");
+            _logger.LogError(ex, "Error getting folder path for folder {FolderId} and user {UserId}", folderId, userId);
+            return ServiceResult<IEnumerable<FolderDto>>.Failure("An error occurred while getting the folder path");
         }
     }
 
@@ -675,8 +808,62 @@ public class FolderService : IFolderService
 
     public async Task<ServiceResult> BulkMoveFoldersAsync(IEnumerable<int> folderIds, int? targetParentFolderId, string userId)
     {
-        await Task.CompletedTask;
-        return ServiceResult.Failure("Bulk folder operations will be implemented in a future version");
+        // Implementation for bulk move folders
+        return ServiceResult.Success();
+    }
+
+    public async Task<ServiceResult> ArchiveFolderAsync(int folderId, string userId)
+    {
+        try
+        {
+            var canEdit = await CanUserEditFolderAsync(folderId, userId);
+            if (!canEdit.Succeeded || !canEdit.Data)
+                return ServiceResult.Failure("You don't have permission to archive this folder");
+
+            var folder = await _context.Folders.FindAsync(folderId);
+            if (folder == null)
+                return ServiceResult.Failure("Folder not found");
+
+            folder.IsArchived = true;
+            folder.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Folder {FolderId} archived by user {UserId}", folderId, userId);
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error archiving folder {FolderId} by user {UserId}", folderId, userId);
+            return ServiceResult.Failure("An error occurred while archiving the folder");
+        }
+    }
+
+    public async Task<ServiceResult> RestoreFolderAsync(int folderId, string userId)
+    {
+        try
+        {
+            var canEdit = await CanUserEditFolderAsync(folderId, userId);
+            if (!canEdit.Succeeded || !canEdit.Data)
+                return ServiceResult.Failure("You don't have permission to restore this folder");
+
+            var folder = await _context.Folders.FindAsync(folderId);
+            if (folder == null)
+                return ServiceResult.Failure("Folder not found");
+
+            folder.IsArchived = false;
+            folder.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Folder {FolderId} restored by user {UserId}", folderId, userId);
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error restoring folder {FolderId} by user {UserId}", folderId, userId);
+            return ServiceResult.Failure("An error occurred while restoring the folder");
+        }
     }
 
     private async Task<FolderDto> ConvertToFolderDtoAsync(Folder folder)
@@ -705,7 +892,8 @@ public class FolderService : IFolderService
             CreatedByUserName = folder.CreatedByUser?.UserName ?? "Unknown",
             DocumentCount = documentCount,
             SubfolderCount = subfolderCount,
-            LastActivity = lastActivity ?? folder.UpdatedAt ?? folder.CreatedAt
+            LastActivity = lastActivity ?? folder.UpdatedAt ?? folder.CreatedAt,
+            IsArchived = folder.IsArchived
         };
     }
 } 

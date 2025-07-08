@@ -7,6 +7,7 @@ using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Projects;
 
@@ -71,7 +72,7 @@ public class IndexModel : PageModel
         }
 
         // Get project details first to check ownership
-        var projectResult = await _projectService.GetProjectByIdAsync(projectId);
+        var projectResult = await _projectService.GetProjectByIdAsync(projectId, userId);
         if (!projectResult.Succeeded)
         {
             TempData["ErrorMessage"] = projectResult.Error;

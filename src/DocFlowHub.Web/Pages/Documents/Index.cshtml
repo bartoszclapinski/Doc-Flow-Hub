@@ -117,6 +117,25 @@
                                 </div>
                             }
 
+                            <!-- Project Filter -->
+                            <div class="col-md-3">
+                                <label asp-for="ProjectId" class="form-label small fw-semibold text-muted">
+                                    <i class="bi bi-kanban me-1"></i>Project
+                                </label>
+                                <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="form-select" onchange="this.form.submit();">
+                                    <option value="">All Projects</option>
+                                    <option value="0" selected="@(Model.ProjectId == 0)">Unassigned</option>
+                                </select>
+                            </div>
+
+                            <!-- Folder Filter -->
+                            <div class="col-md-3">
+                                <label asp-for="FolderId" class="form-label small fw-semibold text-muted">
+                                    <i class="bi bi-folder me-1"></i>Folder
+                                </label>
+                                <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="form-select"></select>
+                            </div>
+
                             <!-- Filter Actions -->
                             <div class="col-md-2">
                                 <div class="d-flex gap-2">
@@ -177,6 +196,9 @@
                                 </button>
                                 <button type="button" id="bulkDeleteBtn" class="btn btn-sm btn-danger">
                                     <i class="bi bi-trash me-1"></i>Delete Selected
+                                </button>
+                                <button type="button" id="bulkMoveBtn" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-arrows-angle-right me-1"></i>Move Selected
                                 </button>
                             </div>
                         </div>
@@ -334,6 +356,11 @@
                                                             <button type="button" class="dropdown-item text-danger" 
                                                                                 onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
                                                                 <i class="bi bi-trash me-2"></i>Delete
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
+                                                                <i class="bi bi-arrows-angle-right me-2"></i>Move
                                                             </button>
                                                         </li>
                                                     }
@@ -503,6 +530,48 @@
                         <span class="btn-text">Delete Document</span>
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Move Document Modal -->
+<div class="modal fade" id="moveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrows-angle-right me-2"></i>Move Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="moveDocumentId" />
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted"><i class="bi bi-kanban me-1"></i>Project</label>
+                    <select id="moveProjectSelect" class="form-select">
+                        <option value="">Keep current</option>
+                        <option value="0">Unassigned</option>
+                        @foreach (var project in Model.Projects)
+                        {
+                            <option value="@project.Id">@project.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted"><i class="bi bi-folder me-1"></i>Folder (optional)</label>
+                    <select id="moveFolderSelect" class="form-select">
+                        <option value="">None</option>
+                        @foreach (var folder in Model.Folders)
+                        {
+                            <option value="@folder.Id">@folder.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x me-1"></i>Cancel</button>
+                <button type="button" id="confirmMoveBtn" class="btn btn-primary"><span class="spinner-border spinner-border-sm d-none me-2" role="status"></span><i class="bi bi-arrows-angle-right me-1"></i><span class="btn-text">Move</span></button>
             </div>
         </div>
     </div>
@@ -948,6 +1017,107 @@
                     }
                 });
             }
+            // Move document logic
+            const moveModal = document.getElementById('moveModal');
+            if(moveModal){
+                let selectedDocId = null;
+                moveModal.addEventListener('show.bs.modal', function(event){
+                    const button = event.relatedTarget;
+                    selectedDocId = button.getAttribute('data-document-id');
+                    document.getElementById('moveDocumentId').value = selectedDocId;
+                });
+
+                document.getElementById('confirmMoveBtn').addEventListener('click', async function(){
+                    const btn = this;
+                    const spinner = btn.querySelector('.spinner-border');
+                    const btnText = btn.querySelector('.btn-text');
+                    btn.disabled = true;
+                    spinner.classList.remove('d-none');
+
+                    const isBulk = window.bulkMoveIds && window.bulkMoveIds.length > 0;
+                    
+                    try{
+                        let response;
+                        if(isBulk){
+                            // Bulk move operation
+                            const payload = {
+                                documentIds: window.bulkMoveIds.map(id=>parseInt(id)),
+                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value):null,
+                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value):null
+                            };
+                            response = await fetch('/Documents/Index?handler=BulkMove',{
+                                method:'POST', 
+                                headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
+                                body:JSON.stringify(payload)
+                            });
+                        } else {
+                            // Single document move operation
+                            const requestPayload = {
+                                documentId: parseInt(document.getElementById('moveDocumentId').value),
+                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value) : null,
+                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value) : null
+                            };
+                            response = await fetch('/Documents/Index?handler=Move', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                },
+                                body: JSON.stringify(requestPayload)
+                            });
+                        }
+
+                        const result = await response.json();
+                        if(result.success){
+                            window.location.reload();
+                        } else {
+                            alert(result.error || 'Move failed');
+                        }
+                    } catch(err){
+                        console.error(err);
+                        alert('Network error');
+                    } finally {
+                        spinner.classList.add('d-none');
+                        btn.disabled = false;
+                        btnText.textContent = 'Move';
+                    }
+                });
+
+                document.getElementById('moveProjectSelect').addEventListener('change', async function(){
+                    const projectId = this.value;
+                    const folderSelect = document.getElementById('moveFolderSelect');
+                    // Clear existing options except first
+                    folderSelect.options.length = 0;
+                    const defaultOpt = new Option('None', '');
+                    folderSelect.add(defaultOpt);
+                    if(!projectId){
+                        return;
+                    }
+                    try{
+                        const resp = await fetch(`/Documents/Index?handler=Folders&projectId=${projectId}`);
+                        const data = await resp.json();
+                        if(data.success){
+                            data.folders.forEach(f => {
+                               const opt = new Option(f.name, f.id);
+                               folderSelect.add(opt);
+                            });
+                        }
+                    }catch(err){ console.error(err); }
+                });
+            }
+            document.getElementById('bulkMoveBtn').addEventListener('click', function(){
+                const selected = Array.from(document.querySelectorAll('.document-checkbox:checked')).map(cb=>cb.value);
+                if(selected.length===0){ alert('No documents selected'); return; }
+                window.bulkMoveIds = selected;
+                // reset modal fields
+                document.getElementById('moveProjectSelect').value='';
+                const folderSel = document.getElementById('moveFolderSelect');
+                folderSel.options.length = 0; folderSel.add(new Option('None',''));
+                const modal = new bootstrap.Modal(document.getElementById('moveModal'));
+                modal.show();
+            });
+
+
         });
     </script>
     

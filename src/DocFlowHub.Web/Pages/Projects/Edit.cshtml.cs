@@ -6,6 +6,7 @@ using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Projects;
 
@@ -50,7 +51,7 @@ public class EditModel : PageModel
         }
 
         // Load the project
-        var projectResult = await _projectService.GetProjectByIdAsync(id);
+        var projectResult = await _projectService.GetProjectByIdAsync(id, userId);
         if (!projectResult.Succeeded)
         {
             ErrorMessage = projectResult.Error ?? "Project not found.";

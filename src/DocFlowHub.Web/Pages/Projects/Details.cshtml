@@ -153,10 +153,10 @@
                     <div class="card-body">
                         <p class="card-text">Organize your documents with folders and sub-folders.</p>
                         <div class="d-grid gap-2">
-                            <a href="#" class="btn btn-outline-primary" onclick="alert('Folder management coming soon!')">
+                            <a asp-page="/Folders/Create" asp-route-projectId="@Model.Project.Id" class="btn btn-outline-primary">
                                 <i class="bi bi-plus-circle me-1"></i> Create Folder
                             </a>
-                            <a href="#" class="btn btn-outline-secondary" onclick="alert('Folder browser coming soon!')">
+                            <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="btn btn-outline-secondary">
                                 <i class="bi bi-folder2-open me-1"></i> Browse Folders
                             </a>
                         </div>
@@ -173,10 +173,10 @@
                     <div class="card-body">
                         <p class="card-text">Upload and manage documents within this project.</p>
                         <div class="d-grid gap-2">
-                            <a href="#" class="btn btn-outline-primary" onclick="alert('Project-specific document upload coming soon!')">
+                            <a asp-page="/Documents/Upload" class="btn btn-outline-primary">
                                 <i class="bi bi-cloud-upload me-1"></i> Upload Document
                             </a>
-                            <a href="#" class="btn btn-outline-secondary" onclick="alert('Project document browser coming soon!')">
+                            <a asp-page="/Documents/Index" class="btn btn-outline-secondary">
                                 <i class="bi bi-list-ul me-1"></i> View Documents
                             </a>
                         </div>

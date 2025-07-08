@@ -7,6 +7,7 @@ using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Teams;
+using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Admin;
 
@@ -74,7 +75,7 @@ public class IndexModel : PageModel
                     IncludeDeleted = false
                 };
 
-                var userDocs = await _documentService.GetDocumentsAsync(filter);
+                var userDocs = await _documentService.GetAllDocumentsForAdminAsync(filter);
                 if (userDocs.Succeeded)
                 {
                     TotalDocuments += userDocs.Data.TotalItems;
