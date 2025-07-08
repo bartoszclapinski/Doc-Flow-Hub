@@ -1,0 +1,102 @@
+@model DocFlowHub.Core.Models.Projects.Dto.FolderDto
+
+<div class="folder-tree-node @(Model.Children?.Any() == true ? "" : "no-children")">
+    <div class="folder-item">
+        @if (Model.Children?.Any() == true)
+        {
+            <div class="folder-toggle">
+                <i class="bi bi-chevron-down"></i>
+            </div>
+        }
+        else
+        {
+            <div class="folder-toggle" style="visibility: hidden;">
+                <i class="bi bi-chevron-right"></i>
+            </div>
+        }
+        
+        <div class="folder-icon">
+            <i class="bi bi-folder-fill"></i>
+        </div>
+        
+        <div class="folder-info">
+            <div class="folder-name">@Model.Name</div>
+            <div class="folder-meta">
+                <span class="me-3">
+                    <i class="bi bi-file-earmark me-1"></i>@Model.DocumentCount documents
+                </span>
+                <span class="me-3">
+                    <i class="bi bi-folder me-1"></i>@Model.Children?.Count() subfolders
+                </span>
+                <span>
+                    <i class="bi bi-calendar me-1"></i>Created @Model.CreatedAt.ToString("MMM dd, yyyy")
+                </span>
+            </div>
+        </div>
+        
+        <div class="folder-actions">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" asp-page="/Folders/Details" asp-route-id="@Model.Id">
+                            <i class="bi bi-eye"></i>View Details
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" asp-page="/Folders/Edit" asp-route-id="@Model.Id">
+                            <i class="bi bi-pencil"></i>Edit Folder
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" asp-route-parentFolderId="@Model.Id">
+                            <i class="bi bi-folder-plus"></i>Create Subfolder
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    @if (Model.IsArchived)
+                    {
+                        <li>
+                            <form method="post" asp-page-handler="Restore" style="display: inline;">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-arrow-clockwise"></i>Restore Folder
+                                </button>
+                            </form>
+                        </li>
+                    }
+                    else
+                    {
+                        <li>
+                            <form method="post" asp-page-handler="Archive" style="display: inline;">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-archive"></i>Archive Folder
+                                </button>
+                            </form>
+                        </li>
+                    }
+                    <li>
+                        <button type="button" class="dropdown-item text-danger btn-delete-folder" 
+                                data-folder-id="@Model.Id" data-folder-name="@Model.Name">
+                            <i class="bi bi-trash"></i>Delete Folder
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    @if (Model.Children?.Any() == true)
+    {
+        <div class="folder-children">
+            @foreach (var child in Model.Children)
+            {
+                <partial name="_FolderTreeNode" model="child" />
+            }
+        </div>
+    }
+</div> 

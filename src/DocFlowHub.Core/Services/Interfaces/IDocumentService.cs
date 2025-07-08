@@ -11,7 +11,7 @@ namespace DocFlowHub.Core.Services.Interfaces;
 public interface IDocumentService
 {
     Task<ServiceResult<DocumentDto>> GetDocumentByIdAsync(int id);
-    Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(DocumentFilter filter);
+    Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsAsync(string userId, DocumentFilter filter);
     Task<ServiceResult<IEnumerable<DocumentDto>>> GetUserDocumentsAsync(string userId, DocumentFilter filter);
     Task<ServiceResult<PagedResult<DocumentDto>>> GetDocumentsForUserAsync(string userId, DocumentFilter filter);
     Task<ServiceResult<bool>> CanUserAccessDocumentAsync(int documentId, string userId);
@@ -28,4 +28,5 @@ public interface IDocumentService
     Task<ServiceResult<DocumentDto>> ShareDocumentWithTeamAsync(int documentId, int teamId);
     Task<ServiceResult> UnshareDocumentFromTeamAsync(int documentId);
     Task<ServiceResult<DocumentDto>> UploadNewVersionAsync(UploadVersionRequest request);
+    Task<ServiceResult<DocumentDto>> MoveDocumentAsync(MoveDocumentRequest request);
 } 

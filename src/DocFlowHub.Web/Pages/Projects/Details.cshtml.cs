@@ -6,6 +6,7 @@ using DocFlowHub.Core.Models.Documents.Dto;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Projects;
 
@@ -44,7 +45,7 @@ public class DetailsModel : PageModel
         }
 
         // Get project details
-        var projectResult = await _projectService.GetProjectByIdAsync(id);
+        var projectResult = await _projectService.GetProjectByIdAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         if (!projectResult.Succeeded)
         {
             ErrorMessage = projectResult.Error ?? "Project not found.";

@@ -78,7 +78,7 @@ namespace DocFlowHub.Web.Pages
                     IncludeDeleted = false
                 };
 
-                var userDocuments = await _documentService.GetDocumentsAsync(userFilter);
+                var userDocuments = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, userFilter);
                 if (userDocuments.Succeeded)
                 {
                     TotalDocuments = userDocuments.Data.TotalItems;
@@ -122,7 +122,7 @@ namespace DocFlowHub.Web.Pages
                     IncludeDeleted = false
                 };
 
-                var recentDocs = await _documentService.GetDocumentsAsync(filter);
+                var recentDocs = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, filter);
                 
                 if (recentDocs.Succeeded)
                 {
@@ -197,7 +197,7 @@ namespace DocFlowHub.Web.Pages
                     IncludeDeleted = false
                 };
 
-                var recentDocs = await _documentService.GetDocumentsAsync(filter);
+                var recentDocs = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, filter);
                 var activities = new List<ActivitySummary>();
 
                 if (recentDocs.Succeeded)

@@ -25,4 +25,6 @@ public class DocumentDto
     // AI Summary Information
     public DocumentSummary? AISummary { get; set; }
     public bool HasAISummary => AISummary != null;
+    public int? ProjectId { get; set; }
+    public int? FolderId { get; set; }
 } 

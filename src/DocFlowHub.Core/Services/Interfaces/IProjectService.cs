@@ -11,7 +11,7 @@ public interface IProjectService
 {
     // Basic CRUD operations
     Task<ServiceResult<ProjectDto>> CreateProjectAsync(CreateProjectRequest request, string ownerId);
-    Task<ServiceResult<ProjectDto>> GetProjectByIdAsync(int id);
+    Task<ServiceResult<ProjectDto>> GetProjectByIdAsync(int id, string userId);
     Task<ServiceResult<ProjectDto>> UpdateProjectAsync(int id, UpdateProjectRequest request, string userId);
     Task<ServiceResult> DeleteProjectAsync(int id, string userId);
     

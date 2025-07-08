@@ -1,0 +1,497 @@
+@page
+@model DocFlowHub.Web.Pages.Folders.IndexModel
+@{
+    ViewData["Title"] = "Folders";
+}
+
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a asp-page="/Index" class="text-decoration-none">
+                    <i class="bi bi-house-door me-1"></i>Home
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a asp-page="/Projects/Index" class="text-decoration-none">
+                    <i class="bi bi-kanban me-1"></i>Projects
+                </a>
+            </li>
+            @if (Model.Project != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="text-decoration-none">
+                        <i class="bi bi-@Model.Project.Icon me-1"></i>@Model.Project.Name
+                    </a>
+                </li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">
+                <i class="bi bi-folder me-1"></i>Folders
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-folder me-2"></i>Folders
+            </h1>
+            @if (Model.Project != null)
+            {
+                <p class="text-muted mb-0">
+                    Managing folders in <strong>@Model.Project.Name</strong>
+                </p>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" 
+               class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>New Folder
+            </a>
+            <a asp-page="/Projects/Details" asp-route-id="@Model.ProjectId" 
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Project
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <input type="hidden" asp-for="ProjectId" />
+                
+                <div class="col-md-4">
+                    <label asp-for="Filter.SearchTerm" class="form-label">Search Folders</label>
+                    <input asp-for="Filter.SearchTerm" class="form-control" 
+                           placeholder="Search by folder name..." />
+                </div>
+                
+                <div class="col-md-3">
+                    <label asp-for="Filter.Status" class="form-label">Status</label>
+                    <select asp-for="Filter.Status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Archived">Archived</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label asp-for="Filter.SortBy" class="form-label">Sort By</label>
+                    <select asp-for="Filter.SortBy" class="form-select">
+                        <option value="Name">Name</option>
+                        <option value="CreatedAt">Created Date</option>
+                        <option value="UpdatedAt">Modified Date</option>
+                        <option value="Level">Folder Level</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Folder Tree View -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-diagram-3 me-2"></i>Folder Structure
+            </h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="expandAll">
+                    <i class="bi bi-arrows-expand me-1"></i>Expand All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseAll">
+                    <i class="bi bi-arrows-collapse me-1"></i>Collapse All
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="p-3">
+                <input type="text" id="folderSearch" class="form-control form-control-sm" placeholder="Search folders..." />
+            </div>
+            @if (!Model.Folders.Items.Any())
+            {
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="bi bi-folder-x display-1 text-muted"></i>
+                    </div>
+                    <h4 class="text-muted mb-2">No folders yet</h4>
+                    <p class="text-muted mb-4">
+                        Get started by creating your first folder to organize your documents.
+                    </p>
+                    <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" 
+                       class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Create First Folder
+                    </a>
+                </div>
+            }
+            else
+            {
+                <!-- Folder Tree -->
+                <div class="folder-tree" id="folderTree">
+                    @foreach (var folder in Model.Folders.Items.Where(f => f.ParentFolderId == null))
+                    {
+                        <partial name="_FolderTreeNode" model="folder" />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.Folders.TotalPages > 1)
+    {
+        <nav aria-label="Folder pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                @if (Model.Folders.PageNumber > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber - 1)" 
+                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                }
+
+                @for (int i = 1; i <= Model.Folders.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Folders.PageNumber ? "active" : "")">
+                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i" 
+                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
+                            @i
+                        </a>
+                    </li>
+                }
+
+                @if (Model.Folders.PageNumber < Model.Folders.TotalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber + 1)" 
+                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Delete Folder
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the folder <strong id="folderName"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-page-handler="Delete" style="display: inline;">
+                    <input type="hidden" id="folderIdToDelete" name="id" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete Folder
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Folder tree functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand/Collapse all functionality
+            document.getElementById('expandAll').addEventListener('click', function() {
+                const treeNodes = document.querySelectorAll('.folder-tree-node');
+                treeNodes.forEach(node => {
+                    node.classList.remove('collapsed');
+                    const toggle = node.querySelector('.folder-toggle');
+                    if (toggle) {
+                        toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                    }
+                });
+            });
+
+            document.getElementById('collapseAll').addEventListener('click', function() {
+                const treeNodes = document.querySelectorAll('.folder-tree-node');
+                treeNodes.forEach(node => {
+                    if (node.querySelector('.folder-children')) {
+                        node.classList.add('collapsed');
+                        const toggle = node.querySelector('.folder-toggle');
+                        if (toggle) {
+                            toggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                        }
+                    }
+                });
+            });
+
+            // Individual folder toggle
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.folder-toggle')) {
+                    const node = e.target.closest('.folder-tree-node');
+                    const toggle = e.target.closest('.folder-toggle');
+                    const children = node.querySelector('.folder-children');
+                    
+                    if (children) {
+                        node.classList.toggle('collapsed');
+                        if (node.classList.contains('collapsed')) {
+                            toggle.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                        } else {
+                            toggle.innerHTML = '<i class="bi bi-chevron-down"></i>';
+                        }
+                    }
+                }
+            });
+
+            // Delete confirmation
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.btn-delete-folder')) {
+                    e.preventDefault();
+                    const button = e.target.closest('.btn-delete-folder');
+                    const folderId = button.dataset.folderId;
+                    const folderName = button.dataset.folderName;
+                    
+                    document.getElementById('folderIdToDelete').value = folderId;
+                    document.getElementById('folderName').textContent = folderName;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                    modal.show();
+                }
+            });
+
+            // Drag and drop functionality
+            const tree = document.getElementById('folderTree');
+            tree.querySelectorAll('.folder-tree-node').forEach(n=>{
+                n.setAttribute('draggable','true');
+            });
+
+            let draggedId=null;
+            tree.addEventListener('dragstart',e=>{
+                const node=e.target.closest('.folder-tree-node');
+                if(!node)return;
+                draggedId=node.dataset.id;
+                e.dataTransfer.effectAllowed='move';
+            });
+            tree.addEventListener('dragover',e=>{
+                e.preventDefault();
+            });
+            tree.addEventListener('drop',async e=>{
+                e.preventDefault();
+                const targetNode=e.target.closest('.folder-tree-node');
+                if(!targetNode||draggedId===null)return;
+                const targetId=targetNode.dataset.id;
+                if(targetId===draggedId)return;
+                const payload={folderId:parseInt(draggedId), newParentFolderId:parseInt(targetId)};
+                const resp=await fetch('/Folders/Index?handler=MoveFolder',{
+                    method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
+                    body:JSON.stringify(payload)
+                });
+                const data=await resp.json();
+                if(data.success){window.location.reload();}
+                else alert(data.error||'Move failed');
+            });
+
+            // folder search filter
+            const searchInput=document.getElementById('folderSearch');
+            searchInput.addEventListener('input',()=>{
+                const term=searchInput.value.toLowerCase();
+                tree.querySelectorAll('.folder-tree-node').forEach(n=>{
+                    const name=n.querySelector('.folder-name').textContent.toLowerCase();
+                    n.style.display = name.includes(term)?'':'none';
+                });
+            });
+        });
+    </script>
+}
+
+<style>
+    .folder-tree {
+        padding: 1rem;
+    }
+
+    .folder-tree-node {
+        margin-bottom: 0.5rem;
+    }
+
+    .folder-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        background-color: #fff;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .folder-item:hover {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .folder-toggle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        cursor: pointer;
+        color: #6c757d;
+        transition: color 0.2s ease-in-out;
+    }
+
+    .folder-toggle:hover {
+        color: #495057;
+    }
+
+    .folder-icon {
+        color: #ffc107;
+        margin-right: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .folder-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .folder-name {
+        font-weight: 500;
+        color: #212529;
+        margin-bottom: 0.25rem;
+        word-break: break-word;
+    }
+
+    .folder-meta {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .folder-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .folder-children {
+        margin-left: 2rem;
+        margin-top: 0.5rem;
+        border-left: 2px solid #e9ecef;
+        padding-left: 1rem;
+    }
+
+    .folder-tree-node.collapsed .folder-children {
+        display: none;
+    }
+
+    .folder-tree-node.collapsed .folder-toggle i {
+        transform: rotate(0deg);
+    }
+
+    .folder-toggle i {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .folder-tree-node:not(.collapsed) .folder-toggle i {
+        transform: rotate(90deg);
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0;
+        margin: 0;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+        color: #6c757d;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item i {
+        width: 1rem;
+        margin-right: 0.5rem;
+    }
+
+    .alert {
+        border: none;
+        border-radius: 0.375rem;
+    }
+
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .pagination .page-link {
+        color: #0d6efd;
+        border-color: #dee2e6;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    @@media (max-width: 768px) {
+        .folder-actions {
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .folder-children {
+            margin-left: 1rem;
+        }
+        
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+    }
+</style>

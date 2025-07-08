@@ -25,6 +25,9 @@ public class FolderDto
     public string CreatedByUserId { get; set; } = string.Empty;
     public string CreatedByUserName { get; set; } = string.Empty;
     
+    // Status
+    public bool IsArchived { get; set; }
+    
     // Statistics (optional, for efficiency)
     public int DocumentCount { get; set; }
     public int SubfolderCount { get; set; }

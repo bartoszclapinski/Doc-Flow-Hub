@@ -7,6 +7,7 @@ using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Teams;
+using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Admin.Users;
 
@@ -54,7 +55,7 @@ public class IndexModel : PageModel
                     PageSize = 1000,
                     IncludeDeleted = false
                 };
-                var documentsResult = await _documentService.GetDocumentsAsync(documentFilter);
+                var documentsResult = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, documentFilter);
                 int documentCount = documentsResult.Succeeded ? documentsResult.Data.TotalItems : 0;
 
                 // Get user's team count

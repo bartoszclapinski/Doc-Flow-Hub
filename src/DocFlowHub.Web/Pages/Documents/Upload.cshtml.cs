@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using DocFlowHub.Core.Models.Projects.Dto;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace DocFlowHub.Web.Pages.Documents;
 
@@ -24,19 +26,25 @@ public class UploadModel : PageModel
     private readonly ITeamService _teamService;
     private readonly IAISettingsService _aiSettingsService;
     private readonly IDocumentSummaryService _documentSummaryService;
+    private readonly IProjectService _projectService;
+    private readonly IFolderService _folderService;
 
     public UploadModel(
         IDocumentService documentService,
         IDocumentCategoryService categoryService,
         ITeamService teamService,
         IAISettingsService aiSettingsService,
-        IDocumentSummaryService documentSummaryService)
+        IDocumentSummaryService documentSummaryService,
+        IProjectService projectService,
+        IFolderService folderService)
     {
         _documentService = documentService;
         _categoryService = categoryService;
         _teamService = teamService;
         _aiSettingsService = aiSettingsService;
         _documentSummaryService = documentSummaryService;
+        _projectService = projectService;
+        _folderService = folderService;
     }
 
     [BindProperty]
@@ -53,6 +61,12 @@ public class UploadModel : PageModel
 
     [BindProperty]
     public int? TeamId { get; set; }
+
+    [BindProperty]
+    public int? ProjectId { get; set; }
+
+    [BindProperty]
+    public int? FolderId { get; set; }
 
     // AI Settings Properties
     [BindProperty]
@@ -74,11 +88,16 @@ public class UploadModel : PageModel
     public bool AIFeaturesEnabled { get; set; }
     public List<AIModelOption> AvailableAIModels { get; set; } = new List<AIModelOption>();
     public string? ErrorMessage { get; set; }
+    public IEnumerable<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
+    public IEnumerable<FolderDto> Folders { get; set; } = new List<FolderDto>();
 
     // Cost Estimation Properties
     public string EstimatedCost => GetEstimatedCost();
     public string EstimatedProcessingTime => GetEstimatedProcessingTime();
     public string ModelCapabilities => GetModelCapabilities();
+
+    public SelectList ProjectSelectList => new SelectList(Projects, "Id", "Name", ProjectId);
+    public SelectList FolderSelectList => new SelectList(Folders, "Id", "Name", FolderId);
 
     public class AIModelOption
     {
@@ -114,6 +133,17 @@ public class UploadModel : PageModel
         }
         Teams = teamsResult.Data.Items;
 
+        // Load projects
+        var projectsResult = await _projectService.GetActiveProjectsForUserAsync(userId);
+        Projects = projectsResult.Succeeded ? projectsResult.Data : new List<ProjectDto>();
+        if (Projects.Any())
+        {
+            if (!ProjectId.HasValue)
+                ProjectId = Projects.First().Id;
+
+            await LoadFoldersAsync(userId);
+        }
+
         // Load AI settings and set defaults
         await LoadAISettingsAsync(userId);
 
@@ -143,6 +173,8 @@ public class UploadModel : PageModel
             Description = Description,
             CategoryIds = SelectedCategoryIds,
             TeamId = TeamId,
+            ProjectId = ProjectId,
+            FolderId = FolderId,
             OwnerId = userId
         };
 
@@ -275,6 +307,17 @@ public class UploadModel : PageModel
 
         // Reload available AI models
         LoadAvailableAIModels();
+
+        // Reload projects
+        var projectsResult = await _projectService.GetActiveProjectsForUserAsync(userId);
+        Projects = projectsResult.Succeeded ? projectsResult.Data : new List<ProjectDto>();
+        if (Projects.Any())
+        {
+            if (!ProjectId.HasValue)
+                ProjectId = Projects.First().Id;
+
+            await LoadFoldersAsync(userId);
+        }
     }
 
     private async Task LoadAISettingsAsync(string userId)
@@ -464,5 +507,51 @@ public class UploadModel : PageModel
             AIModel.Gpt41 => 25,      // Highest quality, slowest
             _ => 15                   // Default
         };
+    }
+
+    private async Task LoadFoldersAsync(string userId)
+    {
+        if (!ProjectId.HasValue)
+        {
+            Folders = new List<FolderDto>();
+            return;
+        }
+        var foldersResult = await _folderService.GetProjectFoldersAsync(ProjectId.Value, userId);
+        if (!foldersResult.Succeeded)
+        {
+            Folders = new List<FolderDto>();
+            return;
+        }
+        // Flatten hierarchy for dropdown display
+        var flattened = new List<FolderDto>();
+        void Flatten(IEnumerable<FolderDto> list, int depth)
+        {
+            foreach (var f in list.OrderBy(x => x.Name))
+            {
+                var clone = new FolderDto
+                {
+                    Id = f.Id,
+                    Name = new string('›', depth) + " " + f.Name // use chevron character for indentation
+                };
+                flattened.Add(clone);
+                if (f.Children?.Any() == true)
+                    Flatten(f.Children, depth + 1);
+            }
+        }
+        Flatten(foldersResult.Data, 0);
+        Folders = flattened;
+    }
+
+    public async Task<JsonResult> OnGetFoldersAsync(int projectId)
+    {
+        var userId = User.GetUserId();
+        if(string.IsNullOrEmpty(userId))
+            return new JsonResult(new { success=false, error="User not authenticated"});
+
+        var result = await _folderService.GetProjectFoldersAsync(projectId, userId);
+        if(!result.Succeeded)
+            return new JsonResult(new { success=false, error=result.Error});
+
+        return new JsonResult(new { success=true, folders=result.Data.Select(f=> new {f.Id, f.Name})});
     }
 } 

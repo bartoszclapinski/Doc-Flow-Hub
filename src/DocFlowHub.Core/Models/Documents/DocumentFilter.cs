@@ -5,6 +5,7 @@ public class DocumentFilter
     public string? SearchTerm { get; set; }
     public string? FileType { get; set; }
     public int? CategoryId { get; set; }
+    public int? FolderId { get; set; }
     public bool IncludeTeamDocuments { get; set; }
     public string? OwnerId { get; set; }
     public int? TeamId { get; set; }
@@ -13,4 +14,5 @@ public class DocumentFilter
     public int PageSize { get; set; } = 10;
     public string? SortBy { get; set; }
     public string? SortDirection { get; set; } = "asc";
+    public int? ProjectId { get; set; }
 } 

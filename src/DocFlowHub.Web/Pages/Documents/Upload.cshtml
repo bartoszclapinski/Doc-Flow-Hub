@@ -150,6 +150,24 @@
                             </div>
                         </div>
 
+                        <!-- Project & Folder Selection -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ProjectId" class="form-label fw-bold">
+                                    <i class="bi bi-kanban me-1"></i> Project
+                                </label>
+                                <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="form-select" id="projectSelectUpload"></select>
+                                <span asp-validation-for="ProjectId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FolderId" class="form-label fw-bold">
+                                    <i class="bi bi-folder me-1"></i> Folder (optional)
+                                </label>
+                                <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="form-select"></select>
+                                <span asp-validation-for="FolderId" class="text-danger"></span>
+                            </div>
+                        </div>
+
                         <!-- Document Metadata -->
                         <div class="row">
                             <div class="col-md-6">
@@ -395,212 +413,26 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.getElementById('file-input');
-            const dropZone = document.getElementById('file-drop-zone');
-            const selectedFileDiv = document.getElementById('selected-file');
-            const fileNameSpan = document.getElementById('file-name');
-            const fileSizeSpan = document.getElementById('file-size');
-            const uploadForm = document.getElementById('upload-form');
-            const submitBtn = document.getElementById('submit-btn');
-            const progressDiv = document.getElementById('upload-progress');
+            EnhancedUploadProgress.init();
 
-            // Auto-fill title from filename
-            fileInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    const file = this.files[0];
-                    displaySelectedFile(file);
-                    
-                    // Auto-fill title if empty
-                    const titleInput = document.querySelector('input[name="Title"]');
-                    if (!titleInput.value) {
-                        const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-                        titleInput.value = fileName;
+            const projectSelect = document.getElementById('projectSelectUpload');
+            const folderSelect = document.querySelector('select[name="FolderId"]');
+            async function loadFolders(projectId){
+                folderSelect.options.length = 0;
+                folderSelect.add(new Option('None', ''));
+                if(!projectId) return;
+                try{
+                    const resp = await fetch(`/Documents/Upload?handler=Folders&projectId=${projectId}`);
+                    const data = await resp.json();
+                    if(data.success){
+                        data.folders.forEach(f=> folderSelect.add(new Option(f.name, f.id)));
                     }
-                }
-            });
-
-            // Drag and drop functionality
-            dropZone.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('dragover');
-            });
-
-            dropZone.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('dragover');
-            });
-
-            dropZone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('dragover');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    displaySelectedFile(files[0]);
-                    
-                    // Auto-fill title
-                    const titleInput = document.querySelector('input[name="Title"]');
-                    if (!titleInput.value) {
-                        const fileName = files[0].name.replace(/\.[^/.]+$/, "");
-                        titleInput.value = fileName;
-                    }
-                }
-            });
-
-            // Click to select file
-            dropZone.addEventListener('click', function() {
-                fileInput.click();
-            });
-
-            function displaySelectedFile(file) {
-                fileNameSpan.textContent = file.name;
-                fileSizeSpan.textContent = formatFileSize(file.size);
-                selectedFileDiv.classList.remove('d-none');
-                
-                // Show success state
-                fileInput.classList.add('field-success');
-                
-                // Show toast notification
-                if (window.DocFlowHub) {
-                    window.DocFlowHub.showSuccess('File selected: ' + file.name);
-                }
+                }catch(err){ console.error(err); }
             }
-
-            // File validation
-            fileInput.addEventListener('change', function() {
-                const file = this.files[0];
-                if (file) {
-                    // Check file size (30MB limit)
-                    if (file.size > 30 * 1024 * 1024) {
-                        this.classList.add('field-error');
-                        if (window.DocFlowHub) {
-                            window.DocFlowHub.showError('File size must be less than 30MB');
-                        }
-                        return;
-                    }
-                    
-                    // Check file type
-                    const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif'];
-                    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-                    
-                    if (!allowedTypes.includes(fileExt)) {
-                        this.classList.add('field-error');
-                        if (window.DocFlowHub) {
-                            window.DocFlowHub.showError('File type not supported');
-                        }
-                        return;
-                    }
-                    
-                    this.classList.remove('field-error');
-                    this.classList.add('field-success');
-                }
-            });
-
-            // Enhanced form submission with AI processing workflow
-            uploadForm.addEventListener('submit', function(e) {
-                const progressContainer = document.getElementById('upload-progress');
-                const progressSteps = document.getElementById('progress-steps');
-                const progressBar = document.getElementById('progress-bar');
-                const progressText = document.getElementById('progress-text');
-                const progressMessage = document.getElementById('progress-message-text');
-                const progressSpinner = document.getElementById('progress-spinner');
-                const aiProcessingDetails = document.getElementById('ai-processing-details');
-                
-                // Show progress indicators
-                progressContainer.classList.add('show');
-                progressSteps.style.display = 'block';
-                progressSpinner.style.display = 'inline-block';
-                
-                // Update upload step
-                const stepUpload = document.getElementById('step-upload');
-                stepUpload.classList.add('active');
-                progressBar.style.width = '25%';
-                progressText.textContent = '25%';
-                progressMessage.textContent = 'Uploading document...';
-                
-                if (aiToggle && aiToggle.checked) {
-                    // Show AI processing message
-                    const submitBtn = document.getElementById('submit-btn');
-                    submitBtn.innerHTML = '<i class="bi bi-robot me-1"></i> Uploading & Processing with AI...';
-                    
-                    // Simulate AI processing stages after a delay
-                    setTimeout(() => {
-                        // File uploaded, start AI processing
-                        stepUpload.classList.remove('active');
-                        stepUpload.classList.add('completed');
-                        document.querySelector('.step-line').classList.add('completed');
-                        
-                        const stepAI = document.getElementById('step-ai');
-                        stepAI.classList.add('active');
-                        aiProcessingDetails.style.display = 'block';
-                        
-                        progressBar.style.width = '60%';
-                        progressText.textContent = '60%';
-                        progressMessage.textContent = 'AI analyzing document content...';
-                        
-                        // Simulate AI completion
-                        setTimeout(() => {
-                            stepAI.classList.remove('active');
-                            stepAI.classList.add('completed');
-                            document.querySelectorAll('.step-line')[1].classList.add('completed');
-                            
-                            const stepComplete = document.getElementById('step-complete');
-                            stepComplete.classList.add('active');
-                            
-                            progressBar.style.width = '100%';
-                            progressText.textContent = '100%';
-                            progressMessage.textContent = 'AI processing complete!';
-                            
-                            document.getElementById('ai-stage-title').textContent = 'Processing Complete';
-                            document.getElementById('ai-stage-description').textContent = 'AI summary generated successfully';
-                            document.getElementById('ai-time-remaining').textContent = 'Done!';
-                        }, 3000);
-                    }, 2000);
-                    
-                    if (window.DocFlowHub) {
-                        window.DocFlowHub.showInfo('Document will be processed with AI after upload');
-                    }
-                } else {
-                    // No AI processing, just show upload progress
-                    setTimeout(() => {
-                        stepUpload.classList.remove('active');
-                        stepUpload.classList.add('completed');
-                        
-                        const stepComplete = document.getElementById('step-complete');
-                        stepComplete.classList.add('active');
-                        
-                        progressBar.style.width = '100%';
-                        progressText.textContent = '100%';
-                        progressMessage.textContent = 'Upload complete!';
-                    }, 1500);
-                }
-            });
-
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            if(projectSelect){
+                loadFolders(projectSelect.value);
+                projectSelect.addEventListener('change', ()=> loadFolders(projectSelect.value));
             }
-
-            // Real-time form validation feedback
-            const inputs = document.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    if (this.checkValidity()) {
-                        this.classList.remove('field-error');
-                        this.classList.add('field-success');
-                    } else {
-                        this.classList.remove('field-success');
-                        this.classList.add('field-error');
-                    }
-                });
-            });
         });
 
                     function clearFile() {
