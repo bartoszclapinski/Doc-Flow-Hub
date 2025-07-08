@@ -72,7 +72,7 @@ public class IndexModel : PageModel
         }
 
         // Get project details first to check ownership
-        var projectResult = await _projectService.GetProjectByIdAsync(projectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var projectResult = await _projectService.GetProjectByIdAsync(projectId, userId);
         if (!projectResult.Succeeded)
         {
             TempData["ErrorMessage"] = projectResult.Error;

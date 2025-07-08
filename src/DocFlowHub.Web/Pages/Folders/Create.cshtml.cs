@@ -48,10 +48,16 @@ public class CreateModel : PageModel
             return RedirectToPage("/Projects/Index");
         }
 
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         try
         {
             // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, userId);
             if (!projectResult.Succeeded)
             {
                 ErrorMessage = "Project not found or access denied.";
@@ -63,7 +69,7 @@ public class CreateModel : PageModel
             // Get available parent folders
             var foldersResult = await _folderService.GetFoldersInProjectAsync(
                 ProjectId, 
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                userId,
                 new FolderFilter { Status = "Active" });
 
             if (foldersResult.Succeeded)
@@ -98,10 +104,16 @@ public class CreateModel : PageModel
             return RedirectToPage("/Projects/Index");
         }
 
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         try
         {
             // Validate project access
-            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, userId);
             if (!projectResult.Succeeded)
             {
                 ErrorMessage = "Project not found or access denied.";
@@ -115,7 +127,7 @@ public class CreateModel : PageModel
             {
                 var foldersResult = await _folderService.GetFoldersInProjectAsync(
                     ProjectId, 
-                    User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                    userId,
                     new FolderFilter { Status = "Active" });
 
                 if (foldersResult.Succeeded)
@@ -143,7 +155,7 @@ public class CreateModel : PageModel
                 ParentFolderId = ParentFolderId
             };
 
-            var result = await _folderService.CreateFolderAsync(createRequest, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _folderService.CreateFolderAsync(createRequest, userId);
 
             if (result.Succeeded)
             {

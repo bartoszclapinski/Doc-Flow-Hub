@@ -845,6 +845,41 @@ public class DocumentService : IDocumentService
         if (document.OwnerId != request.UserId)
             return ServiceResult<DocumentDto>.Failure("Not authorized to move this document");
 
+        // Validate target project access if specified
+        if (request.ProjectId.HasValue)
+        {
+            var targetProject = await _context.Projects
+                .FirstOrDefaultAsync(p => p.Id == request.ProjectId.Value && p.IsActive);
+            
+            if (targetProject == null)
+                return ServiceResult<DocumentDto>.Failure("Target project not found or is not active");
+            
+            // Check if user owns the target project (for now, only owner can move documents to project)
+            // TODO: Add team sharing validation when ProjectTeamShares is implemented
+            if (targetProject.OwnerId != request.UserId)
+                return ServiceResult<DocumentDto>.Failure("You don't have access to the target project");
+        }
+
+        // Validate target folder access if specified  
+        if (request.FolderId.HasValue)
+        {
+            var targetFolder = await _context.Folders
+                .Include(f => f.Project)
+                .FirstOrDefaultAsync(f => f.Id == request.FolderId.Value && !f.IsArchived);
+            
+            if (targetFolder == null)
+                return ServiceResult<DocumentDto>.Failure("Target folder not found or is archived");
+            
+            // Check if user owns the folder's project (for now, only owner can move documents to folder)
+            // TODO: Add team sharing validation when ProjectTeamShares is implemented
+            if (targetFolder.Project.OwnerId != request.UserId)
+                return ServiceResult<DocumentDto>.Failure("You don't have access to the target folder");
+            
+            // If both project and folder are specified, ensure folder belongs to the project
+            if (request.ProjectId.HasValue && targetFolder.ProjectId != request.ProjectId.Value)
+                return ServiceResult<DocumentDto>.Failure("Target folder does not belong to the specified project");
+        }
+
         var hasChanges = false;
 
         if (document.ProjectId != request.ProjectId)

@@ -51,7 +51,7 @@ public class EditModel : PageModel
         }
 
         // Load the project
-        var projectResult = await _projectService.GetProjectByIdAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var projectResult = await _projectService.GetProjectByIdAsync(id, userId);
         if (!projectResult.Succeeded)
         {
             ErrorMessage = projectResult.Error ?? "Project not found.";

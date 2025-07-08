@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using DocFlowHub.Core.Models.Projects.Dto;
 using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -47,10 +48,16 @@ public class EditModel : PageModel
             return RedirectToPage("/Projects/Index");
         }
 
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         try
         {
             // Get folder details
-            var folderResult = await _folderService.GetFolderByIdAsync(Id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var folderResult = await _folderService.GetFolderByIdAsync(Id, userId);
             if (!folderResult.Succeeded)
             {
                 ErrorMessage = "Folder not found or access denied.";
@@ -65,7 +72,7 @@ public class EditModel : PageModel
             ParentFolderId = Folder.ParentFolderId;
 
             // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, userId);
             if (projectResult.Succeeded)
             {
                 Project = projectResult.Data;
@@ -74,7 +81,7 @@ public class EditModel : PageModel
             // Get available parent folders (excluding current folder and its descendants)
             var foldersResult = await _folderService.GetFoldersInProjectAsync(
                 Folder.ProjectId, 
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                userId,
                 new FolderFilter { Status = "Active" });
 
             if (foldersResult.Succeeded)
@@ -101,10 +108,16 @@ public class EditModel : PageModel
             return RedirectToPage("/Projects/Index");
         }
 
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+
         try
         {
             // Validate folder access
-            var folderResult = await _folderService.GetFolderByIdAsync(Id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var folderResult = await _folderService.GetFolderByIdAsync(Id, userId);
             if (!folderResult.Succeeded)
             {
                 ErrorMessage = "Folder not found or access denied.";
@@ -114,7 +127,7 @@ public class EditModel : PageModel
             Folder = folderResult.Data;
 
             // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, userId);
             if (projectResult.Succeeded)
             {
                 Project = projectResult.Data;
@@ -125,7 +138,7 @@ public class EditModel : PageModel
             {
                 var foldersResult = await _folderService.GetFoldersInProjectAsync(
                     Folder.ProjectId, 
-                    User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                    userId,
                     new FolderFilter { Status = "Active" });
 
                 if (foldersResult.Succeeded)
@@ -156,7 +169,7 @@ public class EditModel : PageModel
                 ParentFolderId = ParentFolderId
             };
 
-            var result = await _folderService.UpdateFolderAsync(Id, updateRequest, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _folderService.UpdateFolderAsync(Id, updateRequest, userId);
 
             if (result.Succeeded)
             {
