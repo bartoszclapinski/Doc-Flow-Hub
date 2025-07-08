@@ -868,6 +868,85 @@ public class DocumentService : IDocumentService
         return ServiceResult<DocumentDto>.Success(document.ToDto());
     }
 
+    public async Task<ServiceResult<PagedResult<DocumentDto>>> GetAllDocumentsForAdminAsync(DocumentFilter filter)
+    {
+        var query = _context.Documents
+            .Include(d => d.Versions)
+            .Include(d => d.Categories)
+            .Include(d => d.Team)
+            .Include(d => d.Owner)
+            .AsQueryable();
+
+        // Admin method - no access control filtering, returns ALL documents
+        
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            query = query.Where(d => 
+                d.Title.Contains(filter.SearchTerm) || 
+                d.Description.Contains(filter.SearchTerm));
+        }
+
+        if (!string.IsNullOrEmpty(filter.FileType))
+        {
+            query = query.Where(d => d.FileType == filter.FileType);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(d => 
+                d.Categories.Any(c => c.Id == filter.CategoryId));
+        }
+
+        if (filter.FolderId.HasValue)
+        {
+            query = query.Where(d => d.FolderId == filter.FolderId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(filter.OwnerId))
+        {
+            query = query.Where(d => d.OwnerId == filter.OwnerId);
+        }
+
+        if (filter.TeamId.HasValue)
+        {
+            query = query.Where(d => d.TeamId == filter.TeamId);
+        }
+
+        if (filter.ProjectId.HasValue)
+        {
+            if (filter.ProjectId.Value == 0)
+            {
+                query = query.Where(d => d.ProjectId == null);
+            }
+            else if (filter.ProjectId.Value > 0)
+            {
+                query = query.Where(d => d.ProjectId == filter.ProjectId.Value);
+            }
+        }
+
+        if (!filter.IncludeDeleted)
+        {
+            query = query.Where(d => !d.IsDeleted);
+        }
+
+        // Apply sorting
+        query = ApplySorting(query, filter.SortBy, filter.SortDirection);
+
+        var totalItems = await query.CountAsync();
+        var items = await query
+            .Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<DocumentDto>>.Success(new PagedResult<DocumentDto>
+        {
+            Items = items.Select(d => d.ToDto()),
+            TotalItems = totalItems,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize
+        });
+    }
+
     private static IQueryable<Document> ApplySorting(IQueryable<Document> query, string? sortBy, string? sortDirection)
     {
         var isDescending = sortDirection?.ToLower() == "desc";

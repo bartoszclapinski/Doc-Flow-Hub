@@ -75,7 +75,7 @@ public class IndexModel : PageModel
                     IncludeDeleted = false
                 };
 
-                var userDocs = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, filter);
+                var userDocs = await _documentService.GetAllDocumentsForAdminAsync(filter);
                 if (userDocs.Succeeded)
                 {
                     TotalDocuments += userDocs.Data.TotalItems;

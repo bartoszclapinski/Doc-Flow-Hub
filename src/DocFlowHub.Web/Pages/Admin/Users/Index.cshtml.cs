@@ -55,7 +55,7 @@ public class IndexModel : PageModel
                     PageSize = 1000,
                     IncludeDeleted = false
                 };
-                var documentsResult = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, documentFilter);
+                var documentsResult = await _documentService.GetAllDocumentsForAdminAsync(documentFilter);
                 int documentCount = documentsResult.Succeeded ? documentsResult.Data.TotalItems : 0;
 
                 // Get user's team count

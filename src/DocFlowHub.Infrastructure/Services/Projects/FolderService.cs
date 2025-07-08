@@ -201,8 +201,8 @@ public class FolderService : IFolderService
                     var relativePath = child.Path.Substring(oldPath.Length);
                     child.Path = newPath + relativePath;
                     
-                    // Recalculate level based on path depth
-                    child.Level = child.Path.Count(c => c == '/');
+                    // Recalculate level based on path depth (subtract 1 because root path has 1 slash but is level 0)
+                    child.Level = child.Path.Count(c => c == '/') - 1;
                     child.UpdatedAt = DateTime.UtcNow;
                 }
             }

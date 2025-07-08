@@ -29,4 +29,5 @@ public interface IDocumentService
     Task<ServiceResult> UnshareDocumentFromTeamAsync(int documentId);
     Task<ServiceResult<DocumentDto>> UploadNewVersionAsync(UploadVersionRequest request);
     Task<ServiceResult<DocumentDto>> MoveDocumentAsync(MoveDocumentRequest request);
+    Task<ServiceResult<PagedResult<DocumentDto>>> GetAllDocumentsForAdminAsync(DocumentFilter filter);
 } 

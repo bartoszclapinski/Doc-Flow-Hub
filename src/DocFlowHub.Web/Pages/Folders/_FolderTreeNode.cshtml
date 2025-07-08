@@ -1,6 +1,6 @@
 @model DocFlowHub.Core.Models.Projects.Dto.FolderDto
 
-<div class="folder-tree-node @(Model.Children?.Any() == true ? "" : "no-children")">
+<div class="folder-tree-node @(Model.Children?.Any() == true ? "" : "no-children")" data-id="@Model.Id">
     <div class="folder-item">
         @if (Model.Children?.Any() == true)
         {

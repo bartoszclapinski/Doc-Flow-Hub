@@ -1034,21 +1034,38 @@
                     btn.disabled = true;
                     spinner.classList.remove('d-none');
 
-                    const requestPayload = {
-                        documentId: parseInt(document.getElementById('moveDocumentId').value),
-                        projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value) : null,
-                        folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value) : null
-                    };
-
+                    const isBulk = window.bulkMoveIds && window.bulkMoveIds.length > 0;
+                    
                     try{
-                        const response = await fetch('/Documents/Index?handler=Move', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                            },
-                            body: JSON.stringify(requestPayload)
-                        });
+                        let response;
+                        if(isBulk){
+                            // Bulk move operation
+                            const payload = {
+                                documentIds: window.bulkMoveIds.map(id=>parseInt(id)),
+                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value):null,
+                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value):null
+                            };
+                            response = await fetch('/Documents/Index?handler=BulkMove',{
+                                method:'POST', 
+                                headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
+                                body:JSON.stringify(payload)
+                            });
+                        } else {
+                            // Single document move operation
+                            const requestPayload = {
+                                documentId: parseInt(document.getElementById('moveDocumentId').value),
+                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value) : null,
+                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value) : null
+                            };
+                            response = await fetch('/Documents/Index?handler=Move', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                                },
+                                body: JSON.stringify(requestPayload)
+                            });
+                        }
 
                         const result = await response.json();
                         if(result.success){
@@ -1100,28 +1117,7 @@
                 modal.show();
             });
 
-                // modify confirm click to support bulk
-                document.getElementById('confirmMoveBtn').addEventListener('click', async function(){
-                    const isBulk = window.bulkMoveIds && window.bulkMoveIds.length>0;
-                    if(isBulk){
-                        const payload = {
-                            documentIds: window.bulkMoveIds.map(id=>parseInt(id)),
-                            projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value):null,
-                            folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value):null
-                        };
-                        const btn=this; const spinner=btn.querySelector('.spinner-border'); const btnText=btn.querySelector('.btn-text');
-                        btn.disabled=true; spinner.classList.remove('d-none');
-                        try{
-                            const resp = await fetch('/Documents/Index?handler=BulkMove',{
-                                method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
-                                body:JSON.stringify(payload)
-                            });
-                            const result = await resp.json();
-                            if(result.success){ window.location.reload(); }
-                            else alert(result.error||'Move failed');
-                        }catch(err){console.error(err); alert('Network error');}
-                    }
-                });
+
         });
     </script>
     
