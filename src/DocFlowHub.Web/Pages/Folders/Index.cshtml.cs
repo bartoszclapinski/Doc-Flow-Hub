@@ -1,6 +1,7 @@
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Models.Projects.Dto;
 using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -40,8 +41,15 @@ public class IndexModel : PageModel
 
         try
         {
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                ErrorMessage = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
             // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, userId);
             if (!projectResult.Succeeded)
             {
                 ErrorMessage = "Project not found or access denied.";
@@ -53,7 +61,7 @@ public class IndexModel : PageModel
             // Get folders for the project
             var foldersResult = await _folderService.GetFoldersInProjectAsync(
                 ProjectId, 
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+                userId,
                 Filter);
 
             if (foldersResult.Succeeded)
@@ -78,7 +86,14 @@ public class IndexModel : PageModel
     {
         try
         {
-            var result = await _folderService.DeleteFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.DeleteFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
@@ -102,7 +117,14 @@ public class IndexModel : PageModel
     {
         try
         {
-            var result = await _folderService.ArchiveFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.ArchiveFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
@@ -126,7 +148,14 @@ public class IndexModel : PageModel
     {
         try
         {
-            var result = await _folderService.RestoreFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.RestoreFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
@@ -148,7 +177,7 @@ public class IndexModel : PageModel
 
     public async Task<JsonResult> OnPostMoveFolderAsync([FromBody] MoveFolderRequest request)
     {
-        var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        var userId = User.GetUserId();
         if(string.IsNullOrEmpty(userId))
             return new JsonResult(new{success=false,error="User not authenticated"});
         var result = await _folderService.MoveFolderAsync(request.FolderId, request.NewParentFolderId, userId);

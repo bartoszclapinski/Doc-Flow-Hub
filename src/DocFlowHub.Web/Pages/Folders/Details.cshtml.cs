@@ -5,6 +5,7 @@ using DocFlowHub.Core.Models.Projects.Dto;
 using DocFlowHub.Core.Models.Documents.Dto;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Web.Extensions;
 using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Folders;
@@ -52,8 +53,15 @@ public class DetailsModel : PageModel
 
         try
         {
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                ErrorMessage = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
             // Get folder details
-            var folderResult = await _folderService.GetFolderByIdAsync(Id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var folderResult = await _folderService.GetFolderByIdAsync(Id, userId);
             if (!folderResult.Succeeded)
             {
                 ErrorMessage = "Folder not found or access denied.";
@@ -63,7 +71,7 @@ public class DetailsModel : PageModel
             Folder = folderResult.Data;
 
             // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var projectResult = await _projectService.GetProjectByIdAsync(Folder.ProjectId, userId);
             if (projectResult.Succeeded)
             {
                 Project = projectResult.Data;
@@ -72,7 +80,7 @@ public class DetailsModel : PageModel
             // Get folder path
             if (Folder.ParentFolderId.HasValue)
             {
-                var pathResult = await _folderService.GetFolderPathAsync(Folder.Id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var pathResult = await _folderService.GetFolderPathAsync(Folder.Id, userId);
                 if (pathResult.Succeeded)
                 {
                     FolderPath = pathResult.Data.ToList();
@@ -87,7 +95,7 @@ public class DetailsModel : PageModel
                 PageSize = 50 // Show first 50 documents
             };
 
-            var documentsResult = await _documentService.GetDocumentsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, documentsFilter);
+            var documentsResult = await _documentService.GetDocumentsAsync(userId, documentsFilter);
             if (documentsResult.Succeeded)
             {
                 Documents = documentsResult.Data.Items;
@@ -116,7 +124,14 @@ public class DetailsModel : PageModel
     {
         try
         {
-            var result = await _folderService.DeleteFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.DeleteFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
@@ -141,7 +156,14 @@ public class DetailsModel : PageModel
     {
         try
         {
-            var result = await _folderService.ArchiveFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.ArchiveFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
@@ -165,7 +187,14 @@ public class DetailsModel : PageModel
     {
         try
         {
-            var result = await _folderService.RestoreFolderAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = User.GetUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                TempData["ErrorMessage"] = "User not authenticated.";
+                return RedirectToPage("/Account/Login");
+            }
+
+            var result = await _folderService.RestoreFolderAsync(id, userId);
             
             if (result.Succeeded)
             {
