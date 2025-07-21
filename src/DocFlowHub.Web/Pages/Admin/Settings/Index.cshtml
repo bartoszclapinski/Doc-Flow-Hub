@@ -13,189 +13,185 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-gear me-2"></i>Application Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <form method="post" asp-page-handler="UpdateAppSettings">
-                    <div class="mb-3">
-                        <label class="form-label">Application Name</label>
-                        <input type="text" class="form-control" value="DocFlowHub" readonly>
-                        <div class="form-text">The name displayed in the application header.</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Max File Size (MB)</label>
-                        <input type="number" class="form-control" value="30" min="1" max="100">
-                        <div class="form-text">Maximum file size allowed for document uploads.</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Registration</label>
-                        <select class="form-select">
-                            <option value="open">Open Registration</option>
-                            <option value="admin">Admin Only</option>
-                            <option value="disabled">Disabled</option>
-                        </select>
-                        <div class="form-text">Control who can register new accounts.</div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check2"></i> Save Settings
-                    </button>
-                </form>
-            </div>
-        </div>
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-    
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-cloud me-2"></i>Storage Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Storage Provider</label>
-                    <input type="text" class="form-control" value="Azure Blob Storage" readonly>
-                    <div class="form-text">Current document storage provider.</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Storage Container</label>
-                    <input type="text" class="form-control" value="documents" readonly>
-                    <div class="form-text">Azure storage container name.</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Connection Status</label>
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-success me-2">Connected</span>
-                        <small class="text-muted">Last checked: @DateTime.Now.ToString("MMM dd, yyyy HH:mm")</small>
-                    </div>
-                </div>
-                
-                <button type="button" class="btn btn-outline-primary" onclick="testStorageConnection()">
-                    <i class="bi bi-arrow-clockwise"></i> Test Connection
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+}
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-shield-check me-2"></i>Security Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="requireEmailConfirmation" checked>
-                        <label class="form-check-label" for="requireEmailConfirmation">
-                            Require Email Confirmation
-                        </label>
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form method="post" asp-page-handler="UpdateSettings">
+    <div class="row">
+        @foreach (var group in Model.SettingsGroups)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            @switch (group.Category)
+                            {
+                                case "AI":
+                                    <i class="bi bi-robot me-2"></i>
+                                    break;
+                                case "Security":
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    break;
+                                case "Performance":
+                                    <i class="bi bi-speedometer2 me-2"></i>
+                                    break;
+                                case "System":
+                                    <i class="bi bi-gear me-2"></i>
+                                    break;
+                                default:
+                                    <i class="bi bi-wrench me-2"></i>
+                                    break;
+                            }
+                            @group.Category Settings
+                        </h5>
+                        <button type="submit" asp-page-handler="ResetCategory" asp-route-category="@group.Category" 
+                                class="btn btn-outline-secondary btn-sm" 
+                                onclick="return confirm('Are you sure you want to reset all @group.Category settings to default values?')">
+                            <i class="bi bi-arrow-clockwise"></i> Reset
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var setting in group.Settings)
+                        {
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <label class="form-label">
+                                        @setting.Key.Split('.').Last()
+                                        @if (setting.RequiresRestart)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-1">Restart Required</span>
+                                        }
+                                        @if (setting.IsSensitive)
+                                        {
+                                            <span class="badge bg-danger ms-1">Sensitive</span>
+                                        }
+                                    </label>
+                                    @if (!string.IsNullOrEmpty(setting.DefaultValue))
+                                    {
+                                        <button type="submit" asp-page-handler="ResetSetting" asp-route-key="@setting.Key"
+                                                class="btn btn-outline-secondary btn-sm" 
+                                                onclick="return confirm('Reset @setting.Key to default value?')">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    }
+                                </div>
+                                
+                                @switch (setting.DataType.ToUpper())
+                                {
+                                    case "BOOLEAN":
+                                        <select class="form-select" name="SettingsRequest.Settings[@setting.Key]">
+                                            <option value="true" selected="@(setting.Value.ToLower() == "true")">True</option>
+                                            <option value="false" selected="@(setting.Value.ToLower() == "false")">False</option>
+                                        </select>
+                                        break;
+                                    case "NUMBER":
+                                        <input type="number" class="form-control" 
+                                               name="SettingsRequest.Settings[@setting.Key]" 
+                                               value="@setting.Value" 
+                                               step="any">
+                                        break;
+                                    case "JSON":
+                                        <textarea class="form-control" rows="3" 
+                                                  name="SettingsRequest.Settings[@setting.Key]">@setting.Value</textarea>
+                                        break;
+                                    default:
+                                        if (setting.IsSensitive)
+                                        {
+                                            <input type="password" class="form-control" 
+                                                   name="SettingsRequest.Settings[@setting.Key]" 
+                                                   value="@setting.Value">
+                                        }
+                                        else
+                                        {
+                                            <input type="text" class="form-control" 
+                                                   name="SettingsRequest.Settings[@setting.Key]" 
+                                                   value="@setting.Value">
+                                        }
+                                        break;
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(setting.Description))
+                                {
+                                    <div class="form-text">@setting.Description</div>
+                                }
+                                @if (!string.IsNullOrEmpty(setting.DefaultValue))
+                                {
+                                    <div class="form-text text-muted">Default: @setting.DefaultValue</div>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
-                
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="enableTwoFactor">
-                        <label class="form-check-label" for="enableTwoFactor">
-                            Enable Two-Factor Authentication
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Session Timeout (minutes)</label>
-                    <input type="number" class="form-control" value="60" min="15" max="480">
-                </div>
-                
-                <button type="button" class="btn btn-warning">
-                    <i class="bi bi-shield-exclamation"></i> Update Security
-                </button>
             </div>
-        </div>
+        }
     </div>
     
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>System Information
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <strong>Version:</strong> 1.0.0
-                </div>
-                <div class="mb-2">
-                    <strong>Environment:</strong> Development
-                </div>
-                <div class="mb-2">
-                    <strong>Database:</strong> SQL Server
-                </div>
-                <div class="mb-2">
-                    <strong>Server Time:</strong> @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                </div>
-                <div class="mb-3">
-                    <strong>Uptime:</strong> <span id="uptime">@TimeSpan.FromMinutes(45).ToString(@"hh\:mm\:ss")</span>
-                </div>
-                
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-info btn-sm">
-                        <i class="bi bi-download"></i> Export Logs
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <button type="submit" class="btn btn-primary btn-lg me-2">
+                        <i class="bi bi-check2"></i> Save All Settings
                     </button>
-                    <button type="button" class="btn btn-outline-warning btn-sm">
-                        <i class="bi bi-arrow-clockwise"></i> Clear Cache
-                    </button>
+                    <a href="/Admin" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Admin
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</form>
 
 @section Scripts {
     <script>
-        function testStorageConnection() {
-            // Show loading state
-            event.target.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Testing...';
-            event.target.disabled = true;
-            
-            // Simulate connection test
-            setTimeout(() => {
-                event.target.innerHTML = '<i class="bi bi-check2"></i> Connection OK';
-                event.target.className = 'btn btn-success';
-                
-                setTimeout(() => {
-                    event.target.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Test Connection';
-                    event.target.className = 'btn btn-outline-primary';
-                    event.target.disabled = false;
-                }, 2000);
-            }, 1500);
-        }
+        // Auto-save warning for settings that require restart
+        document.addEventListener('DOMContentLoaded', function() {
+            const restartRequiredInputs = document.querySelectorAll('input[name*="Security"], input[name*="Performance.Upload"]');
+            restartRequiredInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    if (this.closest('.mb-3').querySelector('.badge.bg-warning')) {
+                        this.style.borderColor = '#ffc107';
+                        this.style.backgroundColor = '#fff3cd';
+                    }
+                });
+            });
+        });
         
-        // Add spinning animation for loading states
-        const style = document.createElement('style');
-        style.textContent = `
-            .spin {
-                animation: spin 1s linear infinite;
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const jsonInputs = document.querySelectorAll('textarea[name*="Settings"]');
+            let hasErrors = false;
+            
+            jsonInputs.forEach(input => {
+                try {
+                    if (input.value.trim()) {
+                        JSON.parse(input.value);
+                    }
+                    input.classList.remove('is-invalid');
+                } catch (error) {
+                    input.classList.add('is-invalid');
+                    hasErrors = true;
+                }
+            });
+            
+            if (hasErrors) {
+                e.preventDefault();
+                alert('Please fix JSON syntax errors before saving.');
+                return false;
             }
-            @@keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
+        });
     </script>
 } 

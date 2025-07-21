@@ -10,6 +10,8 @@ using DocFlowHub.Infrastructure.Services.Profile;
 using DocFlowHub.Infrastructure.Services.Role;
 using DocFlowHub.Infrastructure.Services.AI;
 using DocFlowHub.Infrastructure.Services.Projects;
+using DocFlowHub.Infrastructure.Services.Admin;
+using DocFlowHub.Infrastructure.Services.Analytics;
 
 namespace DocFlowHub.Infrastructure;
 
@@ -48,6 +50,16 @@ public static class DependencyInjection
         services.AddScoped<ITextExtractionService, TextExtractionService>();
         services.AddScoped<IAISettingsService, AISettingsService>();
         services.AddScoped<IAIUsageTrackingService, AIUsageTrackingService>();
+        
+        // Admin Services
+        services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
+        
+        // User Management Services
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IUserActivityService, UserActivityService>();
+        services.AddScoped<IUserSecurityService, UserSecurityService>();
+        services.AddScoped<IUserCommunicationService, UserCommunicationService>();
         
         // Configure Document Storage
         services.Configure<DocumentStorageOptions>(options =>

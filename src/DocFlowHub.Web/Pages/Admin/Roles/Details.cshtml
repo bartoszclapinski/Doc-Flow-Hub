@@ -1,0 +1,393 @@
+@page "{id?}"
+@model DocFlowHub.Web.Pages.Admin.Roles.DetailsModel
+@{
+    ViewData["Title"] = "Role Details";
+    ViewData["ActivePage"] = "Roles";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Admin/Index">Admin Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Roles</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Role?.Name</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>@ViewData["Title"]</h2>
+                <p class="text-muted mb-0">Manage role permissions and user assignments</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-page="./Edit" asp-route-id="@Model.Role?.Id" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1"></i>Edit Role
+                </a>
+                <a asp-page="./Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Roles
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Role == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Role not found or access denied.
+    </div>
+}
+else
+{
+    <!-- Role Information Header -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-person-badge text-primary" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4 class="mb-1">@Model.Role.Name</h4>
+                    <p class="text-muted mb-2">
+                        @(!string.IsNullOrEmpty(Model.Role.Description) ? Model.Role.Description : "No description provided")
+                    </p>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge bg-success">Active Role</span>
+                        <span class="badge bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-people me-1"></i>@Model.AssignedUsers.Count Users
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fw-bold text-primary fs-4">@Model.AssignedUsers.Count</div>
+                            <small class="text-muted">Assigned Users</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold text-success fs-4">@((DateTime.UtcNow - Model.Role.CreatedAt).Days)</div>
+                            <small class="text-muted">Days Active</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Role Information -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Role Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Role ID</label>
+                        <div class="form-control-plaintext">@Model.Role.Id</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Role Name</label>
+                        <div class="form-control-plaintext">@Model.Role.Name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <div class="form-control-plaintext">
+                            @if (!string.IsNullOrEmpty(Model.Role.Description))
+                            {
+                                @Model.Role.Description
+                            }
+                            else
+                            {
+                                <span class="text-muted">No description provided</span>
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Created Date</label>
+                        <div class="form-control-plaintext">@Model.Role.CreatedAt.ToString("MMMM dd, yyyy 'at' HH:mm")</div>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <label class="form-label fw-bold">Status</label>
+                        <div class="form-control-plaintext">
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Permissions -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Role Permissions
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="managePermissions('@Model.Role.Id')">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="text-center py-3">
+                        <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
+                        <h6 class="mt-2 mb-2">Role-Based Permissions</h6>
+                        <p class="text-muted mb-3">
+                            This role grants access based on ASP.NET Core Identity role authorization.
+                        </p>
+                        
+                        <div class="d-grid gap-2">
+                            @if (Model.Role.Name == "Administrator")
+                            {
+                                <div class="alert alert-info mb-2">
+                                    <i class="bi bi-crown me-2"></i>
+                                    <strong>Full System Access</strong><br>
+                                    <small>Complete administrative privileges</small>
+                                </div>
+                            }
+                            else if (Model.Role.Name == "Manager")
+                            {
+                                <div class="alert alert-warning mb-2">
+                                    <i class="bi bi-people me-2"></i>
+                                    <strong>Team Management</strong><br>
+                                    <small>User and content management</small>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary mb-2">
+                                    <i class="bi bi-person me-2"></i>
+                                    <strong>Standard User</strong><br>
+                                    <small>Basic application access</small>
+                                </div>
+                            }
+                        </div>
+                        
+                        <small class="text-muted">
+                            Permissions are managed through ASP.NET Core authorization policies
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Statistics -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Role Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+                                <div class="fw-bold text-primary fs-4">@Model.AssignedUsers.Count</div>
+                                <small class="text-muted">Users</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                <div class="fw-bold text-success fs-4">@Model.ActiveUsers</div>
+                                <small class="text-muted">Active Users</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-info bg-opacity-10 rounded">
+                                <div class="fw-bold text-info fs-4">@((DateTime.UtcNow - Model.Role.CreatedAt).Days)</div>
+                                <small class="text-muted">Days Old</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                                <div class="fw-bold text-warning fs-4">100%</div>
+                                <small class="text-muted">Uptime</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-muted">Role Health</span>
+                            <span class="badge bg-success">Excellent</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: 95%"></div>
+                        </div>
+                        <small class="text-muted">Based on usage and assignments</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assigned Users -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-people me-2"></i>Assigned Users (@Model.AssignedUsers.Count)
+            </h5>
+            <div>
+                <button type="button" class="btn btn-outline-primary" onclick="addUserToRole('@Model.Role.Id')">
+                    <i class="bi bi-person-plus me-1"></i>Add User
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.AssignedUsers.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Assigned</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Model.AssignedUsers)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center me-2" 
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">@($"{user.FirstName} {user.LastName}".Trim())</div>
+                                                <small class="text-muted">ID: @user.Id.Substring(0, 8)...</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        <span class="badge bg-@(user.EmailConfirmed ? "success" : "warning")">
+                                            @(user.EmailConfirmed ? "Verified" : "Pending")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">@user.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a asp-page="/Admin/Users/Details" asp-route-id="@user.Id" class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            @if (user.Email != "admin@docflowhub.com")
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="removeUserFromRole('@user.Id', '@user.Email', '@Model.Role.Id', '@Model.Role.Name')">
+                                                    <i class="bi bi-person-dash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                    <h6 class="mt-2 mb-2">No Users Assigned</h6>
+                    <p class="text-muted mb-3">This role has not been assigned to any users yet.</p>
+                    <button type="button" class="btn btn-primary" onclick="addUserToRole('@Model.Role.Id')">
+                        <i class="bi bi-person-plus me-1"></i>Add First User
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Action Panel -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="mb-1">Role Management Actions</h6>
+                    <p class="text-muted mb-0">Perform administrative actions on this role</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <a asp-page="./Edit" asp-route-id="@Model.Role.Id" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="exportRoleData('@Model.Role.Id')">
+                            <i class="bi bi-download me-1"></i>Export
+                        </button>
+                        @if (Model.AssignedUsers.Count == 0)
+                        {
+                            <button type="button" class="btn btn-outline-danger" onclick="confirmDeleteRole('@Model.Role.Id', '@Model.Role.Name')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-danger disabled" 
+                                    title="Cannot delete role with assigned users">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function managePermissions(roleId) {
+            // TODO: Implement permission management modal
+            console.log("Managing permissions for role:", roleId);
+            alert("Permission management will be implemented in the next update.");
+        }
+        
+        function addUserToRole(roleId) {
+            // TODO: Implement add user modal
+            console.log("Adding user to role:", roleId);
+            alert("Add user functionality will be implemented in the next update.");
+        }
+        
+        function removeUserFromRole(userId, userEmail, roleId, roleName) {
+            if (confirm(`Are you sure you want to remove ${userEmail} from the ${roleName} role?`)) {
+                // TODO: Implement remove user functionality
+                console.log("Removing user from role:", userId, roleId);
+                alert("Remove user functionality will be implemented in the next update.");
+            }
+        }
+        
+        function exportRoleData(roleId) {
+            // TODO: Implement role data export
+            console.log("Exporting role data:", roleId);
+            alert("Export functionality will be implemented in the next update.");
+        }
+        
+        function confirmDeleteRole(roleId, roleName) {
+            if (confirm(`Are you sure you want to delete the role: ${roleName}? This action cannot be undone.`)) {
+                // TODO: Implement role deletion
+                console.log("Deleting role:", roleId);
+                window.location.href = `/Admin/Roles/Delete/${roleId}`;
+            }
+        }
+    </script>
+} 

@@ -433,15 +433,126 @@
                 loadFolders(projectSelect.value);
                 projectSelect.addEventListener('change', ()=> loadFolders(projectSelect.value));
             }
+
+            // File input change handler - THE MISSING FUNCTIONALITY!
+            const fileInput = document.getElementById('file-input');
+            const selectedFileDiv = document.getElementById('selected-file');
+            const fileNameSpan = document.getElementById('file-name');
+            const fileSizeSpan = document.getElementById('file-size');
+            const titleInput = document.querySelector('input[name="Title"]');
+            const fileDropZone = document.getElementById('file-drop-zone');
+
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    
+                    if (file) {
+                        // Show selected file information
+                        showSelectedFile(file);
+                        
+                        // Auto-fill title if empty
+                        if (titleInput && (!titleInput.value || titleInput.value.trim() === '')) {
+                            const fileName = file.name;
+                            const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+                            titleInput.value = nameWithoutExtension;
+                        }
+                        
+                        // Add success styling
+                        fileInput.classList.add('field-success');
+                        fileInput.classList.remove('field-error');
+                        
+                        // Provide user feedback
+                        if (window.DocFlowHub) {
+                            window.DocFlowHub.showSuccess(`File "${file.name}" selected successfully`);
+                        }
+                    }
+                });
+            }
+
+            // Drag and drop functionality
+            if (fileDropZone) {
+                fileDropZone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    fileDropZone.classList.add('dragover');
+                });
+
+                fileDropZone.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    fileDropZone.classList.remove('dragover');
+                });
+
+                fileDropZone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    fileDropZone.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        
+                        // Validate file type
+                        if (isValidFileType(file)) {
+                            fileInput.files = files;
+                            
+                            // Trigger the change event manually
+                            const changeEvent = new Event('change', { bubbles: true });
+                            fileInput.dispatchEvent(changeEvent);
+                        } else {
+                            if (window.DocFlowHub) {
+                                window.DocFlowHub.showError('File type not supported. Please select a valid document file.');
+                            }
+                        }
+                    }
+                });
+
+                // Make the entire drop zone clickable
+                fileDropZone.addEventListener('click', function(e) {
+                    if (e.target === fileDropZone || e.target.closest('.upload-text')) {
+                        fileInput.click();
+                    }
+                });
+            }
+
+            // Helper functions
+            function showSelectedFile(file) {
+                const fileName = file.name;
+                const fileSize = formatFileSize(file.size);
+                
+                fileNameSpan.textContent = fileName;
+                fileSizeSpan.textContent = `(${fileSize})`;
+                
+                selectedFileDiv.classList.remove('d-none');
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            }
+
+            function isValidFileType(file) {
+                const validTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif'];
+                const fileName = file.name.toLowerCase();
+                return validTypes.some(type => fileName.endsWith(type));
+            }
         });
 
                     function clearFile() {
             const fileInput = document.getElementById('file-input');
             const selectedFileDiv = document.getElementById('selected-file');
+            const fileNameSpan = document.getElementById('file-name');
+            const fileSizeSpan = document.getElementById('file-size');
             
             fileInput.value = '';
             selectedFileDiv.classList.add('d-none');
             fileInput.classList.remove('field-success', 'field-error');
+            
+            // Clear file info
+            fileNameSpan.textContent = '';
+            fileSizeSpan.textContent = '';
             
             if (window.DocFlowHub) {
                 window.DocFlowHub.showInfo('File selection cleared');
@@ -1199,5 +1310,45 @@
         border-color: #20c997;
         background: #20c997;
         color: white;
+    }
+
+    /* File Upload Enhancements */
+    .file-upload-container {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+    }
+
+    .file-upload-container:hover {
+        border-color: #007bff;
+        background: #e3f2fd;
+    }
+
+    .file-upload-container.dragover {
+        border-color: #28a745;
+        background: #d4edda;
+        transform: scale(1.02);
+    }
+
+    /* File input success/error states */
+    .field-success {
+        border-color: #28a745 !important;
+        background-color: #f8fff9;
+    }
+
+    .field-error {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5;
+    }
+
+    /* Selected file display */
+    .selected-file .alert {
+        margin-bottom: 0;
+        border: 1px solid #b6d7ff;
+        background: #e3f2fd;
     }
 </style> 

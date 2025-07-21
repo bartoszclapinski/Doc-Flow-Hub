@@ -1,306 +1,289 @@
-# 📄 Doc-Flow-Hub
+# 📄 DocFlowHub
 
-Document Management System built with ASP.NET Core 9.
+**Enterprise Document Management Platform with AI Intelligence**
 
-![Build Status](https://github.com/bartoszclapinski/Doc-Flow-Hub/actions/workflows/ci.yml/badge.svg)
+[![Build Status](https://github.com/bartoszclapinski/Doc-Flow-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/bartoszclapinski/Doc-Flow-Hub/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)](https://dotnet.microsoft.com/)
+[![Azure](https://img.shields.io/badge/Azure-Storage-blue.svg)](https://azure.microsoft.com/)
 
-## 🚀 Description
+## 🚀 Overview
 
-Doc-Flow-Hub is a modern **AI-powered enterprise document management system** that helps teams organize, track, and collaborate on documents efficiently. The system provides powerful hierarchical organization with projects and folders, advanced version control, team collaboration features, AI-powered document analysis, and a professional Azure Portal-style user interface.
+DocFlowHub is a **comprehensive enterprise document management platform** designed for modern organizations requiring sophisticated document organization, team collaboration, and AI-powered insights. Built with cutting-edge technologies, it provides a scalable, secure, and intelligent solution for managing documents across large enterprises.
 
-## 🎯 Current Status
+### 🎯 **Key Differentiators**
+- **AI-Powered Intelligence**: Automatic document summarization and intelligent version comparison
+- **Enterprise-Grade User Management**: Advanced admin capabilities for 1000+ users with real-time analytics
+- **Hierarchical Organization**: Unlimited project and folder nesting with professional tree navigation
+- **Real-Time Collaboration**: Team-based sharing with granular permissions and live updates
+- **Professional Interface**: Azure Portal-inspired design with responsive, accessible UI
+- **Security-First Architecture**: Comprehensive threat detection and enterprise-grade security
 
-**Sprint 6: 100% COMPLETE** 🎉 - **Complete Enterprise Document Management Platform Achieved**
+---
 
-### ✅ Production-Ready Enterprise Platform
-- **Complete Organizational System**: Hierarchical project and folder structure with unlimited nesting capability
-- **Advanced Features**: Professional drag-and-drop interface, bulk operations, enhanced search and filtering
-- **Enhanced Security**: All identified vulnerabilities resolved with improved authentication patterns
-- **AI Integration**: Document summarization and version comparison working end-to-end with organizational context
-- **Quality Assurance**: 23/23 tests passing, comprehensive bug fixes, enhanced stability
-- **Enterprise Grade**: Professional Azure Portal-style interface with comprehensive navigation
+## ✨ Core Features
 
-### ✅ Fully Working Features
-- **Complete Document Lifecycle**: Upload → Browse (with sorting & filtering) → View → Edit → Download → Delete (Individual/Bulk/Version)
-- **Hierarchical Organization**: Projects and folders with unlimited nesting, tree navigation, breadcrumbs
-- **Advanced Operations**: Drag-and-drop document organization, bulk move operations, context menus
-- **AI Document Analysis**: Automatic summarization and intelligent version comparison integrated with organizational structure
-- **Team Collaboration**: Create teams, share documents and projects, team-based filtering, hierarchical access control  
-- **Professional UI**: Azure Portal-style interface with responsive design, enhanced animations, and tree navigation
-- **Complete Admin System**: System statistics, user management, AI analytics, and security monitoring
-- **Security**: Enhanced authentication patterns, comprehensive authorization, vulnerability fixes
-- **Version Management**: Complete version history with AI-powered difference analysis and version deletion
+### 🏗️ **Enterprise Document Organization**
 
-## ✨ Features
+#### **Hierarchical Project Structure**
+- **Multi-Level Projects**: Create project containers with unlimited folder nesting
+- **Visual Organization**: Professional tree navigation with drag-and-drop functionality
+- **Custom Branding**: Project colors, icons, and metadata for visual identification
+- **Team Integration**: Project-level sharing with role-based access control
 
-### 🏗️ Enterprise Document Organization
-- **Project Management**
-  - Top-level project containers with team sharing and customization
-  - Project creation with color/icon selection and live preview
-  - Complete CRUD operations (Create, Read, Update, Delete, Archive, Restore)
-  - Project statistics and team collaboration features
-  - Professional card layout with filtering, sorting, and pagination
-- **Hierarchical Folder Structure**
-  - Unlimited nesting capability with parent-child relationships
-  - Professional tree navigation with expand/collapse functionality
-  - Breadcrumb navigation showing complete hierarchy path
-  - Folder CRUD operations with circular reference prevention
-  - Context menus for efficient folder management operations
-- **Document Organization**
-  - Project and folder assignment with flexible reassignment
-  - Enhanced upload experience with project/folder selection
-  - Organizational context throughout document lifecycle
-  - Document move operations between projects and folders with validation
+#### **Intelligent Document Management**
+- **Complete Lifecycle**: Upload → Organize → Collaborate → Analyze → Archive
+- **Version Control**: Automatic versioning with detailed change tracking
+- **Bulk Operations**: Professional multi-select operations with progress tracking
+- **Smart Search**: Advanced filtering by content, metadata, teams, and organization
 
-### 🎮 Advanced User Operations
-- **Drag-and-Drop Interface**
-  - Professional drag-and-drop for documents and folders with visual feedback
-  - Touch support for mobile devices and tablets
-  - Real-time validation during drag operations
-  - Undo/redo functionality for organization changes
-- **Bulk Operations**
-  - Multi-select interface for projects, folders, and documents
-  - Bulk move operations with destination picker and validation
-  - Bulk sharing operations with team management
-  - Progress indicators with comprehensive error handling and detailed feedback
-- **Enhanced Search & Filtering**
-  - Project-scoped and folder-scoped search with hierarchical results
-  - Advanced filter combinations (projects + folders + teams + categories + AI status)
-  - Quick filter chips for common searches and organizational patterns
-  - Organization-aware search results with contextual display
+### 🤖 **AI-Powered Intelligence**
 
-### 👤 User Management
-- **Authentication and Authorization**
-  - Secure login and registration with enhanced security patterns
-  - Email confirmation and password recovery
-  - Enhanced authentication with vulnerability fixes
-- **Profile Management** 
-  - Customizable user profiles with profile picture upload and management
-  - Bio and personal information management
-  - Password management with secure policies
-- **Role-based Access Control** 
-  - Admin and user roles with complete dashboard
-  - Permission-based actions and system management
-  - User statistics and administrative tools with security monitoring
+#### **Document Analysis**
+- **Automatic Summarization**: AI-generated summaries on upload with confidence scoring
+- **Version Comparison**: Intelligent analysis of document changes and differences
+- **Content Insights**: Key points extraction and document classification
+- **Cost Optimization**: Smart API usage with caching and performance optimization
 
-### 👥 Team Collaboration 
-- **Team Management** 
-  - Create and manage teams with member roles (Owner, Member)
-  - Team activity tracking and invitation system
-  - Project-level team sharing with hierarchical access control
-- **Document & Project Sharing** 
-  - Share documents with specific teams with granular permissions
-  - Project-level team collaboration with comprehensive access control
-  - Team-based document and project filtering
-  - Secure access control with enhanced authorization patterns
-  - Real-time sharing/unsharing with feedback messages
+#### **Configurable AI Engine**
+- **Multiple Models**: GPT-4o, GPT-4o-mini, and future model support
+- **User Preferences**: Personalized AI settings and feature toggles
+- **Usage Analytics**: Comprehensive monitoring and cost tracking
+- **Enterprise Controls**: Admin-managed rate limits and usage policies
 
-### 📝 Document Management 
-- **Document Organization** 
-  - Hierarchical organization within projects and folders
-  - Categorization and tagging system (many-to-many relationships)
-  - Professional Azure Portal-style table layout with organizational context
-  - Custom metadata (title, description, change summaries)
-  - Hierarchical storage in Azure Blob Storage with secure access
-- **Complete Document Lifecycle**
-  - **Upload**: Professional upload with AI integration, team sharing, and project/folder assignment
-  - **Browse**: Enhanced listing with organizational context and tree navigation
-  - **View**: Detailed document views with version history and organizational context
-  - **Edit**: Document editing with version management and organizational updates
-  - **Delete**: Complete deletion suite (Individual, Bulk, Version) with enterprise UX and professional confirmations
-- **Version Control** 
-  - Automatic version tracking with sequential numbering
-  - Complete version history with metadata and organizational context
-  - Version restoration and downloads with proper authorization
-  - Version deletion with safety checks and owner-only authorization
-  - Secure file storage with proper resource management
-- **Search and Filtering** 
-  - Advanced search by title, metadata, and organizational structure
-  - Filter by team membership, categories, projects, folders, and file types
-  - Column sorting (Title, Modified Date, File Size) with visual indicators
-  - Pagination with UX-optimized page reset on sorting
-  - File type validation (PDF, DOC, DOCX, TXT, MD, images) 
-  - Size limit enforcement (30MB) 
+### 👥 **Advanced Team Collaboration**
 
-### 🔒 Enhanced Security 
-- **Authentication & Authorization** 
-  - Enhanced secure password policies with ASP.NET Core Identity
-  - Improved authentication patterns with vulnerability fixes
-  - Account lockout protection and email confirmation
-  - Session management with enhanced security
-  - Role-based access control (Admin, User roles) with comprehensive authorization
-- **Document Security** 
-  - Enhanced authorization preventing unauthorized document access
-  - Secure document filtering with ownership and team membership validation
-  - Project and folder level access control with hierarchical permissions
-  - HTTPS enforcement throughout with secure authentication patterns
-  - Secure file access with proper resource management and enhanced validation
-  - File type and size validation with comprehensive security checks
-- **Data Protection** 
-  - SQL injection prevention with parameterized queries
-  - XSS prevention with proper encoding
-  - Enhanced resource cleanup and proper disposal
-  - Comprehensive error handling without information leakage with security improvements
-  - Vulnerability fixes and enhanced authentication patterns
+#### **Team Management**
+- **Flexible Teams**: Create teams with custom roles and permissions
+- **Invitation System**: Secure team member invitations with email workflows
+- **Activity Tracking**: Real-time team activity monitoring and notifications
+- **Hierarchical Access**: Project and folder-level team permissions
 
-### 🤖 AI-Powered Features
-- **Document Summarization**
-  - Automatic AI summary generation on upload with organizational context
-  - Confidence scores and key points extraction
-  - Background processing with real OpenAI API integration
-  - Professional UI display with metadata and project/folder context
-- **AI Version Comparison**
-  - Intelligent analysis of document differences with organizational awareness
-  - AI-powered change detection and summarization
-  - Model selection with cost estimation
-  - Professional comparison results display with enhanced navigation
-- **AI Settings & Configuration**
-  - Complete user AI preferences management
-  - Model selection (GPT-4o, GPT-4o-mini, GPT-4.1, GPT-4.1-mini)
-  - Feature toggles and performance settings
-  - API key management and validation
-  - Smart defaults and cost estimation
-- **AI Analytics & Monitoring**
-  - Comprehensive usage tracking and analytics
-  - Admin dashboard with interactive charts
-  - User rate limits and monitoring system
-  - Performance metrics and optimization insights
-  - Cost analysis and usage trends
+#### **Collaboration Features**
+- **Document Sharing**: Granular sharing controls with team-based access
+- **Real-Time Updates**: Live collaboration with instant feedback
+- **Comment System**: Contextual discussions and review workflows
+- **Notification Engine**: Smart notifications for team activities
 
-## 🏁 Getting Started
+### 🔐 **Enterprise Security & Compliance**
 
-### Prerequisites
+#### **Advanced User Management**
+- **Scalable Administration**: Manage 1000+ users with enterprise-grade tools
+- **Advanced Search**: Multi-criteria user filtering with real-time results
+- **Bulk Operations**: Efficient user lifecycle management with progress tracking
+- **Activity Analytics**: Comprehensive user behavior analysis and reporting
 
-- **.NET 9 SDK**
-- **SQL Server**
-- **Azure Storage Account**
-- **OpenAI API Account** (for AI features)
-- **Visual Studio 2022** or **VS Code**
+#### **Security Monitoring**
+- **Threat Detection**: Real-time security scoring and suspicious activity monitoring
+- **Device Management**: Device fingerprinting with trust level assessment
+- **Audit Trails**: Comprehensive logging for compliance and security analysis
+- **Access Controls**: Role-based permissions with granular security policies
 
-### Installation
+#### **Compliance Ready**
+- **Data Protection**: GDPR-compliant data handling and user rights management
+- **Audit Logging**: Detailed activity logs for regulatory compliance
+- **Secure Storage**: Encrypted file storage with access control
+- **Privacy Controls**: User data management with transparency and control
 
-1. Clone the repository
-```bash
-git clone https://github.com/bartoszclapinski/Doc-Flow-Hub.git
-```
+### 📊 **Real-Time Analytics & Insights**
 
-2. Navigate to the project directory
-```bash
-cd Doc-Flow-Hub
-```
+#### **System Analytics**
+- **Usage Metrics**: Comprehensive system utilization and performance monitoring
+- **User Engagement**: Detailed analytics on user behavior and feature adoption
+- **Growth Tracking**: Real-time statistics with trend analysis
+- **Performance Insights**: System optimization recommendations and bottleneck identification
 
-3. Restore dependencies
-```bash
-dotnet restore
-```
+#### **Administrative Dashboard**
+- **Live Statistics**: Real-time user metrics with growth indicators
+- **Security Monitoring**: Active threat detection and security event tracking
+- **Resource Management**: Storage usage, AI consumption, and cost analysis
+- **System Health**: Performance monitoring with automated alerts
 
-4. Configure the application
+---
+
+## 🏗️ **Technical Architecture**
+
+### **Modern Technology Stack**
+- **Backend**: ASP.NET Core 9 with Clean Architecture principles
+- **Database**: SQL Server with Entity Framework Core and optimized indexing
+- **Storage**: Azure Blob Storage with secure access and CDN integration
+- **AI Integration**: OpenAI API with intelligent caching and cost optimization
+- **Frontend**: Responsive Razor Pages with Bootstrap 5 and custom components
+- **Authentication**: ASP.NET Core Identity with enhanced security patterns
+
+### **Scalability & Performance**
+- **Enterprise Scale**: Optimized for 1000+ concurrent users
+- **Efficient Queries**: Strategic indexing and query optimization
+- **Caching Strategy**: Multi-level caching for optimal performance
+- **Responsive Design**: Mobile-first approach with touch support
+
+### **Security Architecture**
+- **Defense in Depth**: Multiple security layers with comprehensive protection
+- **Data Encryption**: End-to-end encryption for data at rest and in transit
+- **Access Control**: Fine-grained permissions with role-based security
+- **Vulnerability Management**: Regular security assessments and updates
+
+---
+
+## 🚀 **Getting Started**
+
+### **Prerequisites**
+- .NET 9 SDK
+- SQL Server (LocalDB or full instance)
+- Azure Storage Account
+- OpenAI API Key (for AI features)
+
+### **Quick Setup**
+
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/bartoszclapinski/Doc-Flow-Hub.git
+   cd Doc-Flow-Hub
+   ```
+
+2. **Configure Application**
    
-Create or update `appsettings.Development.json` in the `src/DocFlowHub.Web` directory:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
-  },
-  "Storage": {
-    "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=your_account_name;AccountKey=your_account_key;EndpointSuffix=core.windows.net"
-  },
-  "OpenAI": {
-    "ApiKey": "your_openai_api_key_here",
-    "Model": "gpt-4o-mini",
-    "Temperature": 0.7
-  }
-}
+   Create `appsettings.Development.json`:
+   ```json
+   {
+     "ConnectionStrings": {
+       "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
+     },
+     "Storage": {
+       "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
+     },
+     "OpenAI": {
+       "ApiKey": "your_openai_api_key",
+       "Model": "gpt-4o-mini",
+       "Temperature": 0.7
+     }
+   }
+   ```
+
+3. **Setup Database**
+   ```bash
+   dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
+   ```
+
+4. **Launch Application**
+   ```bash
+   dotnet run --project src/DocFlowHub.Web
+   ```
+
+### **Configuration Options**
+
+#### **Azure Storage Setup**
+1. Create Azure Storage Account
+2. Generate access keys from Azure Portal
+3. Configure blob container for document storage
+4. Update connection string in application settings
+
+#### **OpenAI Integration**
+1. Create OpenAI API account
+2. Generate API key with appropriate permissions
+3. Configure model preferences and rate limits
+4. Set up usage monitoring and cost controls
+
+---
+
+## 📁 **Project Structure**
+
+```
+DocFlowHub/
+├── src/
+│   ├── DocFlowHub.Core/              # Domain logic and interfaces
+│   │   ├── Models/                   # Entity models and DTOs
+│   │   ├── Services/                 # Service interfaces
+│   │   └── Identity/                 # User management
+│   ├── DocFlowHub.Infrastructure/    # Data access and external services
+│   │   ├── Data/                     # EF Core configurations
+│   │   ├── Services/                 # Service implementations
+│   │   └── Migrations/               # Database migrations
+│   └── DocFlowHub.Web/              # Web application
+│       ├── Pages/                    # Razor Pages
+│       ├── wwwroot/                  # Static assets
+│       └── Services/                 # Web-specific services
+├── tests/
+│   └── DocFlowHub.Tests/            # Unit and integration tests
+└── docs/                            # Documentation and guides
 ```
 
-To get Azure Storage connection string:
-1. Go to Azure Portal
-2. Navigate to your Storage Account
-3. Go to "Access keys" under "Security + networking"
-4. Copy the connection string
-5. Replace the `Storage:ConnectionString` value in `appsettings.Development.json`
+### **Architecture Principles**
+- **Clean Architecture**: Separation of concerns with dependency inversion
+- **Domain-Driven Design**: Rich domain models with business logic encapsulation
+- **SOLID Principles**: Maintainable and extensible code structure
+- **Async/Await**: Non-blocking operations for optimal performance
 
-To get OpenAI API Key:
-1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Create a new API key
-3. Replace the `OpenAI:ApiKey` value in `appsettings.Development.json`
+---
 
-⚠️ Never commit actual API keys or connection strings to source control!
+## 🔧 **Advanced Configuration**
 
-5. Update the database
-```bash
-dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
-```
+### **Performance Optimization**
+- **Caching Strategy**: Configure Redis for distributed caching
+- **Database Tuning**: Optimize indexes and query performance
+- **CDN Integration**: Azure CDN for static asset delivery
+- **Load Balancing**: Horizontal scaling configuration
 
-6. Run the application
-```bash
-dotnet run --project src/DocFlowHub.Web
-```
+### **Security Hardening**
+- **SSL/TLS**: Configure HTTPS with proper certificates
+- **API Security**: Rate limiting and API key management
+- **Data Protection**: Configure encryption keys and secure storage
+- **Audit Logging**: Enhanced logging for security monitoring
 
-## 🏗️ Project Structure
+### **Enterprise Integration**
+- **Single Sign-On**: SAML/OAuth provider integration
+- **LDAP/AD**: Active Directory integration for user management
+- **API Access**: RESTful APIs for third-party integration
+- **Webhook Support**: Real-time notifications and event handling
 
-The solution follows Clean Architecture principles with full separation of concerns:
+---
 
-- **DocFlowHub.Core** 📦: Domain models, interfaces, and business logic
-  - Document entities (Document, DocumentVersion, DocumentCategory)
-  - Project and Folder entities (Project, Folder) with hierarchical relationships
-  - Team entities (Team, TeamMember) with role-based access
-  - Service interfaces (IDocumentService, IProjectService, IFolderService, ITeamService, IDocumentStorageService)
-  - DTOs and business logic models with validation and organizational support
-  
-- **DocFlowHub.Infrastructure** 🔧: Data access, external services, and implementations
-  - Entity Framework Core with SQL Server and complex hierarchical relationships
-  - Complete service implementations with async patterns and organizational operations
-  - Azure Blob Storage integration with secure file management
-  - Database configurations and migrations including organizational schema
-  
-- **DocFlowHub.Web** 🌐: ASP.NET Core web application with professional UI
-  - Razor Pages with Azure Portal-style layouts and tree navigation
-  - Responsive Bootstrap 5.3 styling with custom enhancements and organizational components
-  - Professional loading states and toast notification system
-  - Security-first approach with proper authorization and enhanced authentication patterns
+## 🧪 **Testing & Quality**
 
-## 🔄 CI/CD
+### **Comprehensive Test Suite**
+- **Unit Tests**: Core business logic validation
+- **Integration Tests**: Database and external service testing
+- **End-to-End Tests**: Complete user workflow validation
+- **Performance Tests**: Load testing and scalability validation
 
-The project uses GitHub Actions for continuous integration and deployment:
-- Automated builds
-- Unit tests execution (23/23 tests passing)
-- Code quality checks
-- Azure integration tests
+### **Quality Assurance**
+- **Code Coverage**: Comprehensive test coverage reporting
+- **Static Analysis**: Code quality and security scanning
+- **Automated Testing**: CI/CD pipeline with automated test execution
+- **Performance Monitoring**: Real-time application performance tracking
 
-## 🚀 Recent Major Achievements
+---
 
-### Sprint 6 Achievements ✅ **ENTERPRISE PLATFORM COMPLETED**
-- **Complete Organizational System**: Full project and folder hierarchy with unlimited nesting capability
-- **Advanced User Operations**: Professional drag-and-drop interface, bulk operations, enhanced search functionality
-- **Enhanced Security**: All identified vulnerabilities resolved with improved authentication patterns
-- **Quality Assurance**: Comprehensive bug fixes, 23/23 tests passing, enhanced stability and security
-- **Professional UX**: Complete Azure Portal-style interface with tree navigation, breadcrumbs, and context menus
+## 🚀 **Deployment**
 
-### Sprint 5 Achievements ✅ **AI PLATFORM FOUNDATION**
-- **AI Document Summarization**: Real OpenAI API integration with automatic summary generation on upload
-- **AI Version Comparison**: AI-powered analysis of document differences with professional UI
-- **Complete AI Settings System**: Backend + UI + upload integration with user configuration
-- **AI Analytics Dashboard**: Interactive charts, usage monitoring, and cost optimization insights
-- **User Limits Management**: Rate limiting system with admin monitoring and controls
-- **Performance Optimization**: Multi-level caching reducing API costs and improving response times
+### **Production Deployment**
+- **Azure App Service**: Scalable cloud hosting
+- **Docker Support**: Containerized deployment options
+- **Database Migration**: Safe production database updates
+- **Monitoring**: Application insights and performance tracking
 
-### Technical Excellence ✅
-- **Complete Platform Architecture**: Clean separation with proper service layer and dependency injection
-- **Database Excellence**: Multiple migrations for organizational and AI entities with proper relationships
-- **Testing Coverage**: All 23/23 tests passing with comprehensive coverage including organizational features
-- **Production Ready**: Real OpenAI API integration with comprehensive error handling
-- **Performance Optimized**: Intelligent caching strategies, hierarchical query optimization, and cost management
-- **Enhanced Security**: Vulnerability fixes, improved authentication patterns, comprehensive authorization
-- **Zero Technical Debt**: Professional implementation maintaining code quality standards throughout
+### **CI/CD Pipeline**
+- **GitHub Actions**: Automated build and deployment
+- **Quality Gates**: Automated testing and quality checks
+- **Environment Management**: Staging and production environments
+- **Rollback Support**: Safe deployment with rollback capabilities
 
-### Sprint 6 Scope Achievement ✅
-- ✅ **Complete Organizational System**: Project and folder hierarchy with advanced features (100% complete)
-- ✅ **Advanced Operations**: Drag-and-drop interface, bulk operations, enhanced search (100% complete)
-- ✅ **Quality Assurance**: All critical bugs resolved, enhanced security, comprehensive testing (100% complete)
-- ✅ **AI Integration**: All AI features working seamlessly with organizational structure
-- 🚀 **Advanced Enterprise Features**: Ready for Sprint 7 (Smart categorization, external integrations)
+---
 
-## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+## 📄 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🔗 **Links**
+
+- **Live Demo**: [DocFlowHub Demo](https://demo.docflowhub.com) *(Coming Soon)*
+- **Documentation**: [Full Documentation](https://docs.docflowhub.com) *(Coming Soon)*
+- **API Reference**: [API Documentation](https://api.docflowhub.com) *(Coming Soon)*
+- **Support**: [GitHub Issues](https://github.com/bartoszclapinski/Doc-Flow-Hub/issues)
+
+---
+
+*Built with ❤️ for modern enterprises requiring sophisticated document management solutions.* 
