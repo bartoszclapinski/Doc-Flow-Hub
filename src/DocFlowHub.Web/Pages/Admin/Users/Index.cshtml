@@ -59,6 +59,13 @@
             font-weight: 500;
             padding: 0.5rem 1rem;
             border-width: 1px;
+            min-width: auto;
+            height: auto;
+            line-height: 1.5;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .filter-panel .d-flex.gap-2 {
@@ -67,18 +74,36 @@
         }
         
         .filter-panel .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+            color: #fff !important;
         }
         
         .filter-panel .btn-outline-secondary {
-            color: #6c757d;
-            border-color: #6c757d;
+            color: #6c757d !important;
+            border-color: #6c757d !important;
+            background-color: transparent !important;
+        }
+        
+        .filter-panel .btn-outline-secondary:hover {
+            color: #fff !important;
+            background-color: #6c757d !important;
         }
         
         .filter-panel .btn-outline-info {
-            color: #0dcaf0;
-            border-color: #0dcaf0;
+            color: #0dcaf0 !important;
+            border-color: #0dcaf0 !important;
+            background-color: transparent !important;
+        }
+        
+        .filter-panel .btn-outline-info:hover {
+            color: #000 !important;
+            background-color: #0dcaf0 !important;
+        }
+        
+        /* Ensure icons and text are visible */
+        .filter-panel .btn i {
+            margin-right: 0.5rem;
         }
     </style>
 }
