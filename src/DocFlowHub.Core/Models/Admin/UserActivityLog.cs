@@ -91,9 +91,8 @@ public class UserCommunicationEntity
     [StringLength(450)]
     public string UserId { get; set; } = string.Empty;
     
-    [Required]
     [StringLength(450)]
-    public string AdminId { get; set; } = string.Empty;
+    public string? AdminId { get; set; }
     
     [Required]
     [StringLength(200)]

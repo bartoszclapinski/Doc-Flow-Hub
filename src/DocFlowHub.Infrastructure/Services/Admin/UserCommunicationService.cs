@@ -344,22 +344,27 @@ public class UserCommunicationService : IUserCommunicationService
     // Helper method for sending system messages
     private async Task<ServiceResult> SendSystemMessageAsync(string userId, string subject, string message, CommunicationType type)
     {
-        var systemAdminId = "system"; // In real implementation, would be a system account
-
-        var communication = new UserCommunicationEntity
+        try
         {
-            UserId = userId,
-            AdminId = systemAdminId,
-            Subject = subject,
-            Message = message,
-            Type = type.ToString(),
-            SentAt = DateTime.UtcNow,
-            IsRead = false
-        };
+            var communication = new UserCommunicationEntity
+            {
+                UserId = userId,
+                AdminId = null, // System messages don't have an admin sender
+                Subject = subject,
+                Message = message,
+                Type = type.ToString(),
+                SentAt = DateTime.UtcNow,
+                IsRead = false
+            };
 
-        _context.UserCommunications.Add(communication);
-        await _context.SaveChangesAsync();
+            _context.UserCommunications.Add(communication);
+            await _context.SaveChangesAsync();
 
-        return ServiceResult.Success();
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult.Failure($"Failed to send system message: {ex.Message}");
+        }
     }
 } 

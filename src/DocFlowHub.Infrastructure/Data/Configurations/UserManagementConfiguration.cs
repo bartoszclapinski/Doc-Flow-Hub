@@ -127,7 +127,6 @@ public class UserCommunicationConfiguration : IEntityTypeConfiguration<UserCommu
             .HasMaxLength(450);
             
         builder.Property(x => x.AdminId)
-            .IsRequired()
             .HasMaxLength(450);
             
         builder.Property(x => x.Subject)
