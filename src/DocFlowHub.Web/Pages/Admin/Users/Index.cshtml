@@ -157,10 +157,10 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search"></i> Search
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.clearUserFilters()">
                             <i class="bi bi-x-circle"></i> Clear
                         </button>
-                        <button type="button" class="btn btn-outline-info" onclick="toggleBulkActions()">
+                        <button type="button" class="btn btn-outline-info" onclick="window.toggleUserBulkActions()">
                             <i class="bi bi-check2-square"></i> Bulk Actions
                         </button>
                     </div>
@@ -433,52 +433,41 @@
         
         let selectedUserIds = [];
 
-        // Button functions (defined early to ensure availability)
-        function clearFilters() {
-            console.log('clearFilters() called');
+        // Define functions directly on window object for guaranteed global access
+        window.clearUserFilters = function() {
+            console.log('clearUserFilters() called');
             try {
-                const searchInput = document.querySelector('input[name="Filter.SearchTerm"]');
-                const statusSelect = document.querySelector('select[name="Filter.Status"]');
-                const roleSelect = document.querySelector('select[name="Filter.Role"]');
-                const activitySelect = document.querySelector('select[name="Filter.ActivityLevel"]');
-                
-                console.log('Found elements:', { searchInput, statusSelect, roleSelect, activitySelect });
-                
-                if (searchInput) searchInput.value = '';
-                if (statusSelect) statusSelect.value = '';
-                if (roleSelect) roleSelect.value = '';
-                if (activitySelect) activitySelect.value = '';
-                
-                // Just reload the page without query parameters (simpler approach)
+                // Simple approach: just reload the page without query parameters
                 window.location.href = window.location.pathname;
             } catch (error) {
                 console.error('Error clearing filters:', error);
-                // Fallback: reload the page
-                window.location.href = window.location.pathname;
+                // Force reload if anything goes wrong
+                window.location.reload();
             }
-        }
+        };
 
-        function toggleBulkActions() {
-            console.log('toggleBulkActions() called');
+        window.toggleUserBulkActions = function() {
+            console.log('toggleUserBulkActions() called');
             try {
                 const panel = document.getElementById('bulkActionsPanel');
                 console.log('Panel found:', panel);
                 if (panel) {
-                    const currentDisplay = window.getComputedStyle(panel).display;
-                    const newDisplay = currentDisplay === 'none' ? 'block' : 'none';
-                    console.log('Toggling from', currentDisplay, 'to', newDisplay);
-                    panel.style.display = newDisplay;
+                    const isHidden = panel.style.display === 'none' || !panel.style.display;
+                    panel.style.display = isHidden ? 'block' : 'none';
+                    console.log('Panel display set to:', panel.style.display);
                 } else {
                     console.error('Bulk actions panel not found');
                 }
             } catch (error) {
                 console.error('Error toggling bulk actions:', error);
             }
-        }
-
-        // Make functions globally accessible
-        window.clearFilters = clearFilters;
-        window.toggleBulkActions = toggleBulkActions;
+        };
+        
+        // Test functions are available
+        console.log('Functions defined:', {
+            clearUserFilters: typeof window.clearUserFilters,
+            toggleUserBulkActions: typeof window.toggleUserBulkActions
+        });
 
         // Load user activity data for each user
         document.addEventListener('DOMContentLoaded', function() {
