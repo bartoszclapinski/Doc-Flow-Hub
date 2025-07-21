@@ -428,7 +428,57 @@
 
 @section Scripts {
     <script>
+        // Debug: Test if functions are accessible
+        console.log('Admin Users page JavaScript loaded');
+        
         let selectedUserIds = [];
+
+        // Button functions (defined early to ensure availability)
+        function clearFilters() {
+            console.log('clearFilters() called');
+            try {
+                const searchInput = document.querySelector('input[name="Filter.SearchTerm"]');
+                const statusSelect = document.querySelector('select[name="Filter.Status"]');
+                const roleSelect = document.querySelector('select[name="Filter.Role"]');
+                const activitySelect = document.querySelector('select[name="Filter.ActivityLevel"]');
+                
+                console.log('Found elements:', { searchInput, statusSelect, roleSelect, activitySelect });
+                
+                if (searchInput) searchInput.value = '';
+                if (statusSelect) statusSelect.value = '';
+                if (roleSelect) roleSelect.value = '';
+                if (activitySelect) activitySelect.value = '';
+                
+                // Just reload the page without query parameters (simpler approach)
+                window.location.href = window.location.pathname;
+            } catch (error) {
+                console.error('Error clearing filters:', error);
+                // Fallback: reload the page
+                window.location.href = window.location.pathname;
+            }
+        }
+
+        function toggleBulkActions() {
+            console.log('toggleBulkActions() called');
+            try {
+                const panel = document.getElementById('bulkActionsPanel');
+                console.log('Panel found:', panel);
+                if (panel) {
+                    const currentDisplay = window.getComputedStyle(panel).display;
+                    const newDisplay = currentDisplay === 'none' ? 'block' : 'none';
+                    console.log('Toggling from', currentDisplay, 'to', newDisplay);
+                    panel.style.display = newDisplay;
+                } else {
+                    console.error('Bulk actions panel not found');
+                }
+            } catch (error) {
+                console.error('Error toggling bulk actions:', error);
+            }
+        }
+
+        // Make functions globally accessible
+        window.clearFilters = clearFilters;
+        window.toggleBulkActions = toggleBulkActions;
 
         // Load user activity data for each user
         document.addEventListener('DOMContentLoaded', function() {
@@ -500,41 +550,7 @@
             document.getElementById('executeBulkBtn').disabled = selectedUserIds.length === 0;
         }
 
-        function toggleBulkActions() {
-            try {
-                const panel = document.getElementById('bulkActionsPanel');
-                if (panel) {
-                    const isHidden = panel.style.display === 'none' || window.getComputedStyle(panel).display === 'none';
-                    panel.style.display = isHidden ? 'block' : 'none';
-                } else {
-                    console.error('Bulk actions panel not found');
-                }
-            } catch (error) {
-                console.error('Error toggling bulk actions:', error);
-            }
-        }
 
-        function clearFilters() {
-            try {
-                document.querySelector('input[name="Filter.SearchTerm"]').value = '';
-                document.querySelector('select[name="Filter.Status"]').value = '';
-                document.querySelector('select[name="Filter.Role"]').value = '';
-                document.querySelector('select[name="Filter.ActivityLevel"]').value = '';
-                // Submit the form to reload with cleared filters
-                const form = document.querySelector('form[method="post"][action*="Search"]') || 
-                            document.querySelector('form[method="post"]');
-                if (form) {
-                    form.submit();
-                } else {
-                    // Fallback: reload the page without query parameters
-                    window.location.href = window.location.pathname;
-                }
-            } catch (error) {
-                console.error('Error clearing filters:', error);
-                // Fallback: reload the page
-                window.location.href = window.location.pathname;
-            }
-        }
 
         // Handle bulk operation selection
         document.getElementById('bulkOperationSelect').addEventListener('change', function() {
