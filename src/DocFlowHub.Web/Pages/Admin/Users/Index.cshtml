@@ -501,15 +501,39 @@
         }
 
         function toggleBulkActions() {
-            const panel = document.getElementById('bulkActionsPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            try {
+                const panel = document.getElementById('bulkActionsPanel');
+                if (panel) {
+                    const isHidden = panel.style.display === 'none' || window.getComputedStyle(panel).display === 'none';
+                    panel.style.display = isHidden ? 'block' : 'none';
+                } else {
+                    console.error('Bulk actions panel not found');
+                }
+            } catch (error) {
+                console.error('Error toggling bulk actions:', error);
+            }
         }
 
         function clearFilters() {
-            document.querySelector('input[name="Filter.SearchTerm"]').value = '';
-            document.querySelector('select[name="Filter.Status"]').value = '';
-            document.querySelector('select[name="Filter.Role"]').value = '';
-            document.querySelector('select[name="Filter.ActivityLevel"]').value = '';
+            try {
+                document.querySelector('input[name="Filter.SearchTerm"]').value = '';
+                document.querySelector('select[name="Filter.Status"]').value = '';
+                document.querySelector('select[name="Filter.Role"]').value = '';
+                document.querySelector('select[name="Filter.ActivityLevel"]').value = '';
+                // Submit the form to reload with cleared filters
+                const form = document.querySelector('form[method="post"][action*="Search"]') || 
+                            document.querySelector('form[method="post"]');
+                if (form) {
+                    form.submit();
+                } else {
+                    // Fallback: reload the page without query parameters
+                    window.location.href = window.location.pathname;
+                }
+            } catch (error) {
+                console.error('Error clearing filters:', error);
+                // Fallback: reload the page
+                window.location.href = window.location.pathname;
+            }
         }
 
         // Handle bulk operation selection
