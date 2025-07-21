@@ -1,0 +1,233 @@
+@page
+@model DocFlowHub.Web.Pages.Admin.Users.CreateModel
+@{
+    ViewData["Title"] = "Create User";
+    ViewData["ActivePage"] = "Users";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Admin/Index">Admin Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Users</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Create User</li>
+            </ol>
+        </nav>
+        <h2>@ViewData["Title"]</h2>
+        <p class="text-muted">Create a new user account with role assignments.</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-plus me-2"></i>New User Account
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <!-- Personal Information -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person me-1"></i>Personal Information
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.FirstName" class="form-label fw-bold">First Name</label>
+                            <input asp-for="Input.FirstName" class="form-control" placeholder="Enter first name" />
+                            <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.LastName" class="form-label fw-bold">Last Name</label>
+                            <input asp-for="Input.LastName" class="form-control" placeholder="Enter last name" />
+                            <span asp-validation-for="Input.LastName" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label fw-bold">
+                            Email Address <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Input.Email" class="form-control" placeholder="Enter email address" type="email" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        <div class="form-text">This will be used as the username for login.</div>
+                    </div>
+                    
+                    <!-- Account Security -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-shield-lock me-1"></i>Account Security
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.Password" class="form-label fw-bold">
+                                Password <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Input.Password" class="form-control" type="password" placeholder="Enter password" />
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                            <div class="form-text">Minimum 6 characters required.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Input.ConfirmPassword" class="form-label fw-bold">
+                                Confirm Password <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Input.ConfirmPassword" class="form-control" type="password" placeholder="Confirm password" />
+                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Role Assignment -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-badge me-1"></i>Role Assignment
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assign Roles</label>
+                        @if (Model.AvailableRoles.Any())
+                        {
+                            <div class="row">
+                                @foreach (var role in Model.AvailableRoles)
+                                {
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="Input.SelectedRoles" value="@role.Name" 
+                                                   id="role-@role.Id"
+                                                   @(Model.Input.SelectedRoles.Contains(role.Name) ? "checked" : "") />
+                                            <label class="form-check-label" for="role-@role.Id">
+                                                <strong>@role.Name</strong>
+                                                @if (!string.IsNullOrEmpty(role.Description))
+                                                {
+                                                    <br><small class="text-muted">@role.Description</small>
+                                                }
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No roles are available. Please create roles first.
+                            </div>
+                        }
+                        <div class="form-text">Select one or more roles for this user. Users without roles will have limited access.</div>
+                    </div>
+                    
+                    <!-- Account Options -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-gear me-1"></i>Account Options
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" asp-for="Input.EmailConfirmed" id="emailConfirmed" />
+                                <label class="form-check-label" for="emailConfirmed">
+                                    Email Confirmed
+                                </label>
+                                <div class="form-text">Mark email as confirmed to allow immediate login.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" asp-for="Input.SendWelcomeEmail" id="sendWelcome" />
+                                <label class="form-check-label" for="sendWelcome">
+                                    Send Welcome Email
+                                </label>
+                                <div class="form-text">Send login credentials to the user's email.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between pt-3 border-top">
+                        <a asp-page="./Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Users
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="clearForm()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Clear Form
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-person-plus me-1"></i>Create User
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    
+    <script>
+        function clearForm() {
+            if (confirm("Are you sure you want to clear all form data?")) {
+                document.querySelector("form").reset();
+                // Uncheck all role checkboxes
+                document.querySelectorAll("input[name='Input.SelectedRoles']").forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            }
+        }
+        
+        // Email input validation
+        document.querySelector("input[name='Input.Email']").addEventListener("input", function(e) {
+            // Simple email validation without using problematic characters
+            const email = e.target.value;
+            if (email.length > 5 && email.includes('.')) {
+                e.target.classList.remove("is-invalid");
+                e.target.classList.add("is-valid");
+            } else if (email.length > 0) {
+                e.target.classList.add("is-invalid");
+                e.target.classList.remove("is-valid");
+            } else {
+                e.target.classList.remove("is-valid", "is-invalid");
+            }
+        });
+        
+        // Password strength indicator
+        document.querySelector("input[name='Input.Password']").addEventListener("input", function(e) {
+            const password = e.target.value;
+            const strengthIndicator = document.getElementById("password-strength");
+            
+            if (password.length >= 8) {
+                e.target.classList.remove("is-invalid");
+                e.target.classList.add("is-valid");
+            } else if (password.length > 0) {
+                e.target.classList.remove("is-valid");
+                e.target.classList.add("is-invalid");
+            } else {
+                e.target.classList.remove("is-valid", "is-invalid");
+            }
+        });
+    </script>
+} 

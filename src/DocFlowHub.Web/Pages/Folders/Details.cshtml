@@ -1,4 +1,5 @@
 @page
+@using DocFlowHub.Web.Extensions
 @model DocFlowHub.Web.Pages.Folders.DetailsModel
 @{
     ViewData["Title"] = $"Folder: {Model.Folder?.Name}";
@@ -211,7 +212,7 @@
                     <div class="tab-pane fade show active" id="documents" role="tabpanel">
                         @if (Model.Documents.Any())
                         {
-                            <div class="table-responsive">
+                            <div class="table-container">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
@@ -219,7 +220,7 @@
                                             <th>Type</th>
                                             <th>Size</th>
                                             <th>Modified</th>
-                                            <th>Actions</th>
+                                            <th width="120">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -229,11 +230,11 @@
                                                 <td>
                                                     <div class="d-flex align-items-center">
                                                         <i class="bi bi-file-earmark me-2 text-muted"></i>
-                                                        <div>
-                                                            <div class="fw-medium">@document.Title</div>
+                                                        <div class="min-w-0 flex-grow-1">
+                                                            <div class="fw-medium text-truncate">@document.Title</div>
                                                             @if (!string.IsNullOrEmpty(document.Description))
                                                             {
-                                                                <small class="text-muted">@document.Description</small>
+                                                                <small class="text-muted text-truncate d-block">@document.Description</small>
                                                             }
                                                         </div>
                                                     </div>
@@ -246,20 +247,35 @@
                                                 <td>
                                                     <div class="dropdown">
                                                         <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                                                                data-bs-toggle="dropdown">
+                                                                data-bs-toggle="dropdown" aria-expanded="false">
                                                             <i class="bi bi-three-dots"></i>
                                                         </button>
-                                                        <ul class="dropdown-menu">
+                                                        <ul class="dropdown-menu dropdown-menu-end">
                                                             <li>
                                                                 <a class="dropdown-item" asp-page="/Documents/Details" asp-route-id="@document.Id">
-                                                                    <i class="bi bi-eye"></i>View
+                                                                    <i class="bi bi-eye me-2"></i>View Details
                                                                 </a>
                                                             </li>
                                                             <li>
                                                                 <a class="dropdown-item" asp-page="/Documents/Edit" asp-route-id="@document.Id">
-                                                                    <i class="bi bi-pencil"></i>Edit
+                                                                    <i class="bi bi-pencil me-2"></i>Edit
                                                                 </a>
                                                             </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="downloadDocument(@document.Id); return false;">
+                                                                    <i class="bi bi-download me-2"></i>Download
+                                                                </a>
+                                                            </li>
+                                                            @if (document.OwnerId == User.GetUserId())
+                                                            {
+                                                                <li><hr class="dropdown-divider"></li>
+                                                                <li>
+                                                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteDocument(@document.Id, '@Html.Raw(Html.Encode(document.Title))'); return false;">
+                                                                        <i class="bi bi-trash me-2"></i>Delete
+                                                                    </a>
+                                                                </li>
+                                                            }
                                                         </ul>
                                                     </div>
                                                 </td>
@@ -450,6 +466,52 @@
                 }
             });
         });
+
+        // Document download function
+        function downloadDocument(documentId) {
+            // Create a form and submit it to trigger download
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/Documents/Details/' + documentId + '?handler=Download';
+            
+            // Add anti-forgery token
+            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (token) {
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token.value;
+                form.appendChild(tokenInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+
+        // Document deletion confirmation
+        function confirmDeleteDocument(documentId, documentTitle) {
+            if (confirm(`Are you sure you want to delete "${documentTitle}"?\n\nThis action cannot be undone.`)) {
+                // Create a form and submit it to trigger deletion
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Documents/Details/' + documentId + '?handler=Delete';
+                
+                // Add anti-forgery token
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = token.value;
+                    form.appendChild(tokenInput);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            }
+        }
     </script>
 }
 
@@ -493,20 +555,61 @@
         color: #0d6efd;
     }
 
+    /* Table container fixes - remove unwanted scrollbars */
+    .table-container {
+        width: 100%;
+        overflow: visible; /* Changed from auto to visible */
+        border: none;
+    }
+
+    .table {
+        margin-bottom: 0;
+        width: 100%;
+        table-layout: fixed; /* Fixed table layout to prevent column width issues */
+    }
+
     .table th {
         border-top: none;
         font-weight: 600;
         color: #495057;
+        white-space: nowrap; /* Prevent header text wrapping */
     }
 
+    .table td {
+        vertical-align: middle;
+        border-top: 1px solid #dee2e6;
+    }
+
+    /* Text truncation fixes for table cells */
+    .table td .text-truncate {
+        max-width: 200px; /* Set max width for proper truncation */
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        display: block;
+    }
+
+    .table td .fw-medium.text-truncate {
+        max-width: 250px; /* Slightly larger for titles */
+    }
+
+    /* Dropdown menu fixes for proper visibility */
     .dropdown-menu {
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
         border: 1px solid rgba(0, 0, 0, 0.1);
+        z-index: 1050; /* Ensure dropdown appears above other elements */
+        min-width: 160px; /* Minimum width for better readability */
+    }
+
+    .dropdown-menu-end {
+        right: 0;
+        left: auto;
     }
 
     .dropdown-item {
         padding: 0.5rem 1rem;
         transition: background-color 0.2s ease-in-out;
+        white-space: nowrap; /* Prevent text wrapping in dropdown items */
     }
 
     .dropdown-item:hover {
@@ -516,6 +619,30 @@
     .dropdown-item i {
         width: 1rem;
         margin-right: 0.5rem;
+    }
+
+    .dropdown-divider {
+        margin: 0.25rem 0;
+    }
+
+    /* Button and action column fixes */
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Ensure actions column has proper width and doesn't overflow */
+    .table th:last-child,
+    .table td:last-child {
+        width: 120px;
+        min-width: 120px;
+        text-align: right;
+    }
+
+    /* Flex container fixes for document info */
+    .d-flex.align-items-center .min-w-0 {
+        min-width: 0;
+        overflow: hidden;
     }
 
     .alert {
@@ -537,9 +664,18 @@
         font-weight: 500;
     }
 
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
+    /* Tab content container - prevent scrollbars */
+    .tab-content {
+        overflow: visible;
+    }
+
+    .tab-pane {
+        overflow: visible;
+    }
+
+    /* Card body overflow fix */
+    .card-body {
+        overflow: visible;
     }
 
     @@media (max-width: 768px) {
@@ -550,6 +686,17 @@
         
         .card-body {
             padding: 1rem;
+        }
+
+        /* Mobile table adjustments */
+        .table-container {
+            overflow-x: auto; /* Only allow horizontal scroll on mobile */
+            overflow-y: visible;
+        }
+
+        .dropdown-menu {
+            position: fixed !important; /* Use fixed positioning on mobile */
+            z-index: 1055;
         }
     }
 </style>

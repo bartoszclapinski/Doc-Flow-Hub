@@ -112,3 +112,125 @@ main {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Dashboard-specific fixes for text overflow */
+.min-w-0 {
+  min-width: 0 !important;
+}
+
+/* Enhanced text truncation for dashboard */
+.dashboard-text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+/* Fix for flex container text truncation */
+.flex-grow-1.min-w-0 .text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+/* Dashboard list item content constraints */
+.document-item .flex-grow-1,
+.team-item .flex-grow-1 {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.document-item .text-truncate,
+.team-item .text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+/* Timeline content constraints */
+.timeline-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.timeline-content .text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+/* Additional constraints for description text */
+.document-item p.text-truncate,
+.team-item p.text-truncate,
+.timeline-content p.text-truncate {
+  margin-bottom: 0.25rem !important;
+  line-height: 1.3;
+  max-width: calc(100% - 20px);
+}
+
+/* Ensure proper spacing and alignment */
+.list-group-item-action {
+  padding: 0.75rem 1rem;
+}
+
+.d-flex.align-items-start .flex-grow-1 {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Responsive dashboard improvements */
+@media (max-width: 767.98px) {
+  /* Stack dashboard cards vertically on mobile */
+  .card-stats {
+    margin-bottom: 1rem;
+  }
+  
+  /* Reduce padding on mobile */
+  .list-group-item-action {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  /* Adjust icon container size on mobile */
+  .icon-container {
+    width: 45px !important;
+    height: 45px !important;
+  }
+  
+  /* Better text sizing on mobile */
+  .dashboard-text-truncate {
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+  
+  /* Timeline adjustments for mobile */
+  .timeline {
+    padding-left: 20px;
+  }
+  
+  .timeline-marker {
+    left: -20px;
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* Medium screen improvements */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  /* Adjust spacing for medium screens */
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Better badge positioning */
+  .badge.flex-shrink-0 {
+    white-space: nowrap;
+  }
+}

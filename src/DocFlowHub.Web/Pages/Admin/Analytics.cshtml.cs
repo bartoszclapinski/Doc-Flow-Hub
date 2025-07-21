@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.AI;
+using DocFlowHub.Core.Models.Analytics;
 using DocFlowHub.Core.Models.Common;
 
 namespace DocFlowHub.Web.Pages.Admin;
@@ -11,19 +12,28 @@ namespace DocFlowHub.Web.Pages.Admin;
 public class AnalyticsModel : PageModel
 {
     private readonly IAIUsageTrackingService _usageTrackingService;
+    private readonly IAnalyticsService _analyticsService;
     private readonly ILogger<AnalyticsModel> _logger;
 
     public AnalyticsModel(
         IAIUsageTrackingService usageTrackingService,
+        IAnalyticsService analyticsService,
         ILogger<AnalyticsModel> logger)
     {
         _usageTrackingService = usageTrackingService;
+        _analyticsService = analyticsService;
         _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)]
     public int Period { get; set; } = 30;
 
+    // New comprehensive analytics properties
+    public SystemAnalytics? SystemAnalytics { get; set; }
+    public AnalyticsTrends? AnalyticsTrends { get; set; }
+    public RealTimeDashboard? RealTimeDashboard { get; set; }
+    
+    // Legacy AI-specific properties (for backward compatibility)
     public SystemUsageStatistics? SystemStats { get; set; }
     public UsageTrends? UsageTrends { get; set; }
     public List<ExpensiveOperation>? ExpensiveOperations { get; set; }
@@ -62,6 +72,71 @@ public class AnalyticsModel : PageModel
             _logger.LogError(ex, "Error refreshing analytics data");
             StatusMessage = "Error refreshing analytics data. Please try again.";
             return RedirectToPage();
+        }
+    }
+
+    public async Task<IActionResult> OnGetSystemAnalyticsAsync()
+    {
+        try
+        {
+            var fromDate = DateTime.UtcNow.AddDays(-Period);
+            var result = await _analyticsService.GetSystemAnalyticsAsync(fromDate);
+            
+            if (result.Succeeded)
+            {
+                return new JsonResult(new
+                {
+                    success = true,
+                    data = result.Data
+                });
+            }
+
+            return new JsonResult(new
+            {
+                success = false,
+                error = result.Error
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting system analytics via API");
+            return new JsonResult(new
+            {
+                success = false,
+                error = "Failed to retrieve system analytics"
+            });
+        }
+    }
+
+    public async Task<IActionResult> OnGetRealTimeDashboardAsync()
+    {
+        try
+        {
+            var result = await _analyticsService.GetRealTimeDashboardAsync();
+            
+            if (result.Succeeded)
+            {
+                return new JsonResult(new
+                {
+                    success = true,
+                    data = result.Data
+                });
+            }
+
+            return new JsonResult(new
+            {
+                success = false,
+                error = result.Error
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting real-time dashboard via API");
+            return new JsonResult(new
+            {
+                success = false,
+                error = "Failed to retrieve real-time dashboard"
+            });
         }
     }
 
@@ -198,31 +273,58 @@ public class AnalyticsModel : PageModel
     private async Task LoadAnalyticsDataAsync()
     {
         var fromDate = DateTime.UtcNow.AddDays(-Period);
+        var toDate = DateTime.UtcNow;
 
-        // Load system usage statistics
+        // Load comprehensive system analytics
+        var systemAnalyticsResult = await _analyticsService.GetSystemAnalyticsAsync(fromDate, toDate);
+        if (systemAnalyticsResult.Succeeded)
+        {
+            SystemAnalytics = systemAnalyticsResult.Data;
+            _logger.LogDebug("Loaded comprehensive system analytics for {Period} days", Period);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to load system analytics: {Error}", systemAnalyticsResult.Error);
+            SystemAnalytics = new SystemAnalytics(); // Provide empty analytics to prevent UI errors
+        }
+
+        // Load analytics trends
+        var trendsResult = await _analyticsService.GetAnalyticsTrendsAsync(fromDate, toDate);
+        if (trendsResult.Succeeded)
+        {
+            AnalyticsTrends = trendsResult.Data;
+            _logger.LogDebug("Loaded analytics trends for {Period} days", Period);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to load analytics trends: {Error}", trendsResult.Error);
+            AnalyticsTrends = new AnalyticsTrends { StartDate = fromDate, EndDate = toDate };
+        }
+
+        // Load real-time dashboard
+        var dashboardResult = await _analyticsService.GetRealTimeDashboardAsync();
+        if (dashboardResult.Succeeded)
+        {
+            RealTimeDashboard = dashboardResult.Data;
+            _logger.LogDebug("Loaded real-time dashboard data");
+        }
+        else
+        {
+            _logger.LogWarning("Failed to load real-time dashboard: {Error}", dashboardResult.Error);
+            RealTimeDashboard = new RealTimeDashboard { LastUpdated = DateTime.UtcNow };
+        }
+
+        // Legacy AI analytics (for backward compatibility)
         var systemStatsResult = await _usageTrackingService.GetSystemUsageStatisticsAsync(fromDate);
         if (systemStatsResult.Succeeded)
         {
             SystemStats = systemStatsResult.Data;
-            _logger.LogDebug("Loaded system statistics for {Period} days", Period);
+            _logger.LogDebug("Loaded legacy AI system statistics for {Period} days", Period);
         }
         else
         {
-            _logger.LogWarning("Failed to load system statistics: {Error}", systemStatsResult.Error);
+            _logger.LogWarning("Failed to load legacy system statistics: {Error}", systemStatsResult.Error);
             SystemStats = new SystemUsageStatistics(); // Provide empty stats to prevent UI errors
-        }
-
-        // Load usage trends
-        var trendsResult = await _usageTrackingService.GetUsageTrendsAsync(null, Period);
-        if (trendsResult.Succeeded)
-        {
-            UsageTrends = trendsResult.Data;
-            _logger.LogDebug("Loaded usage trends for {Period} days", Period);
-        }
-        else
-        {
-            _logger.LogWarning("Failed to load usage trends: {Error}", trendsResult.Error);
-            UsageTrends = new UsageTrends(); // Provide empty trends to prevent UI errors
         }
 
         // Load expensive operations
@@ -238,20 +340,6 @@ public class AnalyticsModel : PageModel
             ExpensiveOperations = new List<ExpensiveOperation>(); // Provide empty list to prevent UI errors
         }
 
-        // Load error statistics
-        var errorStatsResult = await _usageTrackingService.GetErrorRateStatisticsAsync(fromDate);
-        if (errorStatsResult.Succeeded)
-        {
-            ErrorStats = errorStatsResult.Data;
-            _logger.LogDebug("Loaded error statistics with {ErrorRate:F2}% error rate", 
-                ErrorStats?.OverallErrorRate ?? 0);
-        }
-        else
-        {
-            _logger.LogWarning("Failed to load error statistics: {Error}", errorStatsResult.Error);
-            ErrorStats = new ErrorRateStatistics(); // Provide empty stats to prevent UI errors
-        }
-
-        _logger.LogInformation("Analytics data loaded successfully for {Period} day period", Period);
+        _logger.LogInformation("Comprehensive analytics data loaded successfully for {Period} day period", Period);
     }
 } 

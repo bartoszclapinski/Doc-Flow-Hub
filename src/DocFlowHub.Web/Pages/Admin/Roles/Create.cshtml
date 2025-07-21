@@ -3,36 +3,131 @@
 @{
     ViewData["Title"] = "Create Role";
     ViewData["ActivePage"] = "Roles";
-    Layout = "../_AdminLayout";
+    Layout = "_AdminLayout";
 }
 
-<div class="row">
-    <div class="col-md-8 offset-md-2">
-        <div class="card">
-            <div class="card-header">
-                <h4>@ViewData["Title"]</h4>
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Admin/Index">Admin Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Roles</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Create Role</li>
+            </ol>
+        </nav>
+        <h2>@ViewData["Title"]</h2>
+        <p class="text-muted">Create a new role for user authorization and access control.</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-badge me-2"></i>New Role
+                </h5>
             </div>
             <div class="card-body">
-                <partial name="_StatusMessage" />
-                
                 <form method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <!-- Role Information -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-info-circle me-1"></i>Role Information
+                            </h6>
+                        </div>
+                    </div>
                     
                     <div class="mb-3">
-                        <label asp-for="Input.Name" class="form-label"></label>
-                        <input asp-for="Input.Name" class="form-control" />
+                        <label asp-for="Input.Name" class="form-label fw-bold">
+                            Role Name <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Input.Name" class="form-control" placeholder="Enter role name (e.g., Manager, Editor, Viewer)" />
                         <span asp-validation-for="Input.Name" class="text-danger"></span>
+                        <div class="form-text">The role name is used for authorization and must be unique. Use clear, descriptive names.</div>
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.Description" class="form-label"></label>
-                        <textarea asp-for="Input.Description" class="form-control" rows="3"></textarea>
+                        <label asp-for="Input.Description" class="form-label fw-bold">Description</label>
+                        <textarea asp-for="Input.Description" class="form-control" rows="4" 
+                                  placeholder="Describe the purpose and permissions of this role..."></textarea>
                         <span asp-validation-for="Input.Description" class="text-danger"></span>
+                        <div class="form-text">Provide a clear description of what this role is used for and what permissions it grants.</div>
                     </div>
 
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary">Create Role</button>
-                        <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                    <!-- Role Guidelines -->
+                    <div class="row mb-4">
+                        <div class="col">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-lightbulb me-1"></i>Role Guidelines
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title text-info">
+                                <i class="bi bi-info-circle me-1"></i>Best Practices for Role Creation
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li><strong>Use descriptive names:</strong> Choose names that clearly indicate the role's purpose (e.g., "Document Manager", "Team Lead")</li>
+                                <li><strong>Follow conventions:</strong> Use PascalCase for role names and avoid special characters</li>
+                                <li><strong>Be specific:</strong> Create focused roles rather than overly broad permissions</li>
+                                <li><strong>Plan hierarchy:</strong> Consider how roles relate to each other in your organization</li>
+                                <li><strong>Document permissions:</strong> Use the description to clearly explain what users with this role can do</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Common Role Examples -->
+                    <div class="card border-info mb-4">
+                        <div class="card-header bg-info bg-opacity-10">
+                            <h6 class="card-title mb-0 text-info">
+                                <i class="bi bi-lightbulb me-1"></i>Common Role Examples
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong class="text-primary">Administrator</strong>
+                                        <p class="small text-muted mb-0">Full system access and user management</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-success">Manager</strong>
+                                        <p class="small text-muted mb-0">Team and content management capabilities</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong class="text-warning">Editor</strong>
+                                        <p class="small text-muted mb-0">Document creation and editing permissions</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-info">Viewer</strong>
+                                        <p class="small text-muted mb-0">Read-only access to documents and data</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between pt-3 border-top">
+                        <a asp-page="./Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Back to Roles
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="clearForm()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Clear Form
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Create Role
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -41,5 +136,77 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    
+    <script>
+        function clearForm() {
+            if (confirm("Are you sure you want to clear all form data?")) {
+                document.querySelector("form").reset();
+            }
+        }
+        
+        // Role name validation and suggestions
+        document.querySelector("input[name='Input.Name']").addEventListener("input", function(e) {
+            const roleName = e.target.value.trim();
+            const namePattern = /^[a-zA-Z][a-zA-Z0-9_\s]*$/;
+            
+            if (roleName.length > 0) {
+                if (namePattern.test(roleName) && roleName.length >= 2) {
+                    e.target.classList.remove("is-invalid");
+                    e.target.classList.add("is-valid");
+                } else {
+                    e.target.classList.add("is-invalid");
+                    e.target.classList.remove("is-valid");
+                }
+            } else {
+                e.target.classList.remove("is-invalid", "is-valid");
+            }
+        });
+        
+        // Auto-generate description suggestions
+        document.querySelector("input[name='Input.Name']").addEventListener("blur", function(e) {
+            const roleName = e.target.value.trim().toLowerCase();
+            const descriptionField = document.querySelector("textarea[name='Input.Description']");
+            
+            if (roleName && !descriptionField.value.trim()) {
+                let suggestion = "";
+                
+                if (roleName.includes("admin")) {
+                    suggestion = "Full administrative access to all system features, user management, and system configuration.";
+                } else if (roleName.includes("manager")) {
+                    suggestion = "Team and content management capabilities with oversight responsibilities.";
+                } else if (roleName.includes("editor")) {
+                    suggestion = "Document creation, editing, and content management permissions.";
+                } else if (roleName.includes("viewer")) {
+                    suggestion = "Read-only access to documents and system data without modification rights.";
+                } else {
+                    suggestion = `Users with the ${roleName} role have specific permissions tailored to their responsibilities.`;
+                }
+                
+                descriptionField.value = suggestion;
+                descriptionField.focus();
+                descriptionField.select();
+            }
+        });
+        
+        // Character counter for description
+        const descriptionTextarea = document.querySelector("textarea[name='Input.Description']");
+        if (descriptionTextarea) {
+            const maxLength = 500;
+            const counter = document.createElement("div");
+            counter.className = "form-text text-end";
+            counter.style.marginTop = "-0.5rem";
+            descriptionTextarea.parentNode.appendChild(counter);
+            
+            function updateCounter() {
+                const remaining = maxLength - descriptionTextarea.value.length;
+                counter.textContent = `${descriptionTextarea.value.length}/${maxLength} characters`;
+                counter.className = `form-text text-end ${remaining < 50 ? "text-warning" : ""}`;
+            }
+            
+            descriptionTextarea.addEventListener("input", updateCounter);
+            updateCounter();
+        }
+    </script>
 } 

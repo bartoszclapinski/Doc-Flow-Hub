@@ -1,0 +1,271 @@
+@page "{id?}"
+@model DocFlowHub.Web.Pages.Admin.Roles.EditModel
+@{
+    ViewData["Title"] = "Edit Role";
+    ViewData["ActivePage"] = "Roles";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="/Admin/Index">Admin Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-page="./Index">Roles</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit @Model.Input?.Name</li>
+            </ol>
+        </nav>
+        <h2>@ViewData["Title"]</h2>
+        <p class="text-muted">Update role information and settings.</p>
+    </div>
+</div>
+
+@if (Model.Input == null)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Role not found or access denied.
+    </div>
+}
+else
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <form method="post">
+                <input type="hidden" asp-for="Input.Id" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <!-- Role Information -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-person-badge me-2"></i>Role Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="Input.Name" class="form-label fw-bold">
+                                    Role Name <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="Input.Name" class="form-control" placeholder="Enter role name" />
+                                <span asp-validation-for="Input.Name" class="text-danger"></span>
+                                <div class="form-text">The role name is used for authorization and must be unique.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label asp-for="Input.Description" class="form-label fw-bold">Description</label>
+                                <textarea asp-for="Input.Description" class="form-control" rows="4" 
+                                          placeholder="Enter a detailed description of this role's purpose and permissions"></textarea>
+                                <span asp-validation-for="Input.Description" class="text-danger"></span>
+                                <div class="form-text">Provide a clear description of what this role is used for.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Statistics (Read-only) -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-graph-up me-2"></i>Role Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <div class="bg-primary bg-opacity-10 rounded p-3">
+                                    <div class="fw-bold text-primary fs-4">@Model.RoleStats?.UsersCount ?? 0</div>
+                                    <small class="text-muted">Assigned Users</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="bg-success bg-opacity-10 rounded p-3">
+                                    <div class="fw-bold text-success fs-4">@Model.RoleStats?.ActiveUsers ?? 0</div>
+                                    <small class="text-muted">Active Users</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="bg-warning bg-opacity-10 rounded p-3">
+                                    <div class="fw-bold text-warning fs-4">@((DateTime.UtcNow - (Model.RoleStats?.CreatedAt ?? DateTime.UtcNow)).Days)</div>
+                                    <small class="text-muted">Days Active</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="bg-info bg-opacity-10 rounded p-3">
+                                    <div class="fw-bold text-info fs-4">100%</div>
+                                    <small class="text-muted">Uptime</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Role ID:</strong>
+                                    <span class="text-muted">@Model.Input.Id</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Created:</strong>
+                                    <span class="text-muted">@Model.RoleStats?.CreatedAt.ToString("MMMM dd, yyyy")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Warnings -->
+                @if (Model.Input.Name == "Administrator")
+                {
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Security Warning
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-shield-exclamation me-2"></i>
+                                <strong>Administrator Role</strong><br>
+                                This role has full system privileges. Changes to this role affect all administrative functions.
+                                Be extremely careful when modifying the Administrator role.
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Assigned Users Preview -->
+                @if (Model.AssignedUsers.Any())
+                {
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-people me-2"></i>Assigned Users (@Model.AssignedUsers.Count)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                @foreach (var user in Model.AssignedUsers.Take(6))
+                                {
+                                    <div class="col-md-4 mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center me-2" 
+                                                 style="width: 32px; height: 32px;">
+                                                <i class="bi bi-person text-primary small"></i>
+                                            </div>
+                                            <div class="flex-grow-1 min-w-0">
+                                                <div class="text-truncate small fw-medium">@user.FullName</div>
+                                                <div class="text-truncate text-muted small">@user.Email</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (Model.AssignedUsers.Count > 6)
+                                {
+                                    <div class="col-md-4 mb-2">
+                                        <div class="text-center py-2">
+                                            <span class="text-muted">+@(Model.AssignedUsers.Count - 6) more users</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="mt-2">
+                                <a asp-page="./Details" asp-route-id="@Model.Input.Id" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye me-1"></i>View All Users
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a asp-page="./Details" asp-route-id="@Model.Input.Id" class="btn btn-outline-info">
+                                    <i class="bi bi-eye me-1"></i>View Details
+                                </a>
+                                <a asp-page="./Index" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Roles
+                                </a>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-outline-warning me-2" onclick="resetForm()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Reset Changes
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check2 me-1"></i>Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    
+    <script>
+        function resetForm() {
+            if (confirm("Are you sure you want to reset all changes? This will restore the original values.")) {
+                window.location.reload();
+            }
+        }
+        
+        // Role name validation
+        document.querySelector("input[name='Input.Name']").addEventListener("input", function(e) {
+            const roleName = e.target.value.trim();
+            const namePattern = /^[a-zA-Z][a-zA-Z0-9_\s]*$/;
+            
+            if (roleName.length > 0) {
+                if (namePattern.test(roleName) && roleName.length >= 2) {
+                    e.target.classList.remove("is-invalid");
+                    e.target.classList.add("is-valid");
+                } else {
+                    e.target.classList.add("is-invalid");
+                    e.target.classList.remove("is-valid");
+                }
+            } else {
+                e.target.classList.remove("is-invalid", "is-valid");
+            }
+        });
+        
+        // Description character counter
+        const descriptionTextarea = document.querySelector("textarea[name='Input.Description']");
+        if (descriptionTextarea) {
+            const maxLength = 500;
+            const counter = document.createElement("div");
+            counter.className = "form-text text-end";
+            counter.style.marginTop = "-0.5rem";
+            descriptionTextarea.parentNode.appendChild(counter);
+            
+            function updateCounter() {
+                const remaining = maxLength - descriptionTextarea.value.length;
+                counter.textContent = `${descriptionTextarea.value.length}/${maxLength} characters`;
+                counter.className = `form-text text-end ${remaining < 50 ? "text-warning" : ""}`;
+            }
+            
+            descriptionTextarea.addEventListener("input", updateCounter);
+            updateCounter();
+        }
+        
+        // Warn about critical role changes
+        const originalName = document.querySelector("input[name='Input.Name']").value;
+        document.querySelector("form").addEventListener("submit", function(e) {
+            const newName = document.querySelector("input[name='Input.Name']").value;
+            
+            if ((originalName === "Administrator" || newName === "Administrator") && originalName !== newName) {
+                if (!confirm("You are modifying the Administrator role name. This may affect system security. Are you sure you want to continue?")) {
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+} 

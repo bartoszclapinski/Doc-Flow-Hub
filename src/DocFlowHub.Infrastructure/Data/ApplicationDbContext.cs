@@ -1,6 +1,7 @@
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Models;
 using DocFlowHub.Core.Models.AI;
+using DocFlowHub.Core.Models.Admin;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Projects;
 using DocFlowHub.Infrastructure.Data.Configurations;
@@ -31,6 +32,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<VersionComparison> VersionComparisons { get; set; }
     public DbSet<AISettings> AISettings { get; set; }
     public DbSet<AIUsageLog> AIUsageLogs { get; set; }
+    
+    // Admin entities
+    public DbSet<SystemSettings> SystemSettings { get; set; }
+    
+    // User Management entities
+    public DbSet<UserActivityLog> UserActivityLogs { get; set; }
+    public DbSet<UserSecurityEvent> UserSecurityEvents { get; set; }
+    public DbSet<UserCommunicationEntity> UserCommunications { get; set; }
+    public DbSet<UserLoginAttempt> UserLoginAttempts { get; set; }
+    public DbSet<UserDevice> UserDevices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -73,5 +84,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new VersionComparisonConfiguration());
         builder.ApplyConfiguration(new AISettingsConfiguration());
         builder.ApplyConfiguration(new AIUsageLogConfiguration());
+        
+        // Apply admin configurations
+        builder.ApplyConfiguration(new SystemSettingsConfiguration());
+        
+        // Apply user management configurations
+        builder.ApplyConfiguration(new UserActivityLogConfiguration());
+        builder.ApplyConfiguration(new UserSecurityEventConfiguration());
+        builder.ApplyConfiguration(new UserCommunicationConfiguration());
+        builder.ApplyConfiguration(new UserLoginAttemptConfiguration());
+        builder.ApplyConfiguration(new UserDeviceConfiguration());
     }
 } 
