@@ -283,12 +283,129 @@ public class UserManagementService : IUserManagementService
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return ServiceResult.Failure("User not found");
 
-        var result = await _userManager.DeleteAsync(user);
-        if (!result.Succeeded)
-            return ServiceResult.Failure(string.Join(", ", result.Errors.Select(e => e.Description)));
+        _logger.LogInformation("Starting deletion process for user {UserId} ({Email})", userId, user.Email);
 
-        await LogUserActivityAsync(adminId, "UserDeleted", $"Deleted user {user.Email}", userId, user.Email);
-        return ServiceResult.Success();
+        try
+        {
+            // Prevent deletion of admin users
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Contains("Administrator"))
+            {
+                _logger.LogWarning("Attempted to delete administrator user {UserId}", userId);
+                return ServiceResult.Failure("Cannot delete administrator users");
+            }
+
+            // Start transaction for safe deletion
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // 1. Delete user activity logs and communication
+                var activityLogs = await _context.UserActivityLogs.Where(x => x.UserId == userId).ToListAsync();
+                _context.UserActivityLogs.RemoveRange(activityLogs);
+
+                var securityEvents = await _context.UserSecurityEvents.Where(x => x.UserId == userId).ToListAsync();
+                _context.UserSecurityEvents.RemoveRange(securityEvents);
+
+                var communications = await _context.UserCommunications.Where(x => x.UserId == userId).ToListAsync();
+                _context.UserCommunications.RemoveRange(communications);
+
+                var loginAttempts = await _context.UserLoginAttempts.Where(x => x.UserId == userId).ToListAsync();
+                _context.UserLoginAttempts.RemoveRange(loginAttempts);
+
+                var devices = await _context.UserDevices.Where(x => x.UserId == userId).ToListAsync();
+                _context.UserDevices.RemoveRange(devices);
+
+                // 2. Transfer or delete user's documents
+                var documents = await _context.Documents.Where(d => d.OwnerId == userId).ToListAsync();
+                foreach (var doc in documents)
+                {
+                    // Mark as deleted instead of hard delete to preserve references
+                    doc.IsDeleted = true;
+                    doc.UpdatedAt = DateTime.UtcNow;
+                }
+
+                // 3. Transfer ownership of teams to another admin or delete if no members
+                var ownedTeams = await _context.Teams.Where(t => t.OwnerId == userId).ToListAsync();
+                foreach (var team in ownedTeams)
+                {
+                    var teamMembers = await _context.TeamMembers.Where(tm => tm.TeamId == team.Id && tm.UserId != userId).ToListAsync();
+                    if (teamMembers.Any())
+                    {
+                        // Transfer ownership to first remaining member
+                        team.OwnerId = teamMembers.First().UserId;
+                    }
+                    else
+                    {
+                        // No other members, delete the team
+                        var allTeamMembers = await _context.TeamMembers.Where(tm => tm.TeamId == team.Id).ToListAsync();
+                        _context.TeamMembers.RemoveRange(allTeamMembers);
+                        _context.Teams.Remove(team);
+                    }
+                }
+
+                // 4. Remove user from all team memberships
+                var teamMemberships = await _context.TeamMembers.Where(tm => tm.UserId == userId).ToListAsync();
+                _context.TeamMembers.RemoveRange(teamMemberships);
+
+                // 5. Transfer or delete user's projects
+                var ownedProjects = await _context.Projects.Where(p => p.OwnerId == userId).ToListAsync();
+                foreach (var project in ownedProjects)
+                {
+                    // Mark as inactive instead of deleting to preserve structure
+                    project.IsActive = false;
+                    project.UpdatedAt = DateTime.UtcNow;
+                    // Could transfer to team owner if project has team association
+                }
+
+                // 6. Handle folders created by user
+                var createdFolders = await _context.Folders.Where(f => f.CreatedByUserId == userId).ToListAsync();
+                foreach (var folder in createdFolders)
+                {
+                    // Mark as archived instead of deleting
+                    folder.IsArchived = true;
+                    folder.UpdatedAt = DateTime.UtcNow;
+                }
+
+                // 7. Delete AI settings
+                var aiSettings = await _context.AISettings.Where(a => a.UserId == userId).ToListAsync();
+                _context.AISettings.RemoveRange(aiSettings);
+
+                // 8. Save all changes before deleting user
+                await _context.SaveChangesAsync();
+
+                // 9. Finally delete the user
+                _logger.LogInformation("Attempting to delete user {UserId} from Identity tables", userId);
+                var result = await _userManager.DeleteAsync(user);
+                if (!result.Succeeded)
+                {
+                    _logger.LogError("Failed to delete user {UserId}: {Errors}", userId, string.Join(", ", result.Errors.Select(e => e.Description)));
+                    await transaction.RollbackAsync();
+                    return ServiceResult.Failure(string.Join(", ", result.Errors.Select(e => e.Description)));
+                }
+
+                _logger.LogInformation("Successfully deleted user {UserId} from Identity tables", userId);
+
+                // 10. Log the deletion activity within the transaction
+                await LogUserActivityAsync(adminId, "UserDeleted", $"Deleted user {user.Email} and cleaned up related data", userId, user.Email);
+
+                // 11. Commit transaction
+                await transaction.CommitAsync();
+                _logger.LogInformation("Transaction committed successfully for user deletion {UserId}", userId);
+                return ServiceResult.Success();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error during user deletion transaction for user {UserId}", userId);
+                return ServiceResult.Failure($"Failed to delete user: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting user {UserId}", userId);
+            return ServiceResult.Failure($"Failed to delete user: {ex.Message}");
+        }
     }
 
     private async Task<ServiceResult> AssignRoleToUserAsync(string userId, string role, string adminId)

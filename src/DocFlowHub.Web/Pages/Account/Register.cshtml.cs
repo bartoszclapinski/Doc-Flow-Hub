@@ -1,20 +1,14 @@
 #nullable disable
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using DocFlowHub.Core.Identity;
 
@@ -27,21 +21,18 @@ namespace DocFlowHub.Web.Pages.Account
         private readonly IUserStore<ApplicationUser> _userStore;
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
-        private readonly IEmailSender _emailSender;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            ILogger<RegisterModel> logger)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
-            _emailSender = emailSender;
         }
 
         [BindProperty]
@@ -53,6 +44,16 @@ namespace DocFlowHub.Web.Pages.Account
 
         public class InputModel
         {
+            [Required]
+            [StringLength(50, ErrorMessage = "The {0} must be at most {1} characters long.")]
+            [Display(Name = "First Name")]
+            public string FirstName { get; set; } = string.Empty;
+
+            [Required]
+            [StringLength(50, ErrorMessage = "The {0} must be at most {1} characters long.")]
+            [Display(Name = "Last Name")]
+            public string LastName { get; set; } = string.Empty;
+
             [Required]
             [EmailAddress]
             [Display(Name = "Email")]
@@ -92,27 +93,33 @@ namespace DocFlowHub.Web.Pages.Account
                 {
                     _logger.LogInformation("User created a new account with password.");
 
-                    var userId = await _userManager.GetUserIdAsync(user);
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { userId = userId, code = code, returnUrl = returnUrl },
-                        protocol: Request.Scheme);
-
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-
-                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                    // For development, auto-confirm email and sign in user directly
+                    // In production, you would send actual email confirmation
+                    try
                     {
-                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
+                        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                        var confirmResult = await _userManager.ConfirmEmailAsync(user, token);
+                        
+                        if (confirmResult.Succeeded)
+                        {
+                            _logger.LogInformation("User email auto-confirmed for development.");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to auto-confirm email: {Errors}", 
+                                string.Join(", ", confirmResult.Errors.Select(e => e.Description)));
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl);
+                        _logger.LogError(ex, "Error during email confirmation process");
                     }
+
+                    // Sign in the user immediately
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    _logger.LogInformation("User automatically signed in after registration.");
+                    
+                    return LocalRedirect(returnUrl);
                 }
                 foreach (var error in result.Errors)
                 {
@@ -128,7 +135,12 @@ namespace DocFlowHub.Web.Pages.Account
         {
             try
             {
-                return Activator.CreateInstance<ApplicationUser>();
+                var user = Activator.CreateInstance<ApplicationUser>();
+                user.FirstName = Input.FirstName;
+                user.LastName = Input.LastName;
+                user.CreatedAt = DateTime.UtcNow;
+                user.IsActive = true;
+                return user;
             }
             catch
             {

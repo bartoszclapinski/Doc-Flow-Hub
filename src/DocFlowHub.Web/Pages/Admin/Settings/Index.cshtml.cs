@@ -42,7 +42,7 @@ public class IndexModel : PageModel
         var result = await _systemSettingsService.UpdateSettingsAsync(SettingsRequest, userId);
         
         if (result.Succeeded)
-        {
+    {
             TempData["SuccessMessage"] = "Settings updated successfully.";
         }
         else

@@ -47,10 +47,10 @@ public class IndexModel : PageModel
     public BulkUserOperation BulkOperation { get; set; } = new();
     
     [BindProperty]
-    public string SendMessageSubject { get; set; } = string.Empty;
+    public string? SendMessageSubject { get; set; }
     
     [BindProperty]
-    public string SendMessageContent { get; set; } = string.Empty;
+    public string? SendMessageContent { get; set; }
 
     [TempData]
     public string? StatusMessage { get; set; }
@@ -94,8 +94,36 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostBulkOperationAsync()
     {
+        _logger.LogInformation("Processing bulk operation request");
+        _logger.LogDebug("ModelState validation status: {IsValid}", ModelState.IsValid);
+        _logger.LogDebug("Bulk operation type: {Operation}", BulkOperation?.Operation.ToString() ?? "null");
+        _logger.LogDebug("Target user count: {Count}", BulkOperation?.UserIds?.Count ?? 0);
+
+        // Custom validation for SendMessage operation
+        if (BulkOperation?.Operation == BulkOperationType.SendMessage)
+        {
+            if (string.IsNullOrWhiteSpace(SendMessageSubject))
+                ModelState.AddModelError(nameof(SendMessageSubject), "Subject is required for sending messages.");
+            if (string.IsNullOrWhiteSpace(SendMessageContent))
+                ModelState.AddModelError(nameof(SendMessageContent), "Message content is required for sending messages.");
+        }
+
+        // Remove validation errors for message fields if not sending messages
+        if (BulkOperation?.Operation != BulkOperationType.SendMessage)
+        {
+            ModelState.Remove(nameof(SendMessageSubject));
+            ModelState.Remove(nameof(SendMessageContent));
+        }
+
+        // Remove any potential "Page" validation error
+        ModelState.Remove("Page");
+
         if (!ModelState.IsValid)
         {
+            foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+            {
+                _logger.LogWarning("ModelState validation error: {Error}", error.ErrorMessage);
+            }
             await LoadDataAsync();
             return Page();
         }
@@ -103,6 +131,18 @@ public class IndexModel : PageModel
         try
         {
             var adminId = User.GetUserId();
+            
+            // Debug logging
+            _logger.LogInformation("Bulk operation: {Operation}, UserIds count: {Count}, UserIds: {UserIds}", 
+                BulkOperation.Operation, BulkOperation.UserIds.Count, string.Join(", ", BulkOperation.UserIds));
+
+            if (BulkOperation.UserIds.Count == 0)
+            {
+                StatusMessage = "Error: No users selected for bulk operation.";
+                await LoadDataAsync();
+                return Page();
+            }
+
             var result = await _userManagementService.ExecuteBulkOperationAsync(BulkOperation, adminId);
 
             if (result.Succeeded)
@@ -116,10 +156,14 @@ public class IndexModel : PageModel
                     if (bulkResult.Errors.Count > 3)
                         StatusMessage += "...";
                 }
+
+                _logger.LogInformation("Bulk operation result: Success={Success}, Failed={Failed}, Errors={Errors}", 
+                    bulkResult.SuccessfulOperations, bulkResult.FailedOperations, string.Join(", ", bulkResult.Errors));
             }
             else
             {
                 StatusMessage = $"Error: {result.Error}";
+                _logger.LogError("Bulk operation failed: {Error}", result.Error);
             }
         }
         catch (Exception ex)
