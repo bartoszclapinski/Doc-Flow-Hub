@@ -9,6 +9,13 @@
 @inject UserManager<ApplicationUser> UserManager
 
 <ul class="navbar-nav">
+    <!-- Theme Toggle -->
+    <li class="nav-item">
+        <button id="themeToggle" class="btn btn-link nav-link text-dark border-0 d-flex align-items-center" aria-label="Toggle theme">
+            <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;">☀️</span>
+            <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;">🌙</span>
+        </button>
+    </li>
 @if (SignInManager.IsSignedIn(User))
 {
     @if (User.IsInRole("Administrator"))

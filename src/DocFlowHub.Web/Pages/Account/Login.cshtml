@@ -2,82 +2,411 @@
 @model DocFlowHub.Web.Pages.Account.LoginModel
 
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Sign In - DocFlowHub";
+    Layout = null;
 }
 
-<h1>@ViewData["Title"]</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <form id="account" method="post">
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
-                </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </form>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DocFlowHub - Enterprise Document Management System Login" />
+    <title>@ViewData["Title"]</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <!-- Theme System CSS -->
+    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
+    <!-- Custom CSS for Login -->
+    <style>
+        /* Modern Login Page Styles */
+        body {
+            font-family: var(--font-primary);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--text-primary);
+        }
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-} 
+        .login-main-container {
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-6);
+        }
+
+
+
+        .login-container {
+            background: var(--container-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-12) var(--spacing-10);
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .hero-title {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-extrabold);
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: var(--spacing-2);
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: var(--spacing-8);
+            font-weight: var(--font-weight-medium);
+        }
+
+
+
+        .modern-form-group {
+            margin-bottom: var(--spacing-6);
+        }
+
+        .modern-form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-2);
+        }
+
+        .modern-form-input {
+            width: 100%;
+            padding: var(--spacing-4);
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            transition: var(--transition-all);
+        }
+
+        .modern-form-input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-light);
+            background: var(--surface-primary);
+        }
+
+        .modern-form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .modern-checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+            margin-bottom: var(--spacing-8);
+            cursor: pointer;
+        }
+
+        .modern-checkbox {
+            width: 18px;
+            height: 18px;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-base);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .modern-checkbox input {
+            opacity: 0;
+            position: absolute;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .modern-checkbox input:checked + .checkmark {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .modern-checkbox input:checked + .checkmark:after {
+            content: '✓';
+            position: absolute;
+            color: var(--text-inverse);
+            font-size: 12px;
+            font-weight: var(--font-weight-bold);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            border-radius: var(--radius-base);
+            transition: var(--transition-all);
+        }
+
+        .modern-checkbox-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            user-select: none;
+        }
+
+        .modern-login-button {
+            width: 100%;
+            padding: var(--spacing-4);
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: var(--text-inverse);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: var(--transition-all);
+            margin-bottom: var(--spacing-6);
+        }
+
+        .modern-login-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(var(--accent-color), 0.3);
+        }
+
+        .modern-login-button:active {
+            transform: translateY(0);
+        }
+
+        .modern-links-section {
+            text-align: center;
+        }
+
+        .modern-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: var(--font-size-sm);
+            transition: var(--transition-colors);
+            margin: 0 var(--spacing-2);
+        }
+
+        .modern-link:hover {
+            color: var(--accent-hover);
+        }
+
+        .modern-divider {
+            margin: var(--spacing-4) 0;
+            color: var(--text-muted);
+        }
+
+        .validation-summary {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #f87171;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+            color: #dc2626;
+        }
+
+        .field-validation-error {
+            color: #dc2626;
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-1);
+            display: block;
+        }
+
+        .external-login-section {
+            margin-top: var(--spacing-6);
+            padding-top: var(--spacing-6);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .external-login-button {
+            width: 100%;
+            padding: var(--spacing-3);
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: var(--transition-all);
+            margin-bottom: var(--spacing-2);
+        }
+
+        .external-login-button:hover {
+            background: var(--surface-tertiary);
+            border-color: var(--accent-color);
+        }
+
+        /* Theme Toggle for Login Page */
+        .login-theme-toggle {
+            position: fixed;
+            top: var(--spacing-6);
+            right: var(--spacing-6);
+            background: var(--container-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-full);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: var(--transition-all);
+            z-index: 1000;
+        }
+
+        .login-theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive Design */
+        @@media (max-width: 768px) {
+            .login-main-container {
+                flex-direction: column;
+                gap: var(--spacing-10);
+                text-align: center;
+                padding: var(--spacing-4);
+            }
+            
+            .info-section {
+                max-width: 100%;
+            }
+            
+            .hero-title {
+                font-size: var(--font-size-3xl);
+            }
+            
+            .hero-subtitle {
+                font-size: var(--font-size-lg);
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .login-container {
+                margin: var(--spacing-5);
+                padding: var(--spacing-8) var(--spacing-6);
+            }
+            
+            .welcome-text {
+                font-size: var(--font-size-2xl);
+            }
+            
+            .hero-title {
+                font-size: var(--font-size-2xl);
+            }
+            
+            .login-main-container {
+                gap: var(--spacing-8);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button id="themeToggle" class="login-theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;">☀️</span>
+        <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;">🌙</span>
+    </button>
+
+    <div class="login-main-container">
+        <div class="login-container">
+            <div class="hero-title">DocFlowHub</div>
+            <div class="hero-subtitle">Welcome back! Sign in to your account</div>
+
+            <form id="account" method="post">
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="validation-summary" asp-validation-summary="ModelOnly" role="alert"></div>
+                }
+
+                <div class="modern-form-group">
+                    <label class="modern-form-label" asp-for="Input.Email">Email</label>
+                    <input asp-for="Input.Email" 
+                           class="modern-form-input" 
+                           autocomplete="username" 
+                           aria-required="true" 
+                           placeholder="name@example.com" />
+                    <span asp-validation-for="Input.Email" class="field-validation-error"></span>
+                </div>
+
+                <div class="modern-form-group">
+                    <label class="modern-form-label" asp-for="Input.Password">Password</label>
+                    <input asp-for="Input.Password" 
+                           class="modern-form-input" 
+                           autocomplete="current-password" 
+                           aria-required="true" 
+                           placeholder="Enter your password" />
+                    <span asp-validation-for="Input.Password" class="field-validation-error"></span>
+                </div>
+
+                <label class="modern-checkbox-container" asp-for="Input.RememberMe">
+                    <div class="modern-checkbox">
+                        <input asp-for="Input.RememberMe" />
+                        <span class="checkmark"></span>
+                    </div>
+                    <span class="modern-checkbox-label">@Html.DisplayNameFor(m => m.Input.RememberMe)</span>
+                </label>
+
+                <button id="login-submit" type="submit" class="modern-login-button">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </button>
+            </form>
+
+            <div class="modern-links-section">
+                <a id="forgot-password" asp-page="./ForgotPassword" class="modern-link">Forgot your password?</a>
+                <span class="modern-divider">•</span>
+                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="modern-link">Register as a new user</a>
+            </div>
+
+            @if ((Model.ExternalLogins?.Count ?? 0) > 0)
+            {
+                <div class="external-login-section">
+                    <h6 class="text-center mb-3 text-muted">Or continue with</h6>
+                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                        @foreach (var provider in Model.ExternalLogins!)
+                        {
+                            <button type="submit" 
+                                    class="external-login-button" 
+                                    name="provider" 
+                                    value="@provider.Name" 
+                                    title="Log in using your @provider.DisplayName account">
+                                <i class="bi bi-@provider.Name.ToLower() me-2"></i>@provider.DisplayName
+                            </button>
+                        }
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/theme-manager.js" asp-append-version="true"></script>
+    
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+    }
+</body>
+</html> 
