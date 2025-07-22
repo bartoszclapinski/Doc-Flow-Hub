@@ -110,8 +110,8 @@
 
 <div class="user-management-dashboard">
     <!-- Header and Statistics -->
-    <div class="row mb-4">
-        <div class="col">
+<div class="row mb-4">
+    <div class="col">
             <h2><i class="bi bi-people me-2"></i>@ViewData["Title"]</h2>
             <p class="text-muted">Advanced user management with analytics, security monitoring, and bulk operations.</p>
         </div>
@@ -154,17 +154,17 @@
                     <small class="text-muted">Growth trend</small>
                 </div>
             </div>
-        </div>
     </div>
+</div>
 
-    @if (!string.IsNullOrEmpty(Model.StatusMessage))
-    {
-        <div class="alert @(Model.StatusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
-            <i class="bi @(Model.StatusMessage.StartsWith("Error") ? "bi-exclamation-triangle" : "bi-check-circle") me-2"></i>
-            @Model.StatusMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert @(Model.StatusMessage.StartsWith("Error") ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        <i class="bi @(Model.StatusMessage.StartsWith("Error") ? "bi-exclamation-triangle" : "bi-check-circle") me-2"></i>
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
     <!-- Advanced Search and Filter Panel -->
     <form method="post" asp-page-handler="Search">
@@ -216,7 +216,7 @@
                         </button>
                         <button type="button" class="btn btn-outline-info" onclick="window.toggleUserBulkActions()">
                             <i class="bi bi-check2-square"></i> Bulk Actions
-                        </button>
+            </button>
                     </div>
                 </div>
             </div>
@@ -256,7 +256,7 @@
                     <input asp-for="SendMessageSubject" class="form-control" placeholder="Message subject..." />
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-warning me-2" id="executeBulkBtn" disabled>
+                    <button type="button" class="btn btn-warning me-2" id="executeBulkBtn" disabled onclick="executeBulkOperation()">
                         <i class="bi bi-lightning"></i> Execute
                     </button>
                     <span class="text-muted" id="selectedCount">0 users selected</span>
@@ -268,7 +268,7 @@
                     <textarea asp-for="SendMessageContent" class="form-control" rows="3" placeholder="Message content..."></textarea>
                 </div>
             </div>
-            <input type="hidden" asp-for="BulkOperation.UserIds" id="selectedUserIds" />
+            <!-- Hidden inputs for selected user IDs will be added dynamically by JavaScript -->
         </form>
     </div>
 
@@ -281,17 +281,17 @@
             </h5>
             <div class="d-flex gap-2">
                 <a asp-page="Create" class="btn btn-success btn-sm">
-                    <i class="bi bi-person-plus"></i> Add User
-                </a>
+            <i class="bi bi-person-plus"></i> Add User
+        </a>
                 <button type="button" class="btn btn-outline-info btn-sm" onclick="exportUsers()">
                     <i class="bi bi-download"></i> Export
                 </button>
-            </div>
-        </div>
-        <div class="card-body">
+    </div>
+    </div>
+    <div class="card-body">
             @if (Model.Users.Items.Any())
-            {
-                <div class="table-responsive">
+        {
+            <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
@@ -301,22 +301,22 @@
                                 <th>User</th>
                                 <th>Status</th>
                                 <th>Activity</th>
-                                <th>Documents</th>
-                                <th>Teams</th>
+                            <th>Documents</th>
+                            <th>Teams</th>
                                 <th>Security</th>
-                                <th>Last Login</th>
+                            <th>Last Login</th>
                                 <th width="150">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                        </tr>
+                    </thead>
+                    <tbody>
                             @foreach (var user in Model.Users.Items)
-                            {
-                                <tr>
+                        {
+                            <tr>
                                     <td>
                                         <input type="checkbox" class="form-check-input user-checkbox" value="@user.Id" onchange="updateSelectedUsers()" />
                                     </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
+                                <td>
+                                    <div class="d-flex align-items-center">
                                             <div class="user-avatar bg-primary me-2">
                                                 @(user.FirstName?.FirstOrDefault() ?? 'U')@(user.LastName?.FirstOrDefault() ?? ' ')
                                             </div>
@@ -324,8 +324,8 @@
                                                 <div class="fw-semibold">@user.FirstName @user.LastName</div>
                                                 <small class="text-muted">@user.Email</small>
                                             </div>
-                                        </div>
-                                    </td>
+                                    </div>
+                                </td>
                                     <td>
                                         @if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
                                         {
@@ -343,9 +343,9 @@
                                         @if (user.TwoFactorEnabled)
                                         {
                                             <i class="bi bi-shield-check text-success ms-1" title="2FA Enabled"></i>
-                                        }
-                                    </td>
-                                    <td>
+                                    }
+                                </td>
+                                <td>
                                         <span class="badge activity-level-badge bg-secondary" id="activity-@user.Id">
                                             Loading...
                                         </span>
@@ -359,25 +359,25 @@
                                         <span class="badge bg-warning" id="teams-@user.Id">
                                             <i class="bi bi-people"></i> Loading...
                                         </span>
-                                    </td>
-                                    <td>
+                                </td>
+                                <td>
                                         <span class="security-score" id="security-@user.Id">
                                             Loading...
                                         </span>
-                                    </td>
-                                    <td>
-                                        @if (user.LastLoginAt.HasValue)
-                                        {
+                                </td>
+                                <td>
+                                    @if (user.LastLoginAt.HasValue)
+                                    {
                                             <span title="@user.LastLoginAt.Value.ToString("yyyy-MM-dd HH:mm:ss")">
                                                 @user.LastLoginAt.Value.ToString("MMM dd")
                                             </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Never</span>
-                                        }
-                                    </td>
-                                    <td>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Never</span>
+                                    }
+                                </td>
+                                <td>
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-outline-primary btn-sm" 
                                                     onclick="viewUserDetails('@user.Id')" title="View Details">
@@ -402,21 +402,21 @@
                                                     {
                                                         <li><a class="dropdown-item" href="#" onclick="quickAction('@user.Id', 'unlock')">
                                                             <i class="bi bi-unlock"></i> Unlock Account</a></li>
-                                                    }
-                                                    else
-                                                    {
+                                    }
+                                    else
+                                    {
                                                         <li><a class="dropdown-item" href="#" onclick="quickAction('@user.Id', 'lock')">
                                                             <i class="bi bi-lock"></i> Lock Account</a></li>
                                                     }
                                                 </ul>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
                 <!-- Pagination -->
                 @if (Model.Users.TotalPages > 1)
@@ -446,9 +446,9 @@
                         </ul>
                     </nav>
                 }
-            }
-            else
-            {
+        }
+        else
+        {
                 <div class="text-center py-5">
                     <i class="bi bi-people display-4 text-muted"></i>
                     <h4 class="text-muted mt-3">No Users Found</h4>
@@ -585,10 +585,28 @@
         }
 
         function updateSelectedUsers() {
+            console.log('updateSelectedUsers called');
             const checkboxes = document.querySelectorAll('.user-checkbox:checked');
             selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
             
-            document.getElementById('selectedUserIds').value = selectedUserIds.join(',');
+            console.log('Found checkboxes:', checkboxes.length, 'Selected IDs:', selectedUserIds);
+            
+            // Clear existing hidden inputs
+            const existingInputs = document.querySelectorAll('input[name="BulkOperation.UserIds"]');
+            console.log('Removing existing inputs:', existingInputs.length);
+            existingInputs.forEach(input => input.remove());
+            
+            // Create new hidden inputs for each selected user ID
+            const form = document.getElementById('bulkOperationForm');
+            selectedUserIds.forEach(userId => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'BulkOperation.UserIds';
+                hiddenInput.value = userId;
+                form.appendChild(hiddenInput);
+                console.log('Added hidden input for user:', userId);
+            });
+            
             document.getElementById('selectedCount').textContent = `${selectedUserIds.length} users selected`;
             document.getElementById('executeBulkBtn').disabled = selectedUserIds.length === 0;
         }
@@ -698,6 +716,52 @@
         function exportUsers() {
             // Implementation for exporting users
             alert('Export functionality would be implemented here');
+        }
+
+        function executeBulkOperation() {
+            console.log('executeBulkOperation called');
+            const operation = document.getElementById('bulkOperationSelect').value;
+            const selectedCount = selectedUserIds.length;
+            
+            console.log('Operation:', operation, 'Selected count:', selectedCount, 'Selected IDs:', selectedUserIds);
+            
+            if (!operation) {
+                console.log('No operation selected');
+                alert('Please select an operation to perform.');
+                return;
+            }
+            
+            if (selectedCount === 0) {
+                console.log('No users selected');
+                alert('Please select at least one user.');
+                return;
+            }
+            
+            let confirmMessage = `Are you sure you want to ${operation.toLowerCase()} ${selectedCount} user(s)?`;
+            
+            if (operation === 'Delete') {
+                confirmMessage = `⚠️ WARNING: This will permanently delete ${selectedCount} user(s) and all their data. This action cannot be undone!\n\nAre you absolutely sure you want to proceed?`;
+            }
+            
+            console.log('Showing confirmation dialog');
+            if (confirm(confirmMessage)) {
+                console.log('User confirmed, updating form and submitting');
+                // Update the form with selected user IDs and submit
+                updateSelectedUsers();
+                
+                // Log form data before submission
+                const form = document.getElementById('bulkOperationForm');
+                const formData = new FormData(form);
+                console.log('Form data before submission:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key, value);
+                }
+                
+                console.log('Submitting form');
+                form.submit();
+            } else {
+                console.log('User cancelled operation');
+            }
         }
     </script>
 } 

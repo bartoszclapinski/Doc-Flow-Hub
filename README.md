@@ -136,39 +136,39 @@ DocFlowHub is a **comprehensive enterprise document management platform** design
 ### **Quick Setup**
 
 1. **Clone Repository**
-   ```bash
-   git clone https://github.com/bartoszclapinski/Doc-Flow-Hub.git
-   cd Doc-Flow-Hub
-   ```
+```bash
+git clone https://github.com/bartoszclapinski/Doc-Flow-Hub.git
+cd Doc-Flow-Hub
+```
 
 2. **Configure Application**
    
    Create `appsettings.Development.json`:
-   ```json
-   {
-     "ConnectionStrings": {
-       "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
-     },
-     "Storage": {
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
+  },
+  "Storage": {
        "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
-     },
-     "OpenAI": {
+  },
+  "OpenAI": {
        "ApiKey": "your_openai_api_key",
-       "Model": "gpt-4o-mini",
-       "Temperature": 0.7
-     }
-   }
-   ```
+    "Model": "gpt-4o-mini",
+    "Temperature": 0.7
+  }
+}
+```
 
 3. **Setup Database**
-   ```bash
-   dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
-   ```
+```bash
+dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
+```
 
 4. **Launch Application**
-   ```bash
-   dotnet run --project src/DocFlowHub.Web
-   ```
+```bash
+dotnet run --project src/DocFlowHub.Web
+```
 
 ### **Configuration Options**
 
@@ -273,7 +273,7 @@ DocFlowHub/
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
 
 ---
 
