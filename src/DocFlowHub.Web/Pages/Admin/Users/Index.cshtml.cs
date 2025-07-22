@@ -94,10 +94,10 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostBulkOperationAsync()
     {
-        _logger.LogInformation("🔥 OnPostBulkOperationAsync called!");
-        _logger.LogInformation("🔥 ModelState.IsValid: {IsValid}", ModelState.IsValid);
-        _logger.LogInformation("🔥 BulkOperation: {Operation}", BulkOperation?.Operation.ToString() ?? "null");
-        _logger.LogInformation("🔥 UserIds count: {Count}", BulkOperation?.UserIds?.Count ?? 0);
+        _logger.LogInformation("Processing bulk operation request");
+        _logger.LogDebug("ModelState validation status: {IsValid}", ModelState.IsValid);
+        _logger.LogDebug("Bulk operation type: {Operation}", BulkOperation?.Operation.ToString() ?? "null");
+        _logger.LogDebug("Target user count: {Count}", BulkOperation?.UserIds?.Count ?? 0);
 
         // Custom validation for SendMessage operation
         if (BulkOperation?.Operation == BulkOperationType.SendMessage)
@@ -122,7 +122,7 @@ public class IndexModel : PageModel
         {
             foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
             {
-                _logger.LogError("🔥 ModelState Error: {Error}", error.ErrorMessage);
+                _logger.LogWarning("ModelState validation error: {Error}", error.ErrorMessage);
             }
             await LoadDataAsync();
             return Page();
