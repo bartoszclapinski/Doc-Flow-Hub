@@ -580,13 +580,10 @@
                 });
             }
             
-                         // Setup theme manager
-             if (window.ThemeManager) {
-                 console.log('Setting up ThemeManager...');
-                 window.ThemeManager.init();
-             } else {
-                 console.error('ThemeManager not found!');
-             }
+            // Initialize theme manager
+            if (window.ThemeManager) {
+                window.ThemeManager.init();
+            }
 
             // Add loading states to all forms
             const forms = document.querySelectorAll('form');
