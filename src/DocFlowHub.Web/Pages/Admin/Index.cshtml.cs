@@ -36,6 +36,8 @@ public class IndexModel : PageModel
     public int DocumentsThisWeek { get; set; }
     public int TeamsThisWeek { get; set; }
     public long TotalStorageUsed { get; set; } // in bytes
+    public string StorageUsed => (TotalStorageUsed / 1024.0 / 1024.0).ToString("F1"); // in MB
+    public int ActiveSessions { get; set; }
     public List<RecentUserActivity> RecentActivities { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
@@ -154,6 +156,9 @@ public class IndexModel : PageModel
     {
         try
         {
+            // Set active sessions (simplified - could be enhanced with session tracking)
+            ActiveSessions = await _userManager.Users.CountAsync(u => u.EmailConfirmed);
+            
             RecentActivities = new List<RecentUserActivity>();
             var allUsers = await _userManager.Users.OrderByDescending(u => u.CreatedAt).Take(10).ToListAsync();
 
@@ -163,6 +168,7 @@ public class IndexModel : PageModel
                 {
                     UserName = user.Email ?? "Unknown",
                     Activity = "User registered",
+                    Action = "User registered",
                     Timestamp = DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc),
                     Type = "user"
                 });
@@ -173,6 +179,7 @@ public class IndexModel : PageModel
         }
         catch (Exception)
         {
+            ActiveSessions = 0;
             RecentActivities = new List<RecentUserActivity>();
         }
     }
@@ -182,6 +189,7 @@ public class RecentUserActivity
 {
     public string UserName { get; set; } = string.Empty;
     public string Activity { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public string Type { get; set; } = string.Empty; // "user", "document", "team"
 } 

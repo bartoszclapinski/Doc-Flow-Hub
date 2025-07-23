@@ -8,61 +8,85 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
-<ul class="navbar-nav">
-    <!-- Theme Toggle -->
-    <li class="nav-item">
-        <button id="themeToggle" class="btn btn-link nav-link text-dark border-0 d-flex align-items-center" aria-label="Toggle theme">
-            <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;">☀️</span>
-            <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;">🌙</span>
-        </button>
-    </li>
 @if (SignInManager.IsSignedIn(User))
 {
-    @if (User.IsInRole("Administrator"))
-    {
-        <li class="nav-item">
-            <a class="nav-link text-dark" asp-page="/Admin/Index">
-                <i class="bi bi-gear"></i> Admin
-            </a>
-        </li>
-    }
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle text-dark" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-person-circle"></i> Hello @UserManager.GetUserName(User)!
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+    <div class="dropdown">
+        <div class="user-menu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            @if (User.IsInRole("Administrator"))
+            {
+                <span class="admin-badge">Admin</span>
+            }
+            <div class="user-avatar">@(UserManager.GetUserName(User)?.FirstOrDefault().ToString().ToUpper() ?? "U")</div>
+            <span class="d-none d-md-inline">Hello @(UserManager.GetUserName(User)?.Split('@').FirstOrDefault() ?? "User")</span>
+            <i class="bi bi-chevron-down"></i>
+        </div>
+        <ul class="dropdown-menu dropdown-menu-end">
             <li>
                 <a class="dropdown-item" asp-page="/Account/Manage/Index">
-                    <i class="bi bi-person"></i> Profile
+                    <i class="bi bi-person me-2"></i> Profile
                 </a>
             </li>
             <li>
                 <a class="dropdown-item" asp-page="/Settings/AI">
-                    <i class="bi bi-robot"></i> AI Settings
-        </a>
-    </li>
+                    <i class="bi bi-robot me-2"></i> AI Settings
+                </a>
+            </li>
+            @if (User.IsInRole("Administrator"))
+            {
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" asp-page="/Admin/Index">
+                        <i class="bi bi-shield-check me-2"></i> Admin Panel
+                    </a>
+                </li>
+            }
             <li><hr class="dropdown-divider"></li>
             <li>
                 <form class="d-inline" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
                     <button type="submit" class="dropdown-item">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </button>
-        </form>
-                         </li>
-         </ul>
-    </li>
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
 }
 else
 {
-    <li class="nav-item">
-        <a class="nav-link text-dark" id="register" asp-page="/Account/Register" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Register" ? "page" : null)">
-            <i class="bi bi-person-plus"></i> Register
+    <div class="nav-right-guest">
+        <a class="nav-link" asp-page="/Account/Register">
+            <i class="bi bi-person-plus me-1"></i> Register
         </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" id="login" asp-page="/Account/Login" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Account/Login" ? "page" : null)">
-            <i class="bi bi-box-arrow-in-right"></i> Login
+        <a class="nav-link" asp-page="/Account/Login">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Login
         </a>
-    </li>
+    </div>
+    
+    <style>
+        .nav-right-guest {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .nav-right-guest .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: var(--transition-all);
+            display: flex;
+            align-items: center;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .nav-right-guest .nav-link:hover {
+            color: var(--accent-color);
+            background: var(--accent-light);
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+    </style>
 }
-</ul>

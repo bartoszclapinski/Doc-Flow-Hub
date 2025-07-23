@@ -78,6 +78,7 @@ DocFlowHub.sln.DotSettings.user
 *-Roadmap.md
 *-examples.md
 *-key*
+github-*.*
 
 # Test files
 tests/DocFlowHub.Tests/appsettings.Test.json
