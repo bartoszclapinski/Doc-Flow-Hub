@@ -2,76 +2,422 @@
 @model DocFlowHub.Web.Pages.Account.RegisterModel
 @{
     ViewData["Title"] = "Register";
+    Layout = null;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - DocFlowHub</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
+    <style>
+        /* Modern Registration Page Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-<h1>@ViewData["Title"]</h1>
+        body {
+            font-family: var(--font-primary);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--text-primary);
+        }
 
-<div class="row">
-    <div class="col-md-4">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <h2>Create a new account.</h2>
-            <hr />
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.FirstName" class="form-control" aria-required="true" placeholder="Enter your first name" />
-                <label asp-for="Input.FirstName">First Name</label>
-                <span asp-validation-for="Input.FirstName" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.LastName" class="form-control" aria-required="true" placeholder="Enter your last name" />
-                <label asp-for="Input.LastName">Last Name</label>
-                <span asp-validation-for="Input.LastName" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email">Email</label>
-                <span asp-validation-for="Input.Email" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.Password">Password</label>
-                <span asp-validation-for="Input.Password" class="text-danger"></span>
-            </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.ConfirmPassword">Confirm Password</label>
-                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-            </div>
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
+        .register-theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .register-theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-icon {
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-icon-dark {
+            opacity: 0;
+        }
+
+        [data-theme="dark"] .theme-icon-light {
+            opacity: 0;
+        }
+
+        [data-theme="dark"] .theme-icon-dark {
+            opacity: 1;
+        }
+
+        .register-main-container {
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-6);
+        }
+
+
+
+        .register-container {
+            background: var(--container-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-2xl);
+            padding: var(--spacing-12) var(--spacing-10);
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .hero-title {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-extrabold);
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: var(--spacing-2);
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: var(--font-size-base);
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: var(--spacing-8);
+            font-weight: var(--font-weight-medium);
+        }
+
+        .form-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .modern-form-group {
+            margin-bottom: var(--spacing-6);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-4);
+        }
+
+        .modern-form-input {
+            width: 100%;
+            padding: var(--spacing-4);
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            transition: var(--transition-all);
+        }
+
+        .modern-form-input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-light);
+            background: var(--surface-primary);
+        }
+
+        .modern-form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .modern-form-label {
+            display: block;
+            margin-bottom: var(--spacing-2);
+            color: var(--text-primary);
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-sm);
+        }
+
+        .modern-register-button {
+            width: 100%;
+            padding: var(--spacing-4);
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+            border: none;
+            border-radius: var(--radius-lg);
+            color: var(--text-inverse);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: var(--transition-all);
+            margin-bottom: var(--spacing-6);
+        }
+
+        .modern-register-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 30px rgba(var(--accent-color), 0.3);
+        }
+
+        .modern-register-button:active {
+            transform: translateY(0);
+        }
+
+        .validation-summary {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #f87171;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-4);
+            margin-bottom: var(--spacing-6);
+            color: #dc2626;
+        }
+
+        .field-validation-error {
+            color: #dc2626;
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-1);
+            display: block;
+        }
+
+        .modern-links-section {
+            text-align: center;
+        }
+
+        .modern-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: var(--font-size-sm);
+            transition: var(--transition-colors);
+            margin: 0 var(--spacing-2);
+        }
+
+        .modern-link:hover {
+            color: var(--accent-hover);
+        }
+
+        .external-login-section {
+            margin-top: var(--spacing-6);
+            padding-top: var(--spacing-6);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .external-login-button {
+            width: 100%;
+            padding: var(--spacing-3);
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: var(--transition-all);
+            margin-bottom: var(--spacing-3);
+        }
+
+        .external-login-button:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        @@media (max-width: 1024px) {
+            .register-main-container {
+                flex-direction: column;
+            }
+            
+            .info-section {
+                padding: 40px 20px;
+                min-height: 40vh;
+            }
+            
+            .info-title {
+                font-size: 2.5rem;
+            }
+            
+            .stats-section {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+            }
+            
+            .register-container {
+                padding: 40px 20px;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .info-title {
+                font-size: 2rem;
+            }
+            
+            .info-subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .register-form-container {
+                padding: 2rem;
+                border-radius: 16px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .register-theme-toggle {
+                top: 15px;
+                right: 15px;
+                width: 45px;
+                height: 45px;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .register-container {
+                padding: var(--spacing-6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="themeToggle" class="register-theme-toggle" aria-label="Toggle theme">
+        <span class="theme-icon theme-icon-light">☀️</span>
+        <span class="theme-icon theme-icon-dark" style="position: absolute;">🌙</span>
+    </button>
+
+    <div class="register-main-container">
+        <div class="register-container">
+            <div class="hero-title">DocFlowHub</div>
+            <div class="hero-subtitle">Create your account and get started today</div>
+
+                <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+                    
+                    <div class="form-row">
+                        <div class="modern-form-group">
+                            <label asp-for="Input.FirstName" class="modern-form-label">First Name</label>
+                            <input asp-for="Input.FirstName" class="modern-form-input" aria-required="true" placeholder="Enter your first name" />
+                            <span asp-validation-for="Input.FirstName" class="field-validation-error"></span>
+                        </div>
+                        <div class="modern-form-group">
+                            <label asp-for="Input.LastName" class="modern-form-label">Last Name</label>
+                            <input asp-for="Input.LastName" class="modern-form-input" aria-required="true" placeholder="Enter your last name" />
+                            <span asp-validation-for="Input.LastName" class="field-validation-error"></span>
+                        </div>
+                    </div>
+
+                    <div class="modern-form-group">
+                        <label asp-for="Input.Email" class="modern-form-label">Email Address</label>
+                        <input asp-for="Input.Email" class="modern-form-input" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                        <span asp-validation-for="Input.Email" class="field-validation-error"></span>
+                    </div>
+
+                    <div class="modern-form-group">
+                        <label asp-for="Input.Password" class="modern-form-label">Password</label>
+                        <input asp-for="Input.Password" class="modern-form-input" autocomplete="new-password" aria-required="true" placeholder="Create a secure password" type="password" />
+                        <span asp-validation-for="Input.Password" class="field-validation-error"></span>
+                    </div>
+
+                    <div class="modern-form-group">
+                        <label asp-for="Input.ConfirmPassword" class="modern-form-label">Confirm Password</label>
+                        <input asp-for="Input.ConfirmPassword" class="modern-form-input" autocomplete="new-password" aria-required="true" placeholder="Confirm your password" type="password" />
+                        <span asp-validation-for="Input.ConfirmPassword" class="field-validation-error"></span>
+                    </div>
+
+                    <button id="registerSubmit" type="submit" class="modern-register-button">Create Account</button>
+                </form>
+
+                <div class="modern-links-section">
+                    <p>Already have an account? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="modern-link">Sign in here</a></p>
+                </div>
+
+                @if ((Model.ExternalLogins?.Count ?? 0) > 0)
                 {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
+                    <div class="external-login-section">
+                        <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                            @foreach (var provider in Model.ExternalLogins!)
+                            {
+                                <button type="submit" class="external-login-button" name="provider" value="@provider.Name" title="Register using your @provider.DisplayName account">
+                                    @provider.DisplayName
+                                </button>
+                            }
+                        </form>
                     </div>
                 }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/theme-manager.js" asp-append-version="true"></script>
+    <environment include="Development">
+        <script src="~/lib/jquery-validation/dist/jquery.validate.js"></script>
+        <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.js"></script>
+    </environment>
+    <environment exclude="Development">
+        <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+        <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+    </environment>
+
+    <script>
+        // Initialize theme manager for registration page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.ThemeManager) {
+                window.ThemeManager.setupThemeToggle();
+                
+                // Add form validation styling
+                const inputs = document.querySelectorAll('.modern-form-input');
+                inputs.forEach(input => {
+                    input.addEventListener('blur', function() {
+                        if (this.value.trim() !== '') {
+                            this.style.borderColor = 'var(--accent-color)';
+                        }
+                    });
+                    
+                    input.addEventListener('focus', function() {
+                        this.style.borderColor = 'var(--accent-color)';
+                    });
+                });
+
+                // Enhanced button interaction
+                const submitButton = document.getElementById('registerSubmit');
+                if (submitButton) {
+                    submitButton.addEventListener('click', function(e) {
+                        this.style.transform = 'scale(0.98)';
+                        setTimeout(() => {
+                            this.style.transform = '';
+                        }, 150);
+                    });
                 }
             }
-        </section>
-    </div>
-</div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-} 
+        });
+    </script>
+</body>
+</html> 

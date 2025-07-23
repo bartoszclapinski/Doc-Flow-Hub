@@ -42,7 +42,8 @@ namespace DocFlowHub.Web.Pages
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
-                return RedirectToPage("/Account/Login");
+                // Show landing page for unauthenticated users
+                return Page();
             }
 
             // Redirect administrators to admin dashboard
