@@ -29,6 +29,325 @@
     <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     @await RenderSectionAsync("Styles", required: false)
+    
+    <style>
+        /* Modern Admin Dashboard Layout */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--container-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--text-inverse);
+            font-size: 16px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: var(--transition-all);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--accent-color);
+            background: var(--accent-light);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+                 .theme-toggle {
+             background: var(--surface-secondary);
+             border: 1px solid var(--border-color);
+             border-radius: 8px;
+             padding: 8px;
+             color: var(--text-primary);
+             cursor: pointer;
+             transition: var(--transition-all);
+             font-size: 16px;
+             position: relative;
+             width: 40px;
+             height: 40px;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+
+         .theme-toggle:hover {
+             background: var(--surface-tertiary);
+             transform: scale(1.05);
+         }
+
+         .theme-icon {
+             transition: var(--transition-all);
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+
+         .theme-toggle .theme-icon-light {
+             opacity: 1;
+         }
+
+         .theme-toggle .theme-icon-dark {
+             opacity: 0;
+             position: absolute;
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%);
+         }
+
+         /* Let JavaScript handle icon switching via opacity for smooth transitions */
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: var(--transition-all);
+            color: var(--text-primary);
+            text-decoration: none;
+            position: relative;
+        }
+
+        .user-menu:hover {
+            background: var(--surface-tertiary);
+            color: var(--text-primary);
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-inverse);
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* Main Layout */
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 72px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--container-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border-light);
+            padding: 24px 0;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition-all);
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            color: var(--accent-color);
+            background: var(--accent-light);
+            border-left-color: rgba(var(--accent-rgb), 0.3);
+        }
+
+        .sidebar-item.active {
+            color: var(--accent-color);
+            background: var(--accent-light);
+            border-left-color: var(--accent-color);
+        }
+
+        .sidebar-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            max-height: calc(100vh - 72px);
+        }
+
+        /* Responsive */
+        @@media (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -240px;
+                top: 72px;
+                height: calc(100vh - 72px);
+                z-index: 50;
+                width: 240px;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            .header {
+                padding: 12px 16px;
+            }
+            
+            .content {
+                padding: 16px;
+            }
+            
+            .nav-right {
+                gap: 8px;
+            }
+            
+            .user-menu span:not(.user-avatar) {
+                display: none;
+            }
+        }
+
+        /* Admin Badge */
+        .admin-badge {
+            background: var(--accent-color);
+            color: var(--text-inverse);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Login partial overrides */
+        .dropdown-menu {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .dropdown-item {
+            color: var(--text-primary);
+        }
+
+        .dropdown-item:hover {
+            background: var(--surface-secondary);
+            color: var(--text-primary);
+        }
+    </style>
 </head>
 <body>
     <!-- Global Loading Overlay -->
@@ -77,80 +396,143 @@
         </div>
     </div>
 
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">
-                    <i class="bi bi-file-earmark-text"></i> DocFlowHub
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" 
-                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Index" ? "page" : null)">
-                                <i class="bi bi-house"></i> Home
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Documents/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Documents/Index" ? "page" : null)">
-                                <i class="bi bi-folder"></i> Documents
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Projects/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Projects/Index" ? "page" : null)">
-                                <i class="bi bi-kanban"></i> Projects
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Teams/Index" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Teams/Index" ? "page" : null)">
-                                <i class="bi bi-people"></i> Teams
-                            </a>
-                        </li>
-                        @if (SignInManager.IsSignedIn(User))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Settings/AI" aria-current="@(ViewContext.RouteData.Values["Page"]?.ToString() == "/Settings/AI" ? "page" : null)">
-                                    <i class="bi bi-robot"></i> AI Settings
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
-            </div>
-        </nav>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-left">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <a class="logo" asp-area="" asp-page="/Index">
+                <div class="logo-icon">D</div>
+                <span>DocFlowHub</span>
+            </a>
+                         <nav class="nav-links">
+                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Index" ? "active" : "")" asp-area="" asp-page="/Index">
+                     <i class="bi bi-house"></i> Home
+                 </a>
+                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Documents") == true ? "active" : "")" asp-area="" asp-page="/Documents/Index">
+                     <i class="bi bi-folder"></i> Documents
+                 </a>
+                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Projects") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
+                     <i class="bi bi-kanban"></i> Projects
+                 </a>
+                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Teams") == true ? "active" : "")" asp-area="" asp-page="/Teams/Index">
+                     <i class="bi bi-people"></i> Teams
+                 </a>
+                 @if (SignInManager.IsSignedIn(User))
+                 {
+                     <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Settings") == true ? "active" : "")" asp-area="" asp-page="/Settings/AI">
+                         <i class="bi bi-robot"></i> AI Settings
+                     </a>
+                 }
+             </nav>
+        </div>
+        <div class="nav-right">
+                         <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                 <span class="theme-icon theme-icon-light">☀️</span>
+                 <span class="theme-icon theme-icon-dark">🌙</span>
+             </button>
+            <partial name="_LoginPartial" />
+        </div>
     </header>
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+         <!-- Main Layout -->
+     <div class="main-layout">
+         @{
+             var currentPage = ViewContext.RouteData.Values["Page"]?.ToString();
+             var isAdminPage = currentPage?.StartsWith("/Admin") == true;
+         }
+         
+         @if (isAdminPage)
+         {
+             <!-- Admin Sidebar -->
+             <aside class="sidebar" id="sidebar">
+                 <a class="sidebar-item @(currentPage == "/Admin/Index" ? "active" : "")" asp-area="" asp-page="/Admin/Index">
+                     <div class="sidebar-icon"><i class="bi bi-speedometer2"></i></div>
+                     <span>Dashboard</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Users") == true ? "active" : "")" asp-area="" asp-page="/Admin/Users/Index">
+                     <div class="sidebar-icon"><i class="bi bi-people"></i></div>
+                     <span>Users</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Roles") == true ? "active" : "")" asp-area="" asp-page="/Admin/Roles/Index">
+                     <div class="sidebar-icon"><i class="bi bi-person-badge"></i></div>
+                     <span>Roles</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Settings") == true ? "active" : "")" asp-area="" asp-page="/Admin/Settings/Index">
+                     <div class="sidebar-icon"><i class="bi bi-gear"></i></div>
+                     <span>Settings</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage == "/Admin/Analytics" ? "active" : "")" asp-area="" asp-page="/Admin/Analytics">
+                     <div class="sidebar-icon"><i class="bi bi-graph-up"></i></div>
+                     <span>Analytics</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage == "/Admin/UserLimits" ? "active" : "")" asp-area="" asp-page="/Admin/UserLimits">
+                     <div class="sidebar-icon"><i class="bi bi-shield-check"></i></div>
+                     <span>User Limits</span>
+                 </a>
+                 <hr style="border-color: var(--border-color); margin: 16px 24px;">
+                 <a class="sidebar-item" asp-area="" asp-page="/Index">
+                     <div class="sidebar-icon"><i class="bi bi-arrow-left"></i></div>
+                     <span>Back to App</span>
+                 </a>
+             </aside>
+         }
+         else
+         {
+             <!-- Regular Sidebar -->
+             <aside class="sidebar" id="sidebar">
+                 <a class="sidebar-item @(currentPage == "/Index" ? "active" : "")" asp-area="" asp-page="/Index">
+                     <div class="sidebar-icon"><i class="bi bi-speedometer2"></i></div>
+                     <span>Dashboard</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Documents") == true ? "active" : "")" asp-area="" asp-page="/Documents/Index">
+                     <div class="sidebar-icon"><i class="bi bi-folder"></i></div>
+                     <span>Documents</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Projects") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
+                     <div class="sidebar-icon"><i class="bi bi-kanban"></i></div>
+                     <span>Projects</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Folders") == true ? "active" : "")" asp-area="" asp-page="/Folders/Index">
+                     <div class="sidebar-icon"><i class="bi bi-folder2-open"></i></div>
+                     <span>Folders</span>
+                 </a>
+                 <a class="sidebar-item @(currentPage?.StartsWith("/Teams") == true ? "active" : "")" asp-area="" asp-page="/Teams/Index">
+                     <div class="sidebar-icon"><i class="bi bi-people"></i></div>
+                     <span>Teams</span>
+                 </a>
+                 @if (SignInManager.IsSignedIn(User))
+                 {
+                     <a class="sidebar-item @(currentPage?.StartsWith("/Settings") == true ? "active" : "")" asp-area="" asp-page="/Settings/AI">
+                         <div class="sidebar-icon"><i class="bi bi-robot"></i></div>
+                         <span>AI Settings</span>
+                     </a>
+                 }
+                 @if (User.IsInRole("Administrator"))
+                 {
+                     <hr style="border-color: var(--border-color); margin: 16px 24px;">
+                     <a class="sidebar-item @(currentPage?.StartsWith("/Admin") == true ? "active" : "")" asp-area="" asp-page="/Admin/Index">
+                         <div class="sidebar-icon"><i class="bi bi-shield-check"></i></div>
+                         <span>Admin Panel</span>
+                     </a>
+                 }
+             </aside>
+         }
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    &copy; @DateTime.Now.Year - DocFlowHub - Document Management System
-                </div>
-                <div class="col-md-6 text-end">
-                    <a asp-area="" asp-page="/Privacy" class="text-muted text-decoration-none me-3">Privacy</a>
-                    <a asp-area="" asp-page="/Terms" class="text-muted text-decoration-none">Terms</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+         <!-- Content -->
+         <main class="content">
+             @RenderBody()
+         </main>
+     </div>
 
     <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/theme-manager.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 
-    <!-- Global UX Enhancement Scripts -->
     <script>
         // Global notification system
         window.DocFlowHub = {
@@ -179,6 +561,33 @@
 
         // Enhanced form submission handling
         document.addEventListener('DOMContentLoaded', function() {
+            // Mobile sidebar toggle
+            const sidebar = document.getElementById('sidebar');
+            const mobileToggle = document.getElementById('mobile-menu-toggle');
+            
+            if (mobileToggle && sidebar) {
+                mobileToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                });
+                
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth <= 768) {
+                        if (!sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
+                            sidebar.classList.remove('open');
+                        }
+                    }
+                });
+            }
+            
+                         // Setup theme manager
+             if (window.ThemeManager) {
+                 console.log('Setting up ThemeManager...');
+                 window.ThemeManager.init();
+             } else {
+                 console.error('ThemeManager not found!');
+             }
+
             // Add loading states to all forms
             const forms = document.querySelectorAll('form');
             forms.forEach(function(form) {
@@ -232,7 +641,5 @@
             });
         });
     </script>
-
-    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

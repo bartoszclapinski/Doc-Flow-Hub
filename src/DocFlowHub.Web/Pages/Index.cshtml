@@ -24,11 +24,7 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     </head>
     <body>
-        <!-- Theme Toggle -->
-        <button id="themeToggle" class="landing-theme-toggle" aria-label="Toggle theme">
-            <span class="theme-icon theme-icon-light">☀️</span>
-            <span class="theme-icon theme-icon-dark" style="position: absolute;">🌙</span>
-        </button>
+        <!-- Theme Toggle - Removed from landing page as requested -->
 
         <!-- Navigation Bar -->
         <nav class="landing-nav">
@@ -53,34 +49,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-        .landing-theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: var(--container-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .landing-theme-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-md);
-        }
-
-        .theme-icon {
-            font-size: 20px;
-            transition: all 0.3s ease;
-        }
+        /* Landing theme toggle removed as requested */
 
         .theme-icon-dark {
             opacity: 0;
@@ -459,12 +428,7 @@
                 grid-template-columns: repeat(2, 1fr);
             }
             
-            .landing-theme-toggle {
-                top: 15px;
-                right: 15px;
-                width: 45px;
-                height: 45px;
-            }
+            /* Landing theme toggle removed */
         }
     </style>
 

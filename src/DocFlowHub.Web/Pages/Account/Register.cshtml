@@ -387,35 +387,36 @@
     </environment>
 
     <script>
-        // Initialize theme manager for registration page
+        // Initialize theme manager and form enhancements for registration page
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme manager
             if (window.ThemeManager) {
                 window.ThemeManager.setupThemeToggle();
-                
-                // Add form validation styling
-                const inputs = document.querySelectorAll('.modern-form-input');
-                inputs.forEach(input => {
-                    input.addEventListener('blur', function() {
-                        if (this.value.trim() !== '') {
-                            this.style.borderColor = 'var(--accent-color)';
-                        }
-                    });
-                    
-                    input.addEventListener('focus', function() {
+            }
+            
+            // Add form validation styling
+            const inputs = document.querySelectorAll('.modern-form-input');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (this.value.trim() !== '') {
                         this.style.borderColor = 'var(--accent-color)';
-                    });
+                    }
                 });
+                
+                input.addEventListener('focus', function() {
+                    this.style.borderColor = 'var(--accent-color)';
+                });
+            });
 
-                // Enhanced button interaction
-                const submitButton = document.getElementById('registerSubmit');
-                if (submitButton) {
-                    submitButton.addEventListener('click', function(e) {
-                        this.style.transform = 'scale(0.98)';
-                        setTimeout(() => {
-                            this.style.transform = '';
-                        }, 150);
-                    });
-                }
+            // Enhanced button interaction
+            const submitButton = document.getElementById('registerSubmit');
+            if (submitButton) {
+                submitButton.addEventListener('click', function(e) {
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
             }
         });
     </script>

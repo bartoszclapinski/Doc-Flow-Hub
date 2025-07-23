@@ -6,188 +6,190 @@
     Layout = "_AdminLayout";
 }
 
-<div class="row mb-4">
-    <div class="col">
-        <h2>@ViewData["Title"]</h2>
-        <p class="text-muted">System overview and management dashboard</p>
-    </div>
+<!-- Page Header -->
+<div class="admin-page-header">
+    <h1 class="admin-page-title">Admin Dashboard</h1>
+    <p class="admin-page-subtitle">System overview and management dashboard</p>
 </div>
 
-<!-- System Statistics -->
-<div class="row mb-4">
-    <div class="col-md-3 mb-3">
-        <div class="card bg-primary text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">@Model.TotalUsers</h4>
-                        <p class="mb-0">Total Users</p>
-                        <small class="opacity-75">@Model.TotalAdmins administrators</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="bi bi-people" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+<!-- Stats Grid -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card blue">
+        <div class="admin-stat-header">
+            <div class="admin-stat-info">
+                <h3>Total Users</h3>
+                <div class="admin-stat-number">@Model.TotalUsers</div>
+                <div class="admin-stat-change">@Model.TotalAdmins administrators</div>
+            </div>
+            <div class="admin-stat-icon">
+                <i class="bi bi-people"></i>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card bg-success text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">@Model.TotalDocuments</h4>
-                        <p class="mb-0">Total Documents</p>
-                        <small class="opacity-75">+@Model.DocumentsThisWeek this week</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="bi bi-file-earmark" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="admin-stat-card green">
+        <div class="admin-stat-header">
+            <div class="admin-stat-info">
+                <h3>Total Documents</h3>
+                <div class="admin-stat-number">@Model.TotalDocuments</div>
+                <div class="admin-stat-change @(Model.DocumentsThisWeek > 0 ? "positive" : "")">+@Model.DocumentsThisWeek this week</div>
+            </div>
+            <div class="admin-stat-icon">
+                <i class="bi bi-file-earmark"></i>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card bg-info text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">@Model.TotalTeams</h4>
-                        <p class="mb-0">Total Teams</p>
-                        <small class="opacity-75">+@Model.TeamsThisWeek this week</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="admin-stat-card cyan">
+        <div class="admin-stat-header">
+            <div class="admin-stat-info">
+                <h3>Total Teams</h3>
+                <div class="admin-stat-number">@Model.TotalTeams</div>
+                <div class="admin-stat-change @(Model.TeamsThisWeek > 0 ? "positive" : "")">+@Model.TeamsThisWeek this week</div>
+            </div>
+            <div class="admin-stat-icon">
+                <i class="bi bi-people-fill"></i>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0">@((Model.TotalStorageUsed / 1024.0 / 1024.0).ToString("F1")) MB</h4>
-                        <p class="mb-0">Storage Used</p>
-                        <small class="opacity-75">Across all users</small>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="bi bi-hdd" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="admin-stat-card yellow">
+        <div class="admin-stat-header">
+            <div class="admin-stat-info">
+                <h3>Storage Used</h3>
+                <div class="admin-stat-number">@Model.StorageUsed MB</div>
+                <div class="admin-stat-change">Across all users</div>
+            </div>
+            <div class="admin-stat-icon">
+                <i class="bi bi-hdd"></i>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card border-primary h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-people"></i> Users
-                </h5>
-                <p class="card-text">Manage user accounts, roles, and permissions.</p>
-                <a asp-page="/Admin/Users/Index" class="btn btn-primary">Manage Users</a>
+<!-- Management Cards -->
+<div class="admin-management-grid">
+    <div class="admin-management-card users">
+        <div class="admin-management-header">
+            <div class="admin-management-icon">
+                <i class="bi bi-people"></i>
+            </div>
+            <div>
+                <h3 class="admin-management-title">Users</h3>
             </div>
         </div>
+        <p class="admin-management-description">Manage user accounts, roles, and permissions.</p>
+        <a href="@Url.Page("/Admin/Users/Index")" class="admin-management-button">Manage Users</a>
     </div>
-    
-    <div class="col-md-4 mb-4">
-        <div class="card border-success h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-person-badge"></i> Roles
-                </h5>
-                <p class="card-text">Configure roles and their associated permissions.</p>
-                <a asp-page="/Admin/Roles/Index" class="btn btn-success">Manage Roles</a>
+
+    <div class="admin-management-card roles">
+        <div class="admin-management-header">
+            <div class="admin-management-icon">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <div>
+                <h3 class="admin-management-title">Roles</h3>
             </div>
         </div>
+        <p class="admin-management-description">Configure roles and their associated permissions.</p>
+        <a href="@Url.Page("/Admin/Roles/Index")" class="admin-management-button">Manage Roles</a>
     </div>
-    
-    <div class="col-md-4 mb-4">
-        <div class="card border-info h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-gear"></i> Settings
-                </h5>
-                <p class="card-text">Configure application settings and preferences.</p>
-                <a asp-page="/Admin/Settings/Index" class="btn btn-info">Manage Settings</a>
+
+    <div class="admin-management-card settings">
+        <div class="admin-management-header">
+            <div class="admin-management-icon">
+                <i class="bi bi-gear"></i>
+            </div>
+            <div>
+                <h3 class="admin-management-title">Settings</h3>
             </div>
         </div>
+        <p class="admin-management-description">Configure application settings and preferences.</p>
+        <a href="@Url.Page("/Admin/Settings/Index")" class="admin-management-button">Manage Settings</a>
+    </div>
+
+    <div class="admin-management-card analytics">
+        <div class="admin-management-header">
+            <div class="admin-management-icon">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div>
+                <h3 class="admin-management-title">Analytics</h3>
+            </div>
+        </div>
+        <p class="admin-management-description">View system analytics and AI usage statistics.</p>
+        <a href="@Url.Page("/Admin/Analytics")" class="admin-management-button">View Analytics</a>
+    </div>
+
+    <div class="admin-management-card purple">
+        <div class="admin-management-header">
+            <div class="admin-management-icon">
+                <i class="bi bi-lightning"></i>
+            </div>
+            <div>
+                <h3 class="admin-management-title">User Limits</h3>
+            </div>
+        </div>
+        <p class="admin-management-description">Configure user limits and resource quotas.</p>
+        <a href="@Url.Page("/Admin/UserLimits")" class="admin-management-button">Manage Limits</a>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Recent System Activity</h5>
-            </div>
-            <div class="card-body">
-                @if (Model.RecentActivities.Any())
-                {
-                    <div class="list-group list-group-flush">
-                        @foreach (var activity in Model.RecentActivities)
-                        {
-                            <div class="list-group-item border-0 px-0">
-                                <div class="d-flex align-items-center">
-                                    <div class="me-3">
-                                        @if (activity.Type == "user")
-                                        {
-                                            <i class="bi bi-person-plus text-primary"></i>
-                                        }
-                                        else if (activity.Type == "document")
-                                        {
-                                            <i class="bi bi-file-earmark-plus text-success"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-people text-info"></i>
-                                        }
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold">@activity.UserName</div>
-                                        <div class="text-muted small">@activity.Activity</div>
-                                    </div>
-                                    <div class="text-muted small">
-                                        @activity.Timestamp.ToString("MMM dd, HH:mm")
-                                    </div>
-                                </div>
-                            </div>
-                        }
+<!-- Bottom Grid -->
+<div class="admin-bottom-grid">
+    <!-- Recent Activity -->
+    <div class="admin-activity-card">
+        <h3 class="admin-card-title">Recent System Activity</h3>
+        
+        @if (Model.RecentActivities?.Any() == true)
+        {
+            @foreach (var activity in Model.RecentActivities.Take(5))
+            {
+                <div class="admin-activity-item">
+                    <div class="admin-activity-avatar">@(activity.UserName?.FirstOrDefault().ToString().ToUpper() ?? "U")</div>
+                    <div class="admin-activity-info">
+                        <div class="admin-activity-user">@activity.UserName</div>
+                        <div class="admin-activity-action">@activity.Action</div>
                     </div>
-                }
-                else
-                {
-                    <div class="text-center py-3">
-                        <i class="bi bi-activity text-muted" style="font-size: 2rem;"></i>
-                        <p class="text-muted mt-2">No recent activity to display.</p>
-                    </div>
-                }
+                    <div class="admin-activity-time">@activity.Timestamp.ToString("MMM dd, HH:mm")</div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="admin-activity-item">
+                <div class="admin-activity-avatar">S</div>
+                <div class="admin-activity-info">
+                    <div class="admin-activity-user">System</div>
+                    <div class="admin-activity-action">No recent activity</div>
+                </div>
+                <div class="admin-activity-time">--</div>
             </div>
-        </div>
+        }
     </div>
-    
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">System Status</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>System Status:</span>
-                    <span class="badge bg-success">Operational</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>Last Updated:</span>
-                    <span>@DateTime.Now.ToString("g")</span>
-                </div>
-            </div>
+
+    <!-- System Status -->
+    <div class="admin-status-card">
+        <h3 class="admin-card-title">System Status</h3>
+        
+        <div class="admin-status-item">
+            <span class="admin-status-label">System Status:</span>
+            <span class="admin-status-badge">Operational</span>
+        </div>
+
+        <div class="admin-status-item">
+            <span class="admin-status-label">Last Updated:</span>
+            <span class="admin-status-value">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</span>
+        </div>
+
+        <div class="admin-status-item">
+            <span class="admin-status-label">Total Users:</span>
+            <span class="admin-status-value">@Model.TotalUsers</span>
+        </div>
+
+        <div class="admin-status-item">
+            <span class="admin-status-label">Active Sessions:</span>
+            <span class="admin-status-value">@Model.ActiveSessions</span>
         </div>
     </div>
 </div> 
