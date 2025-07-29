@@ -5,471 +5,555 @@
     ViewData["Title"] = "Documents";
 }
 
-<div class="container-fluid py-4 page-transition">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-1">
-                        <i class="bi bi-file-earmark-text me-2 text-primary"></i>
-                        Documents
-                    </h1>
-                    <p class="text-muted mb-0">Manage and organize your documents</p>
+<div class="documents-container">
+    <!-- Modern Page Header -->
+    <div class="documents-page-header">
+        <div class="page-header-content">
+            <div class="page-header-info">
+                <h1 class="page-title">
+                    <div class="page-icon">📄</div>
+                    Documents
+                </h1>
+                <p class="page-subtitle">Manage and organize your documents with modern workflows</p>
+            </div>
+            <div class="page-header-actions">
+                <a asp-page="./Upload" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span>Upload Document</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Stats Grid -->
+    <div class="documents-stats-grid">
+        <div class="documents-stat-card blue">
+            <div class="documents-stat-header">
+                <div class="documents-stat-info">
+                    <h3>Total Documents</h3>
+                    <div class="documents-stat-number">@Model.Documents.TotalItems</div>
+                    <div class="documents-stat-change">@Model.Documents.Items.Count() shown</div>
                 </div>
-                <div>
-                    <a asp-page="./Upload" class="btn btn-primary">
-                        <i class="bi bi-cloud-upload me-1"></i>Upload Document
-                    </a>
+                <div class="documents-stat-icon">📄</div>
+            </div>
+        </div>
+
+        <div class="documents-stat-card green">
+            <div class="documents-stat-header">
+                <div class="documents-stat-info">
+                    <h3>My Documents</h3>
+                    <div class="documents-stat-number">@Model.Documents.Items.Count(d => d.OwnerId == User.GetUserId())</div>
+                    <div class="documents-stat-change">owned by you</div>
                 </div>
+                <div class="documents-stat-icon">👤</div>
+            </div>
+        </div>
+
+        <div class="documents-stat-card cyan">
+            <div class="documents-stat-header">
+                <div class="documents-stat-info">
+                    <h3>Team Documents</h3>
+                    <div class="documents-stat-number">@Model.Documents.Items.Count(d => !string.IsNullOrEmpty(d.TeamName))</div>
+                    <div class="documents-stat-change">shared documents</div>
+                </div>
+                <div class="documents-stat-icon">👥</div>
+            </div>
+        </div>
+
+        <div class="documents-stat-card yellow">
+            <div class="documents-stat-header">
+                <div class="documents-stat-info">
+                    <h3>File Types</h3>
+                    <div class="documents-stat-number">@Model.Documents.Items.Select(d => d.FileType).Distinct().Count()</div>
+                    <div class="documents-stat-change">different formats</div>
+                </div>
+                <div class="documents-stat-icon">🗂️</div>
             </div>
         </div>
     </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            </div>
+        <div class="modern-alert modern-alert-danger">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>@Model.ErrorMessage</span>
+            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
+                <i class="bi bi-x"></i>
+            </button>
         </div>
     }
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle me-2"></i>@TempData["SuccessMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            </div>
+        <div class="modern-alert modern-alert-success">
+            <i class="bi bi-check-circle"></i>
+            <span>@TempData["SuccessMessage"]</span>
+            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
+                <i class="bi bi-x"></i>
+            </button>
         </div>
     }
 
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="modern-alert modern-alert-danger">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>@TempData["ErrorMessage"]</span>
+            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    }
+
+    <!-- Enhanced Filter Panel -->
+    <div class="documents-filter-card">
+        <div class="filter-card-header">
+            <h3 class="filter-title">
+                <i class="bi bi-funnel"></i>
+                Filter & Search
+            </h3>
+            <p class="filter-subtitle">Find your documents quickly</p>
+        </div>
+        
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                <!-- Search -->
+                <div class="filter-group">
+                        <label asp-for="Filter.SearchTerm" class="filter-label">
+                        <i class="bi bi-search"></i>Search Documents
+                        </label>
+                        <input asp-for="Filter.SearchTerm" class="filter-input" 
+                               placeholder="Search by title, description...">
+                </div>
+
+                <!-- Team Filter -->
+                @if (Model.UserTeams != null && Model.UserTeams.Any())
+                {
+                    <div class="filter-group">
+                            <label asp-for="Filter.TeamId" class="filter-label">
+                            <i class="bi bi-building"></i>Workspace
+                            </label>
+                            <select asp-for="Filter.TeamId" class="filter-select">
+                                <option value="">All Documents</option>
+                                <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
+                                @foreach (var team in Model.UserTeams)
+                                {
+                                    <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
+                                        @team.Name (@team.MemberCount members)
+                                    </option>
+                                }
+                            </select>
+                    </div>
+                }
+
+                <!-- Categories -->
+                @if (Model.Categories != null && Model.Categories.Any())
+                {
+                    <div class="filter-group">
+                            <label class="filter-label">
+                            <i class="bi bi-tags"></i>Category
+                            </label>
+                            <select asp-for="Filter.CategoryId" class="filter-select">
+                                <option value="">All Categories</option>
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">
+                                        @category.Name
+                                    </option>
+                                }
+                            </select>
+                    </div>
+                }
+
+                <!-- Project Filter -->
+                <div class="filter-group">
+                        <label asp-for="ProjectId" class="filter-label">
+                        <i class="bi bi-kanban"></i>Project
+                        </label>
+                        <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="filter-select" onchange="this.form.submit();">
+                            <option value="">All Projects</option>
+                            <option value="0" selected="@(Model.ProjectId == 0)">Unassigned</option>
+                        </select>
+                </div>
+
+                <!-- Folder Filter -->
+                <div class="filter-group">
+                        <label asp-for="FolderId" class="filter-label">
+                        <i class="bi bi-folder"></i>Folder
+                        </label>
+                        <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="filter-select"></select>
+                    </div>
+                </div>
+
+                <!-- Filter Actions -->
+                    <div class="filter-actions">
+                        <button type="submit" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-search"></i>
+                    <span>Apply Filters</span>
+                        </button>
+                        <a asp-page="./Index" class="modern-btn modern-btn-outline">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Clear All</span>
+                        </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Documents Content -->
+    @if (!Model.Documents.Items.Any())
+    {
+        <div class="documents-empty-state">
+            <div class="empty-state-content">
+                <div class="empty-state-icon">📂</div>
+                <h3 class="empty-state-title">No documents found</h3>
+                <p class="empty-state-subtitle">Try adjusting your filters or upload your first document to get started</p>
+                <div class="empty-state-actions">
+                    <a asp-page="./Upload" class="modern-btn modern-btn-primary">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>Upload Document</span>
+                    </a>
+                    <a asp-page="./Index" class="modern-btn modern-btn-outline">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Clear Filters</span>
+                    </a>
                 </div>
             </div>
         </div>
     }
+    else
+    {
+        <!-- Results Summary -->
+        <div class="results-summary-card">
+            <div class="results-info">
+                <i class="bi bi-list-ul"></i>
+                <span>Showing <strong>@Model.Documents.Items.Count()</strong> of <strong>@Model.Documents.TotalItems</strong> documents</span>
+            </div>
+            <div class="page-info">
+                <i class="bi bi-file-earmark"></i>
+                <span>Page <strong>@Model.Documents.PageNumber</strong> of <strong>@Model.Documents.TotalPages</strong></span>
+            </div>
+        </div>
 
-    <!-- Filters Section - Top Layout -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm azure-filter-panel">
-                <div class="card-body">
-                    <form method="get">
-                        <div class="row g-3 align-items-end">
-                            <!-- Search -->
-                            <div class="col-md-4">
-                                <label asp-for="Filter.SearchTerm" class="form-label small fw-semibold text-muted">
-                                    <i class="bi bi-search me-1"></i>Search Documents
-                                </label>
-                                <input asp-for="Filter.SearchTerm" class="form-control" 
-                                       placeholder="Search by title, description...">
-                            </div>
-
-                            <!-- Team Filter -->
-                            @if (Model.UserTeams != null && Model.UserTeams.Any())
-                            {
-                                <div class="col-md-3">
-                                    <label asp-for="Filter.TeamId" class="form-label small fw-semibold text-muted">
-                                        <i class="bi bi-building me-1"></i>Workspace
-                                    </label>
-                                    <select asp-for="Filter.TeamId" class="form-select">
-                                        <option value="">All Documents</option>
-                                        <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
-                                        @foreach (var team in Model.UserTeams)
-                                        {
-                                            <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
-                                                @team.Name (@team.MemberCount members)
-                                            </option>
-                                        }
-                                    </select>
-                                </div>
-                            }
-
-                            <!-- Categories -->
-                            @if (Model.Categories != null && Model.Categories.Any())
-                            {
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-semibold text-muted">
-                                        <i class="bi bi-tags me-1"></i>Category
-                                    </label>
-                                    <select asp-for="Filter.CategoryId" class="form-select">
-                                        <option value="">All Categories</option>
-                                        @foreach (var category in Model.Categories)
-                                        {
-                                            <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">
-                                                @category.Name
-                                            </option>
-                                        }
-                                    </select>
-                                </div>
-                            }
-
-                            <!-- Project Filter -->
-                            <div class="col-md-3">
-                                <label asp-for="ProjectId" class="form-label small fw-semibold text-muted">
-                                    <i class="bi bi-kanban me-1"></i>Project
-                                </label>
-                                <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="form-select" onchange="this.form.submit();">
-                                    <option value="">All Projects</option>
-                                    <option value="0" selected="@(Model.ProjectId == 0)">Unassigned</option>
-                                </select>
-                            </div>
-
-                            <!-- Folder Filter -->
-                            <div class="col-md-3">
-                                <label asp-for="FolderId" class="form-label small fw-semibold text-muted">
-                                    <i class="bi bi-folder me-1"></i>Folder
-                                </label>
-                                <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="form-select"></select>
-                            </div>
-
-                            <!-- Filter Actions -->
-                            <div class="col-md-2">
-                                <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-primary flex-fill">
-                                        <i class="bi bi-search me-1"></i>Apply
-                                    </button>
-                                    <a asp-page="./Index" class="btn btn-outline-secondary flex-fill">
-                                        <i class="bi bi-arrow-clockwise me-1"></i>Clear
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+        <!-- Enhanced Bulk Action Bar -->
+        <div id="bulkActionBar" class="bulk-action-card d-none">
+            <div class="bulk-action-content">
+                <div class="bulk-action-info">
+                    <div class="bulk-action-icon">✓</div>
+                    <div class="bulk-action-text">
+                        <span id="selectedCount" class="bulk-count">0 documents selected</span>
+                        <small class="bulk-subtitle">Choose an action below</small>
+                    </div>
+                </div>
+                <div class="bulk-action-buttons">
+                    <button type="button" id="clearSelectionBtn" class="action-btn clear">
+                        <i class="bi bi-x-lg"></i>
+                        <span>Clear</span>
+                    </button>
+                    <button type="button" id="bulkMoveBtn" class="action-btn move">
+                        <i class="bi bi-arrows-move"></i>
+                        <span>Move</span>
+                    </button>
+                    <button type="button" id="bulkDeleteBtn" class="action-btn delete">
+                        <i class="bi bi-trash"></i>
+                        <span>Delete</span>
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Documents List -->
-    <div class="row">
-        <div class="col-12">
-            @if (!Model.Documents.Items.Any())
-            {
-                <div class="azure-empty-state text-center py-5">
-                    <div class="mb-4">
-                        <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
-                    </div>
-                    <h5 class="text-muted">No documents found</h5>
-                    <p class="text-muted mb-4">Try adjusting your filters or upload your first document</p>
-                    <a asp-page="./Upload" class="btn btn-primary">
-                        <i class="bi bi-cloud-upload me-1"></i>Upload Document
-                    </a>
+        <!-- Enhanced Documents Table -->
+        <div class="documents-table-card">
+            <div class="table-card-header">
+                <div class="table-header-info">
+                    <h3 class="table-title">
+                        <i class="bi bi-table"></i>
+                        Documents List
+                    </h3>
+                    <p class="table-subtitle">Manage your document collection</p>
                 </div>
-            }
-            else
-            {
-                                 <!-- Results Info -->
-                 <div class="d-flex justify-content-between align-items-center mb-3">
-                     <div class="text-muted small">
-                         Showing @Model.Documents.Items.Count() of @Model.Documents.TotalItems documents
-                     </div>
-                     <div class="text-muted small">
-                         Page @Model.Documents.PageNumber of @Model.Documents.TotalPages
-                     </div>
-                 </div>
-
-                <!-- Bulk Action Bar -->
-                <div id="bulkActionBar" class="card mb-3 d-none border-warning bulk-action-bar">
-                    <div class="card-body py-2 bg-warning-subtle">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-check-circle text-warning me-2"></i>
-                                <span id="selectedCount" class="fw-medium">0 documents selected</span>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" id="clearSelectionBtn" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-x-lg me-1"></i>Clear Selection
-                                </button>
-                                <button type="button" id="bulkDeleteBtn" class="btn btn-sm btn-danger">
-                                    <i class="bi bi-trash me-1"></i>Delete Selected
-                                </button>
-                                <button type="button" id="bulkMoveBtn" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-arrows-angle-right me-1"></i>Move Selected
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div class="table-actions">
+                    <button class="table-action-btn" title="Refresh" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <button class="table-action-btn" title="View options">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
                 </div>
-
-                <!-- Documents Table -->
-                <div class="card border-0 shadow-sm azure-table-container">
-                    <table class="table table-hover azure-table mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <!-- Selection Column -->
-                                    <th scope="col" class="border-0 py-3" style="width: 50px;">
-                                        <input type="checkbox" id="selectAll" class="form-check-input" title="Select all documents">
-                                    </th>
-                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable" style="width: 42%;">
-                                <a href="@Model.GetSortUrl("Title", ViewData["TitleSortDirection"]?.ToString() ?? "asc")" class="text-decoration-none text-muted">
-                                    <i class="bi bi-file-earmark me-1"></i>Document
+            </div>
+            
+            <div class="modern-table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <!-- Selection Column -->
+                            <th class="select-column">
+                                <input type="checkbox" id="selectAll" class="modern-checkbox" title="Select all documents">
+                            </th>
+                            <th class="document-column sortable">
+                                <a href="@Model.GetSortUrl("Title", ViewData["TitleSortDirection"]?.ToString() ?? "asc")" class="table-sort-link">
+                                    <i class="bi bi-file-earmark"></i>
+                                    <span>Document</span>
                                     @if (ViewData["CurrentSort"]?.ToString() == "Title")
                                     {
-                                        <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                        <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
                                     }
                                 </a>
                             </th>
-                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase d-none d-md-table-cell" style="width: 15%;">
-                                        <i class="bi bi-building me-1"></i>Workspace
-                                    </th>
-                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-lg-table-cell" style="width: 20%;">
-                                <a href="@Model.GetSortUrl("UpdatedAt", ViewData["UpdatedAtSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
-                                    <i class="bi bi-clock me-1"></i>Modified
+                            <th class="workspace-column d-none d-md-table-cell">
+                                <i class="bi bi-building"></i>
+                                <span>Workspace</span>
+                            </th>
+                            <th class="modified-column sortable d-none d-lg-table-cell">
+                                <a href="@Model.GetSortUrl("UpdatedAt", ViewData["UpdatedAtSortDirection"]?.ToString() ?? "desc")" class="table-sort-link">
+                                    <i class="bi bi-clock"></i>
+                                    <span>Modified</span>
                                     @if (ViewData["CurrentSort"]?.ToString() == "UpdatedAt")
                                     {
-                                        <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                        <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
                                     }
                                 </a>
                             </th>
-                                                                <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase sortable d-none d-xl-table-cell" style="width: 10%;">
-                                <a href="@Model.GetSortUrl("FileSize", ViewData["FileSizeSortDirection"]?.ToString() ?? "desc")" class="text-decoration-none text-muted">
-                                    <i class="bi bi-hdd me-1"></i>Size
+                            <th class="size-column sortable d-none d-xl-table-cell">
+                                <a href="@Model.GetSortUrl("FileSize", ViewData["FileSizeSortDirection"]?.ToString() ?? "desc")" class="table-sort-link">
+                                    <i class="bi bi-hdd"></i>
+                                    <span>Size</span>
                                     @if (ViewData["CurrentSort"]?.ToString() == "FileSize")
                                     {
-                                        <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill ms-1"></i>
+                                        <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
                                     }
                                 </a>
                             </th>
-                                    <th scope="col" class="border-0 fw-semibold text-muted small text-uppercase text-end" style="width: 10%;">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var document in Model.Documents.Items)
-                                {
-                                    <tr class="azure-table-row">
-                                        <!-- Document Selection -->
-                                        <td class="border-0 py-3">
-                                            <input type="checkbox" class="form-check-input document-checkbox" 
-                                                   value="@document.Id" data-title="@document.Title" data-size="@FormatFileSize(document.FileSize)" data-date="@document.CreatedAt.ToString("MMM dd, yyyy")">
-                                        </td>
-                                        <!-- Document Info -->
-                                        <td class="border-0 py-3">
-                                            <div class="d-flex align-items-center">
-                                                <div class="me-3 flex-shrink-0">
-                                                    <i class="bi @GetFileIcon(document.FileType) text-primary fs-4"></i>
+                            <th class="actions-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in Model.Documents.Items)
+                        {
+                            <tr class="modern-table-row">
+                                <!-- Document Selection -->
+                                <td class="select-cell">
+                                    <input type="checkbox" class="modern-checkbox document-checkbox" 
+                                           value="@document.Id" data-title="@document.Title" data-size="@FormatFileSize(document.FileSize)" data-date="@document.CreatedAt.ToString("MMM dd, yyyy")">
+                                </td>
+
+                                <!-- Document Info -->
+                                <td class="document-cell">
+                                    <div class="document-info">
+                                        <div class="document-icon @GetFileIconClass(document.FileType)">
+                                            <i class="bi @GetFileIcon(document.FileType)"></i>
+                                        </div>
+                                        <div class="document-details">
+                                            <div class="document-title">@document.Title</div>
+                                            @if (!string.IsNullOrEmpty(document.Description))
+                                            {
+                                                <div class="document-description">
+                                                    @(document.Description.Length > 80 ? document.Description.Substring(0, 80) + "..." : document.Description)
                                                 </div>
-                                                <div class="flex-grow-1 min-width-0">
-                                                    <div class="fw-semibold text-dark mb-1 text-truncate">@document.Title</div>
-                                                    @if (!string.IsNullOrEmpty(document.Description))
+                                            }
+                                            <!-- Mobile-only info -->
+                                            <div class="document-mobile-info d-md-none">
+                                                @if (!string.IsNullOrEmpty(document.TeamName))
+                                                {
+                                                    <span class="document-badge team">
+                                                        <i class="bi bi-people"></i>@document.TeamName
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="document-badge private">
+                                                        <i class="bi bi-lock"></i>Private
+                                                    </span>
+                                                }
+                                                <span class="document-date">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd"))</span>
+                                            </div>
+                                            @if (document.Categories != null && document.Categories.Any())
+                                            {
+                                                <div class="document-categories">
+                                                    @foreach (var category in document.Categories.Take(2))
                                                     {
-                                                        <div class="text-muted small text-truncate">
-                                                            @(document.Description.Length > 80 ? document.Description.Substring(0, 80) + "..." : document.Description)
-                                                        </div>
+                                                        <span class="category-tag">@category.Name</span>
                                                     }
-                                                    <!-- Mobile-only info -->
-                                                    <div class="d-md-none mt-1">
-                                                        @if (!string.IsNullOrEmpty(document.TeamName))
-                                                        {
-                                                            <span class="badge bg-success-subtle text-success me-2">
-                                                                <i class="bi bi-people me-1"></i>@document.TeamName
-                                                            </span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary-subtle text-secondary me-2">
-                                                                <i class="bi bi-lock me-1"></i>Private
-                                                            </span>
-                                                        }
-                                                        <small class="text-muted">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd"))</small>
-                                                    </div>
-                                                    @if (document.Categories != null && document.Categories.Any())
+                                                    @if (document.Categories.Count > 2)
                                                     {
-                                                        <div class="mt-1">
-                                                            @foreach (var category in document.Categories.Take(2))
-                                                            {
-                                                                <span class="badge bg-primary-subtle text-primary me-1 small">@category.Name</span>
-                                                            }
-                                                            @if (document.Categories.Count > 2)
-                                                            {
-                                                                <span class="badge bg-light text-muted small">+@(document.Categories.Count - 2)</span>
-                                                            }
-                                                        </div>
+                                                        <span class="category-tag more">+@(document.Categories.Count - 2)</span>
                                                     }
                                                 </div>
-                                            </div>
-                                        </td>
-
-                                        <!-- Workspace -->
-                                        <td class="border-0 py-3 d-none d-md-table-cell">
-                                            @if (!string.IsNullOrEmpty(document.TeamName))
-                                            {
-                                                <span class="badge bg-success-subtle text-success workspace-badge" title="@document.TeamName">
-                                                    <i class="bi bi-people me-1"></i>@(document.TeamName.Length > 12 ? document.TeamName.Substring(0, 12) + "..." : document.TeamName)
-                                                </span>
                                             }
-                                            else
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Workspace -->
+                                <td class="workspace-cell d-none d-md-table-cell">
+                                    @if (!string.IsNullOrEmpty(document.TeamName))
+                                    {
+                                        <span class="workspace-badge team" title="@document.TeamName">
+                                            <i class="bi bi-people"></i>
+                                            <span>@(document.TeamName.Length > 12 ? document.TeamName.Substring(0, 12) + "..." : document.TeamName)</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="workspace-badge private">
+                                            <i class="bi bi-lock"></i>
+                                            <span>Private</span>
+                                        </span>
+                                    }
+                                </td>
+
+                                <!-- Modified -->
+                                <td class="modified-cell d-none d-lg-table-cell">
+                                    <div class="modified-info">
+                                        <div class="modified-date">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</div>
+                                        <div class="modified-by">by @document.OwnerName</div>
+                                    </div>
+                                </td>
+
+                                <!-- Size -->
+                                <td class="size-cell d-none d-xl-table-cell">
+                                    <div class="size-info">
+                                        <div class="file-size">@FormatFileSize(document.FileSize)</div>
+                                        <div class="file-type">@document.FileType.ToUpper()</div>
+                                    </div>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="actions-cell">
+                                    <div class="dropdown">
+                                        <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
+                                            <li>
+                                                <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
+                                                    <i class="bi bi-eye"></i>
+                                                    <span>View Details</span>
+                                                </a>
+                                            </li>
+                                            @if (document.OwnerId == User.GetUserId())
                                             {
-                                                <span class="badge bg-secondary-subtle text-secondary">
-                                                    <i class="bi bi-lock me-1"></i>Private
-                                                </span>
+                                                <li>
+                                                    <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
+                                                        <i class="bi bi-pencil"></i>
+                                                        <span>Edit</span>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item text-danger" 
+                                                                        onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
+                                                        <i class="bi bi-trash"></i>
+                                                        <span>Delete</span>
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
+                                                        <i class="bi bi-arrows-angle-right"></i>
+                                                        <span>Move</span>
+                                                    </button>
+                                                </li>
                                             }
-                                        </td>
-
-                                        <!-- Modified -->
-                                        <td class="border-0 py-3 d-none d-lg-table-cell">
-                                            <div class="text-muted small">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</div>
-                                            <div class="text-muted small">by @document.OwnerName</div>
-                                        </td>
-
-                                        <!-- Size -->
-                                        <td class="border-0 py-3 d-none d-xl-table-cell">
-                                            <div class="text-muted small">@FormatFileSize(document.FileSize)</div>
-                                            <div class="text-muted small">@document.FileType.ToUpper()</div>
-                                        </td>
-
-                                        <!-- Actions -->
-                                        <td class="border-0 py-3 text-end">
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                    <i class="bi bi-three-dots"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li>
-                                                        <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
-                                                            <i class="bi bi-eye me-2"></i>View Details
-                                                        </a>
-                                                    </li>
-                                                    @if (document.OwnerId == User.GetUserId())
-                                                    {
-                                                        <li>
-                                                            <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
-                                                                <i class="bi bi-pencil me-2"></i>Edit
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <button type="button" class="dropdown-item text-danger" 
-                                                                                onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
-                                                                <i class="bi bi-trash me-2"></i>Delete
-                                                            </button>
-                                                        </li>
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
-                                                                <i class="bi bi-arrows-angle-right me-2"></i>Move
-                                                            </button>
-                                                        </li>
-                                                    }
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
-                                                            <button type="submit" class="dropdown-item text-success">
-                                                                <i class="bi bi-download me-2"></i>Download
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                                                         </tbody>
-                         </table>
-                 </div>
-
-                <!-- Pagination -->
-                @if (Model.Documents.TotalPages > 1)
-                {
-                    <nav aria-label="Page navigation" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            @if (Model.Documents.PageNumber > 1)
-                            {
-                                <li class="page-item">
-                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber - 1)">
-                                        <i class="bi bi-chevron-left"></i>
-                                    </a>
-                                </li>
-                            }
-                            
-                            @for (var i = Math.Max(1, Model.Documents.PageNumber - 2); i <= Math.Min(Model.Documents.TotalPages, Model.Documents.PageNumber + 2); i++)
-                            {
-                                <li class="page-item @(i == Model.Documents.PageNumber ? "active" : "")">
-                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i">@i</a>
-                                </li>
-                            }
-                            
-                            @if (Model.Documents.PageNumber < Model.Documents.TotalPages)
-                            {
-                                <li class="page-item">
-                                    <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber + 1)">
-                                        <i class="bi bi-chevron-right"></i>
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    </nav>
-                }
-            }
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-success">
+                                                        <i class="bi bi-download"></i>
+                                                        <span>Download</span>
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+
+        <!-- Enhanced Pagination -->
+        @if (Model.Documents.TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <nav class="pagination-nav">
+                    <ul class="modern-pagination">
+                        @if (Model.Documents.PageNumber > 1)
+                        {
+                            <li class="pagination-item">
+                                <a asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber - 1)" class="pagination-link prev">
+                                    <i class="bi bi-chevron-left"></i>
+                                    <span>Previous</span>
+                                </a>
+                            </li>
+                        }
+                        
+                        @for (var i = Math.Max(1, Model.Documents.PageNumber - 2); i <= Math.Min(Model.Documents.TotalPages, Model.Documents.PageNumber + 2); i++)
+                        {
+                            <li class="pagination-item">
+                                <a asp-page="./Index" asp-route-pageNumber="@i" 
+                                   class="pagination-link @(i == Model.Documents.PageNumber ? "active" : "")">@i</a>
+                            </li>
+                        }
+                        
+                        @if (Model.Documents.PageNumber < Model.Documents.TotalPages)
+                        {
+                            <li class="pagination-item">
+                                <a asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber + 1)" class="pagination-link next">
+                                    <span>Next</span>
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        }
+    }
 </div>
 
-<!-- Bulk Delete Confirmation Modal -->
+<!-- Modern Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0">
+        <div class="modal-content modern-modal">
+            <div class="modal-header">
                 <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle"></i>
                     Confirm Bulk Document Deletion
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-warning me-2"></i>
+                <div class="modern-alert modern-alert-danger">
+                    <i class="bi bi-warning"></i>
                     <strong>This action cannot be undone!</strong>
                 </div>
                 
                 <p>Are you sure you want to delete <strong><span id="bulkDeleteCount"></span></strong> documents?</p>
                 
-                <div class="card bg-light">
-                    <div class="card-header">
-                        <h6 class="mb-0">Documents to be deleted:</h6>
-                    </div>
-                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <div class="modern-card">
+                    <h6 class="mb-3">Documents to be deleted:</h6>
+                    <div class="bulk-delete-list">
                         <div id="bulkDeleteList"></div>
                     </div>
                 </div>
                 
-                <div id="bulkDeleteProgress" class="d-none mt-3">
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                <div id="bulkDeleteProgress" class="d-none">
+                    <div class="modern-progress">
+                        <div class="modern-progress-bar" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <small class="text-muted mt-1">
+                    <small class="progress-text">
                         <span id="bulkProgressText">Preparing deletion...</span>
                     </small>
                 </div>
-                
-                <p class="text-muted small mt-3">This will:</p>
-                <ul class="text-muted small">
-                    <li>Move the selected documents to deleted items</li>
-                    <li>Remove them from any team sharing</li>
-                    <li>Stop all related notifications</li>
-                    <li>Only delete documents that you own</li>
-                </ul>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cancel
+            <div class="modal-footer">
+                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                    <span>Cancel</span>
                 </button>
-                <button type="button" id="confirmBulkDelete" class="btn btn-danger">
-                    <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                    <i class="bi bi-trash me-1"></i>
+                <button type="button" id="confirmBulkDelete" class="modern-btn modern-btn-danger">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    <i class="bi bi-trash"></i>
                     <span class="btn-text">Delete All Documents</span>
                 </button>
             </div>
@@ -477,56 +561,47 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Modern Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
+        <div class="modal-content modern-modal">
+            <div class="modal-header">
                 <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle"></i>
                     Confirm Document Deletion
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-warning me-2"></i>
+                <div class="modern-alert modern-alert-danger">
+                    <i class="bi bi-warning"></i>
                     <strong>This action cannot be undone!</strong>
                 </div>
                 
                 <p>Are you sure you want to delete this document?</p>
                 
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title mb-2" id="deleteDocumentTitle"></h6>
-                        <div class="row text-muted small">
-                            <div class="col-6">
-                                <strong>Size:</strong> <span id="deleteDocumentSize"></span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Created:</strong> <span id="deleteDocumentDate"></span>
-                            </div>
+                <div class="modern-card">
+                    <h6 id="deleteDocumentTitle"></h6>
+                    <div class="delete-document-info">
+                        <div class="info-item">
+                            <strong>Size:</strong> <span id="deleteDocumentSize"></span>
+                        </div>
+                        <div class="info-item">
+                            <strong>Created:</strong> <span id="deleteDocumentDate"></span>
                         </div>
                     </div>
                 </div>
-                
-                <p class="text-muted small mt-3">This will:</p>
-                <ul class="text-muted small">
-                    <li>Move the document to deleted items (soft delete)</li>
-                    <li>Remove the document from team sharing</li>
-                    <li>Preserve all version history</li>
-                    <li>Allow restoration by admins if needed</li>
-                </ul>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cancel
+            <div class="modal-footer">
+                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                    <span>Cancel</span>
                 </button>
                 <form method="post" asp-page-handler="Delete" class="d-inline" id="deleteForm">
                     <input type="hidden" id="deleteDocumentId" name="documentId" />
-                    <button type="submit" class="btn btn-danger loading-btn">
-                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                        <i class="bi bi-trash me-1"></i>
+                    <button type="submit" class="modern-btn modern-btn-danger loading-btn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        <i class="bi bi-trash"></i>
                         <span class="btn-text">Delete Document</span>
                     </button>
                 </form>
@@ -535,21 +610,24 @@
     </div>
 </div>
 
-<!-- Move Document Modal -->
+<!-- Modern Move Document Modal -->
 <div class="modal fade" id="moveModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
+        <div class="modal-content modern-modal">
+            <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-arrows-angle-right me-2"></i>Move Document
+                    <i class="bi bi-arrows-angle-right"></i>
+                    Move Document
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="moveDocumentId" />
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-muted"><i class="bi bi-kanban me-1"></i>Project</label>
-                    <select id="moveProjectSelect" class="form-select">
+                <div class="form-group">
+                    <label class="modern-form-label">
+                        <i class="bi bi-kanban"></i>Project
+                    </label>
+                    <select id="moveProjectSelect" class="modern-form-select">
                         <option value="">Keep current</option>
                         <option value="0">Unassigned</option>
                         @foreach (var project in Model.Projects)
@@ -558,9 +636,11 @@
                         }
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-muted"><i class="bi bi-folder me-1"></i>Folder (optional)</label>
-                    <select id="moveFolderSelect" class="form-select">
+                <div class="form-group">
+                    <label class="modern-form-label">
+                        <i class="bi bi-folder"></i>Folder (optional)
+                    </label>
+                    <select id="moveFolderSelect" class="modern-form-select">
                         <option value="">None</option>
                         @foreach (var folder in Model.Folders)
                         {
@@ -569,9 +649,16 @@
                     </select>
                 </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x me-1"></i>Cancel</button>
-                <button type="button" id="confirmMoveBtn" class="btn btn-primary"><span class="spinner-border spinner-border-sm d-none me-2" role="status"></span><i class="bi bi-arrows-angle-right me-1"></i><span class="btn-text">Move</span></button>
+            <div class="modal-footer">
+                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i>
+                    <span>Cancel</span>
+                </button>
+                <button type="button" id="confirmMoveBtn" class="modern-btn modern-btn-primary">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    <i class="bi bi-arrows-angle-right"></i>
+                    <span class="btn-text">Move</span>
+                </button>
             </div>
         </div>
     </div>
@@ -605,19 +692,30 @@
             _ => "bi-file-earmark"
         };
     }
+
+    private string GetFileIconClass(string fileType)
+    {
+        return fileType.ToLower() switch
+        {
+            ".pdf" => "pdf-icon",
+            ".doc" or ".docx" => "word-icon",
+            ".txt" => "text-icon",
+            ".md" => "markdown-icon",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "image-icon",
+            _ => ""
+        };
+    }
 }
 
 @section Scripts {
     <script>
         // Confirm delete document function
         function confirmDeleteDocument(documentId, title, size, createdDate) {
-            // Populate modal with document details
             document.getElementById('deleteDocumentId').value = documentId;
             document.getElementById('deleteDocumentTitle').textContent = title;
             document.getElementById('deleteDocumentSize').textContent = size;
             document.getElementById('deleteDocumentDate').textContent = createdDate;
             
-            // Show the modal
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
             deleteModal.show();
         }
@@ -631,7 +729,6 @@
             const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
             const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
-            // Select All/None functionality
             selectAllCheckbox.addEventListener('change', function() {
                 documentCheckboxes.forEach(checkbox => {
                     checkbox.checked = this.checked;
@@ -639,12 +736,10 @@
                 updateBulkActionBar();
             });
 
-            // Individual checkbox change handling
             documentCheckboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', updateBulkActionBar);
             });
 
-            // Clear Selection button
             clearSelectionBtn.addEventListener('click', function() {
                 documentCheckboxes.forEach(checkbox => {
                     checkbox.checked = false;
@@ -654,7 +749,6 @@
                 updateBulkActionBar();
             });
 
-            // Bulk Delete button
             bulkDeleteBtn.addEventListener('click', function() {
                 const selectedCheckboxes = document.querySelectorAll('.document-checkbox:checked');
                 const selectedDocuments = Array.from(selectedCheckboxes).map(checkbox => ({
@@ -669,7 +763,6 @@
                 }
             });
 
-            // Update bulk action bar visibility and state
             function updateBulkActionBar() {
                 const selectedCheckboxes = document.querySelectorAll('.document-checkbox:checked');
                 const count = selectedCheckboxes.length;
@@ -682,7 +775,6 @@
                     bulkActionBar.classList.add('d-none');
                 }
                 
-                // Update "Select All" checkbox state
                 if (count === 0) {
                     selectAllCheckbox.checked = false;
                     selectAllCheckbox.indeterminate = false;
@@ -696,29 +788,25 @@
             }
         }
 
-        // Show bulk delete modal function
         function showBulkDeleteModal(selectedDocuments) {
             if (!selectedDocuments || selectedDocuments.length === 0) return;
             
-            // Update count
             document.getElementById('bulkDeleteCount').textContent = 
                 `${selectedDocuments.length} document${selectedDocuments.length > 1 ? 's' : ''}`;
             
-            // Build document list
             const listContainer = document.getElementById('bulkDeleteList');
             listContainer.innerHTML = selectedDocuments.map(doc => `
-                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <div class="flex-grow-1 min-width-0">
-                        <div class="fw-medium text-truncate">${escapeHtml(doc.title)}</div>
-                        <div class="small text-muted">${doc.size} • Created ${doc.date}</div>
+                <div class="bulk-delete-item">
+                    <div class="bulk-item-info">
+                        <div class="bulk-item-title">${escapeHtml(doc.title)}</div>
+                        <div class="bulk-item-meta">${doc.size} • Created ${doc.date}</div>
                     </div>
-                    <div class="text-end ms-2">
-                        <i class="bi bi-file-earmark text-muted"></i>
+                    <div class="bulk-item-icon">
+                        <i class="bi bi-file-earmark"></i>
                     </div>
                 </div>
             `).join('');
             
-            // Reset modal state
             document.getElementById('bulkDeleteProgress').classList.add('d-none');
             const confirmBtn = document.getElementById('confirmBulkDelete');
             const spinner = confirmBtn.querySelector('.spinner-border');
@@ -730,41 +818,32 @@
             icon.classList.remove('d-none');
             btnText.textContent = `Delete All Documents`;
             
-            // Store selected documents for confirm handler
             window.bulkDeleteDocuments = selectedDocuments;
             
-            // Show modal
             const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
             modal.show();
         }
 
-        // Escape HTML helper function
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Dynamic UI update after bulk delete
         function updateUIAfterBulkDelete(result) {
-            // Remove successfully deleted document rows with animation
             result.results.forEach(item => {
                 if (item.success) {
                     const checkbox = document.querySelector(`.document-checkbox[value="${item.documentId}"]`);
                     if (checkbox) {
                         const row = checkbox.closest('tr');
                         if (row) {
-                            // Add fade-out animation
                             row.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                             row.style.opacity = '0';
                             row.style.transform = 'translateX(-20px)';
                             
-                            // Remove row after animation
                             setTimeout(() => {
                                 row.remove();
-                                
-                                // Check if table is now empty
-                                const remainingRows = document.querySelectorAll('.azure-table-row');
+                                const remainingRows = document.querySelectorAll('.modern-table-row');
                                 if (remainingRows.length === 0) {
                                     showEmptyState();
                                 }
@@ -774,16 +853,12 @@
                 }
             });
 
-            // Reset bulk selection state
             setTimeout(() => {
                 clearAllSelections();
-                
-                // Show success toast message
                 showSuccessToast(result);
             }, 100);
         }
 
-        // Clear all selections and hide bulk action bar
         function clearAllSelections() {
             const selectAllCheckbox = document.getElementById('selectAll');
             const documentCheckboxes = document.querySelectorAll('.document-checkbox');
@@ -803,34 +878,34 @@
             }
         }
 
-        // Show empty state when no documents remain
         function showEmptyState() {
-            const tableContainer = document.querySelector('.azure-table-container');
+            const tableContainer = document.querySelector('.modern-table-container');
             if (tableContainer) {
                 tableContainer.innerHTML = `
-                    <div class="azure-empty-state text-center">
-                        <div class="mb-4">
-                            <i class="bi bi-inbox display-1 text-muted"></i>
+                    <div class="documents-empty-state">
+                        <div class="empty-state-content">
+                            <div class="empty-state-icon">📂</div>
+                            <h3 class="empty-state-title">No documents found</h3>
+                            <p class="empty-state-subtitle">All documents have been successfully deleted.</p>
+                            <div class="empty-state-actions">
+                                <a href="./Upload" class="modern-btn modern-btn-primary">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <span>Upload New Document</span>
+                                </a>
+                            </div>
                         </div>
-                        <h4 class="text-muted mb-3">No documents found</h4>
-                        <p class="text-muted mb-4">All documents have been successfully deleted.</p>
-                        <a asp-page="./Upload" class="btn btn-primary">
-                            <i class="bi bi-cloud-upload me-2"></i>Upload New Document
-                        </a>
                     </div>
                 `;
             }
         }
 
-        // Show success toast notification
         function showSuccessToast(result) {
-            // Create toast element
             const toastHtml = `
                 <div class="toast align-items-center text-white bg-success border-0 position-fixed" 
                      style="top: 20px; right: 20px; z-index: 9999;" role="alert">
                     <div class="d-flex">
                         <div class="toast-body">
-                            <i class="bi bi-check-circle me-2"></i>
+                            <i class="bi bi-check-circle"></i>
                             ${getSuccessMessage(result)}
                         </div>
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" 
@@ -839,21 +914,17 @@
                 </div>
             `;
             
-            // Add toast to page
             document.body.insertAdjacentHTML('beforeend', toastHtml);
             
-            // Initialize and show toast
             const toastElement = document.body.lastElementChild;
             const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
             toast.show();
             
-            // Remove toast element after hiding
             toastElement.addEventListener('hidden.bs.toast', () => {
                 toastElement.remove();
             });
         }
 
-        // Get appropriate success message
         function getSuccessMessage(result) {
             if (result.isFullySuccessful) {
                 return `Successfully deleted ${result.successfulDeletions} document${result.successfulDeletions > 1 ? 's' : ''}!`;
@@ -864,39 +935,13 @@
             }
         }
 
-        // Initialize dropdown z-index management
-        function initializeDropdownZIndex() {
-            const dropdowns = document.querySelectorAll('.dropdown');
-            
-            dropdowns.forEach(dropdown => {
-                const toggle = dropdown.querySelector('.dropdown-toggle');
-                const row = dropdown.closest('.azure-table-row');
-                
-                if (toggle && row) {
-                    toggle.addEventListener('shown.bs.dropdown', function() {
-                        row.classList.add('dropdown-open');
-                    });
-                    
-                    toggle.addEventListener('hidden.bs.dropdown', function() {
-                        row.classList.remove('dropdown-open');
-                    });
-                }
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize bulk selection system
             initializeBulkSelection();
             
-            // Fix dropdown z-index by managing open state
-            initializeDropdownZIndex();
-            
-            // Handle bulk delete confirmation
             document.getElementById('confirmBulkDelete').addEventListener('click', async function() {
                 const documentsToDelete = window.bulkDeleteDocuments;
                 if (!documentsToDelete || documentsToDelete.length === 0) return;
                 
-                // Show loading state
                 const confirmBtn = this;
                 const spinner = confirmBtn.querySelector('.spinner-border');
                 const btnText = confirmBtn.querySelector('.btn-text');
@@ -907,15 +952,13 @@
                 icon.classList.add('d-none');
                 btnText.textContent = 'Deleting...';
                 
-                // Show progress bar
                 const progressDiv = document.getElementById('bulkDeleteProgress');
-                const progressBar = progressDiv.querySelector('.progress-bar');
+                const progressBar = progressDiv.querySelector('.modern-progress-bar');
                 const progressText = document.getElementById('bulkProgressText');
                 progressDiv.classList.remove('d-none');
                 progressText.textContent = `Deleting ${documentsToDelete.length} document(s)...`;
                 
                 try {
-                    // Make real AJAX call to backend
                     const requestData = {
                         documentIds: documentsToDelete.map(doc => parseInt(doc.id))
                     };
@@ -935,12 +978,10 @@
                     
                     const result = await response.json();
                     
-                    // Smooth progress bar animation to 100%
                     progressBar.style.transition = 'width 0.5s ease';
                     progressBar.style.width = '100%';
                     
                     if (result.success) {
-                        // Handle successful deletion
                         if (result.isFullySuccessful) {
                             progressText.textContent = `Successfully deleted all ${result.successfulDeletions} document(s)!`;
                         } else if (result.hasPartialFailure) {
@@ -949,23 +990,19 @@
                             progressText.textContent = `No documents were deleted. Please check permissions.`;
                         }
                         
-                        // Wait a moment to show success message, then close and update UI
                         setTimeout(() => {
                             const modal = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
                             modal.hide();
                             
-                            // Dynamic UI updates instead of page refresh
                             if (result.successfulDeletions > 0) {
                                 updateUIAfterBulkDelete(result);
                             }
                         }, 2000);
                         
                     } else {
-                        // Handle error from backend
                         progressText.textContent = `Error: ${result.error || 'Unknown error occurred'}`;
                         progressBar.classList.add('bg-danger');
                         
-                        // Re-enable button for retry
                         setTimeout(() => {
                             confirmBtn.disabled = false;
                             spinner.classList.add('d-none');
@@ -979,7 +1016,6 @@
                     progressText.textContent = `Network error: ${error.message}`;
                     progressBar.classList.add('bg-danger');
                     
-                    // Re-enable button for retry
                     setTimeout(() => {
                         confirmBtn.disabled = false;
                         spinner.classList.add('d-none');
@@ -988,19 +1024,7 @@
                     }, 2000);
                 }
             });
-            // Enhanced table row hover effects
-            document.querySelectorAll('.azure-table-row').forEach(function(row) {
-                row.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#f8f9fa';
-                    this.style.transition = 'background-color 0.15s ease';
-                });
-                
-                row.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '';
-                });
-            });
 
-            // Delete form loading state
             const deleteForm = document.getElementById('deleteForm');
             if (deleteForm) {
                 deleteForm.addEventListener('submit', function() {
@@ -1017,7 +1041,7 @@
                     }
                 });
             }
-            // Move document logic
+
             const moveModal = document.getElementById('moveModal');
             if(moveModal){
                 let selectedDocId = null;
@@ -1039,7 +1063,6 @@
                     try{
                         let response;
                         if(isBulk){
-                            // Bulk move operation
                             const payload = {
                                 documentIds: window.bulkMoveIds.map(id=>parseInt(id)),
                                 projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value):null,
@@ -1051,7 +1074,6 @@
                                 body:JSON.stringify(payload)
                             });
                         } else {
-                            // Single document move operation
                             const requestPayload = {
                                 documentId: parseInt(document.getElementById('moveDocumentId').value),
                                 projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value) : null,
@@ -1086,7 +1108,6 @@
                 document.getElementById('moveProjectSelect').addEventListener('change', async function(){
                     const projectId = this.value;
                     const folderSelect = document.getElementById('moveFolderSelect');
-                    // Clear existing options except first
                     folderSelect.options.length = 0;
                     const defaultOpt = new Option('None', '');
                     folderSelect.add(defaultOpt);
@@ -1105,217 +1126,1529 @@
                     }catch(err){ console.error(err); }
                 });
             }
+
             document.getElementById('bulkMoveBtn').addEventListener('click', function(){
                 const selected = Array.from(document.querySelectorAll('.document-checkbox:checked')).map(cb=>cb.value);
                 if(selected.length===0){ alert('No documents selected'); return; }
                 window.bulkMoveIds = selected;
-                // reset modal fields
                 document.getElementById('moveProjectSelect').value='';
                 const folderSel = document.getElementById('moveFolderSelect');
                 folderSel.options.length = 0; folderSel.add(new Option('None',''));
                 const modal = new bootstrap.Modal(document.getElementById('moveModal'));
                 modal.show();
             });
-
-
         });
     </script>
     
     <style>
-        .azure-filter-panel {
-            border-radius: 8px;
-            background: #ffffff;
+        /* Modern Documents Container */
+        .documents-container {
+            padding: 32px;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
-        
-                 .azure-table-container {
-             border-radius: 8px;
-             overflow: visible;
-         }
-         
-         .azure-table {
-             font-size: 0.9rem;
-             table-layout: fixed;
-             width: 100%;
-         }
-        
-        .azure-table thead th {
-            background-color: #f8f9fa !important;
+
+        /* Page Header */
+        .documents-page-header {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+        }
+
+        .page-header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .page-header-info .page-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .page-icon {
+            font-size: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Enhanced Modern Button Styling */
+        .modern-btn {
+            padding: 10px 20px;
+            font-size: 14px;
             font-weight: 600;
-            padding: 12px 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
-        
-        .azure-table tbody td {
-            padding: 16px;
-            vertical-align: middle;
+
+        .page-header-actions .modern-btn {
+            padding: 12px 24px;
+            border-radius: 12px;
         }
-        
-        .azure-table-row:hover {
-            background-color: #f8f9fa !important;
+
+        .modern-btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+            border: none;
         }
-        
-        .azure-empty-state {
-            padding: 3rem 1rem;
+
+        .modern-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
+            color: white;
+            background: linear-gradient(135deg, #34d399, #10b981);
+        }
+
+        /* Theme-specific overrides for primary buttons */
+        [data-theme="light"] .modern-btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        [data-theme="light"] .modern-btn-primary:hover {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        [data-theme="dark"] .modern-btn-primary {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            color: white;
+            box-shadow: 0 6px 20px rgba(52, 211, 153, 0.3);
+        }
+
+        [data-theme="dark"] .modern-btn-primary:hover {
+            background: linear-gradient(135deg, #6ee7b7, #34d399);
+            box-shadow: 0 8px 25px rgba(110, 231, 183, 0.4);
+        }
+
+        .modern-btn-outline {
+            background: transparent;
+            color: #6b7280;
+            border: 2px solid #d1d5db;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .modern-btn-outline:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: #10b981;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+        }
+
+        /* Theme-specific overrides for outline buttons */
+        [data-theme="light"] .modern-btn-outline {
             background: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+            color: #374151;
+            border-color: #d1d5db;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
-        
-        .page-transition {
-            animation: fadeIn 0.3s ease-in;
+
+        [data-theme="light"] .modern-btn-outline:hover {
+            background: rgba(16, 185, 129, 0.05);
+            color: #10b981;
+            border-color: #10b981;
         }
-        
-        @@keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        [data-theme="dark"] .modern-btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        
-        .dropdown-toggle::after {
-            display: none;
+
+        [data-theme="dark"] .modern-btn-outline:hover {
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+            border-color: #34d399;
         }
-        
-        .badge {
-            font-size: 0.75rem;
+
+        /* Filter Actions Specific Styling */
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-actions .modern-btn {
+            min-width: 130px;
+            justify-content: center;
+        }
+
+        .filter-actions .modern-btn i {
+            font-size: 16px;
+        }
+
+
+
+        /* Document Stats Grid - Improved Responsive Layout */
+        .documents-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .documents-stat-card {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .documents-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color);
+        }
+
+        .documents-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12);
+        }
+
+        .documents-stat-card.blue {
+            --accent-color: #3b82f6;
+        }
+
+        .documents-stat-card.green {
+            --accent-color: #10b981;
+        }
+
+        .documents-stat-card.cyan {
+            --accent-color: #06b6d4;
+        }
+
+        .documents-stat-card.yellow {
+            --accent-color: #f59e0b;
+        }
+
+        .documents-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .documents-stat-info h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .documents-stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .documents-stat-change {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .documents-stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 80%, transparent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        /* Modern Alerts */
+        .modern-alert {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modern-alert::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--alert-color);
+        }
+
+        .modern-alert-success {
+            --alert-color: #10b981;
+            border-left-color: var(--alert-color);
+        }
+
+        .modern-alert-danger {
+            --alert-color: #ef4444;
+            border-left-color: var(--alert-color);
+        }
+
+        .modern-alert i {
+            color: var(--alert-color);
+            font-size: 18px;
+        }
+
+        .modern-alert span {
+            flex: 1;
+            color: var(--text-primary);
             font-weight: 500;
         }
-        
-        .form-check-sm .form-check-input {
-            margin-top: 0.125rem;
+
+        .modern-alert-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
         }
-        
-                 .btn-sm {
-             font-size: 0.8rem;
-         }
-         
-         .min-width-0 {
-             min-width: 0;
-         }
-         
-         .text-truncate {
-             overflow: hidden;
-             text-overflow: ellipsis;
-             white-space: nowrap;
-         }
-         
-         .azure-table td {
-             position: relative;
-         }
-         
-         .dropdown-menu {
-             z-index: 1050;
-         }
-         
-         .sortable a {
-             cursor: pointer;
-         }
-         
-         .sortable a:hover {
-             color: #495057 !important;
-         }
-         
-         .workspace-badge {
-             max-width: 120px;
-             overflow: hidden;
-             text-overflow: ellipsis;
-             white-space: nowrap;
-             display: inline-block;
-         }
-         
-         .azure-filter-panel .form-control,
-         .azure-filter-panel .form-select {
-             border: 1px solid #ced4da;
-             border-radius: 6px;
-         }
-         
-         .azure-filter-panel .form-control:focus,
-         .azure-filter-panel .form-select:focus {
-             border-color: #86b7fe;
-             box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
-         }
-         
-         /* Enhanced UX Animations */
-         .document-row-exit {
-             animation: slideOutLeft 0.5s ease forwards;
-         }
-         
-         @@keyframes slideOutLeft {
-             from {
-                 opacity: 1;
-                 transform: translateX(0);
-             }
-             to {
-                 opacity: 0;
-                 transform: translateX(-20px);
-             }
-         }
-         
-         .progress-bar {
-             transition: width 0.3s ease, background-color 0.3s ease;
-         }
-         
-         .progress-bar.bg-danger {
-             animation: pulseError 2s ease-in-out;
-         }
-         
-         @@keyframes pulseError {
-             0%, 100% { opacity: 1; }
-             50% { opacity: 0.7; }
-         }
-         
-         .toast {
-             animation: slideInRight 0.3s ease;
-         }
-         
-         @@keyframes slideInRight {
-             from {
-                 opacity: 0;
-                 transform: translateX(100%);
-             }
-             to {
-                 opacity: 1;
-                 transform: translateX(0);
-             }
-         }
-         
-         .bulk-action-bar {
-             transition: all 0.3s ease;
-             animation: slideInDown 0.3s ease;
-         }
-         
-         @@keyframes slideInDown {
-             from {
-                 opacity: 0;
-                 transform: translateY(-10px);
-             }
-             to {
-                 opacity: 1;
-                 transform: translateY(0);
-             }
-         }
-         
-         .azure-table-row {
-             transition: background-color 0.15s ease, transform 0.15s ease;
-         }
-         
-         .azure-table-row:hover {
-             transform: translateY(-1px);
-             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-         }
-         
-         /* Fix dropdown z-index issues */
-         .dropdown {
-             position: relative;
-         }
-         
-         .dropdown-menu {
-             z-index: 1050 !important;
-         }
-         
-         .azure-table-row {
-             position: relative;
-         }
-         
-         .azure-table-row.dropdown-open {
-             z-index: 1040;
-         }
+
+        .modern-alert-close:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+        }
+
+        /* Enhanced Filter Card */
+        .documents-filter-card {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-glass);
+            position: relative;
+        }
+
+        /* Dark theme base styling using design system variables */
+        [data-theme="dark"] .documents-filter-card,
+        html[data-theme="dark"] .documents-filter-card,
+        body[data-theme="dark"] .documents-filter-card {
+            background: var(--surface-primary) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-color: var(--border-color) !important;
+            box-shadow: var(--shadow-glass) !important;
+        }
+
+        .filter-card-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .filter-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-input,
+        .filter-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-secondary);
+            border-radius: 8px;
+            background: var(--surface-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-light);
+            background: var(--surface-primary);
+        }
+
+        /* Dark theme filter styling - Using proper design system variables */
+        [data-theme="dark"] .documents-filter-card {
+            background: var(--surface-primary) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-color: var(--border-color) !important;
+            box-shadow: var(--shadow-glass) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-card-header {
+            border-bottom-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-title {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-subtitle {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-label {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-input,
+        [data-theme="dark"] .documents-filter-card .filter-select {
+            background: var(--surface-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-input:focus,
+        [data-theme="dark"] .documents-filter-card .filter-select:focus {
+            background: var(--surface-tertiary) !important;
+            border-color: var(--accent-color) !important;
+            box-shadow: 0 0 0 3px var(--accent-light) !important;
+        }
+
+        [data-theme="dark"] .documents-filter-card .filter-input::placeholder {
+            color: var(--text-muted) !important;
+        }
+
+        /* Additional dark theme support for option elements */
+        [data-theme="dark"] .documents-filter-card select option {
+            background: var(--surface-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Alternative dark theme detection methods for broader compatibility */
+        html[data-theme="dark"] .documents-filter-card,
+        body[data-theme="dark"] .documents-filter-card,
+        .dark .documents-filter-card {
+            background: var(--surface-primary) !important;
+            border-color: var(--border-color) !important;
+            box-shadow: var(--shadow-glass) !important;
+        }
+
+        html[data-theme="dark"] .documents-filter-card .filter-input,
+        html[data-theme="dark"] .documents-filter-card .filter-select,
+        body[data-theme="dark"] .documents-filter-card .filter-input,
+        body[data-theme="dark"] .documents-filter-card .filter-select,
+        .dark .documents-filter-card .filter-input,
+        .dark .documents-filter-card .filter-select {
+            background: var(--surface-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        html[data-theme="dark"] .documents-filter-card .filter-title,
+        body[data-theme="dark"] .documents-filter-card .filter-title,
+        .dark .documents-filter-card .filter-title {
+            color: var(--text-primary) !important;
+        }
+
+        html[data-theme="dark"] .documents-filter-card .filter-subtitle,
+        body[data-theme="dark"] .documents-filter-card .filter-subtitle,
+        .dark .documents-filter-card .filter-subtitle {
+            color: var(--text-secondary) !important;
+        }
+
+        html[data-theme="dark"] .documents-filter-card .filter-label,
+        body[data-theme="dark"] .documents-filter-card .filter-label,
+        .dark .documents-filter-card .filter-label {
+            color: var(--text-secondary) !important;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* Empty State */
+        .documents-empty-state {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state-content {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            opacity: 0.6;
+            margin-bottom: 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .empty-state-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .empty-state-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Results Summary */
+        .results-summary-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 16px 20px;
+            background: var(--surface-secondary);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-secondary);
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .results-info,
+        .page-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Enhanced Bulk Action Bar */
+        .bulk-action-card {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: 1px solid #10b981;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 12px 40px color-mix(in srgb, #10b981 25%, transparent);
+            animation: slideInDown 0.3s ease;
+        }
+
+        .bulk-action-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .bulk-action-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .bulk-action-icon {
+            font-size: 24px;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bulk-action-text {
+            color: white;
+        }
+
+        .bulk-count {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .bulk-subtitle {
+            display: block;
+            opacity: 0.8;
+            font-size: 12px;
+        }
+
+        .bulk-action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn.clear {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .action-btn.move {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .action-btn.delete {
+            background: rgba(239, 68, 68, 0.3);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Enhanced Table */
+        .documents-table-card {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.02);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .table-header-info .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .table-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .table-action-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+        }
+
+        .modern-table-container {
+            overflow-x: auto;
+        }
+
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .modern-table thead th {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-secondary);
+            background: var(--surface-secondary);
+        }
+
+        .modern-table tbody td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .modern-table-row {
+            transition: all 0.2s ease;
+        }
+
+        .modern-table-row:hover {
+            background: var(--surface-hover);
+        }
+
+        .select-column {
+            width: 50px;
+            text-align: center;
+        }
+
+        .document-column {
+            width: 40%;
+        }
+
+        .workspace-column {
+            width: 15%;
+        }
+
+        .modified-column {
+            width: 20%;
+        }
+
+        .size-column {
+            width: 10%;
+        }
+
+        .actions-column {
+            width: 10%;
+            text-align: center;
+        }
+
+        .table-sort-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .table-sort-link:hover {
+            color: var(--text-primary);
+        }
+
+        /* Checkbox Styling */
+        .modern-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .modern-checkbox:checked {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+
+        .modern-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .modern-checkbox:indeterminate {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+        }
+
+        .modern-checkbox:indeterminate::after {
+            content: '−';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .modern-checkbox:hover {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+
+        /* Dark mode checkbox styling */
+        [data-theme="dark"] .modern-checkbox {
+            background: #374151;
+            border-color: #6b7280;
+        }
+
+        [data-theme="dark"] .modern-checkbox:checked {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            border-color: #34d399;
+        }
+
+        [data-theme="dark"] .modern-checkbox:indeterminate {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            border-color: #34d399;
+        }
+
+        [data-theme="dark"] .modern-checkbox:hover {
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
+        }
+
+        /* Table cell styling for checkboxes */
+        .select-cell {
+            text-align: center;
+            vertical-align: middle;
+            width: 50px;
+        }
+
+        /* Document Info Styling */
+        .document-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .document-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+
+        /* PDF Files - Red */
+        .document-icon .bi-file-earmark-pdf {
+            color: #ffffff;
+            parent-background: linear-gradient(135deg, #ef4444, #dc2626);
+            parent-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Word Documents - Blue */
+        .document-icon .bi-file-earmark-word {
+            color: #ffffff;
+            parent-background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            parent-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Text Files - Cyan */
+        .document-icon .bi-file-earmark-text {
+            color: #ffffff;
+            parent-background: linear-gradient(135deg, #06b6d4, #0891b2);
+            parent-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
+        }
+
+        /* Markdown Files - Purple */
+        .document-icon .bi-markdown {
+            color: #ffffff;
+            parent-background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            parent-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Image Files - Purple */
+        .document-icon .bi-file-earmark-image {
+            color: #ffffff;
+            parent-background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            parent-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Generic Files - Default Blue */
+        .document-icon .bi-file-earmark {
+            color: #ffffff;
+        }
+
+        /* Dynamic styling with JavaScript-like approach using CSS */
+        .document-icon.pdf-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+        }
+
+        .document-icon.word-icon {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        .document-icon.text-icon {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
+        }
+
+        .document-icon.markdown-icon {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+
+        .document-icon.image-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Dark theme adjustments */
+        [data-theme="dark"] .document-icon {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .document-icon.pdf-icon {
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        [data-theme="dark"] .document-icon.word-icon {
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        [data-theme="dark"] .document-icon.text-icon {
+            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+        }
+
+        [data-theme="dark"] .document-icon.markdown-icon {
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+
+        [data-theme="dark"] .document-icon.image-icon {
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .document-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .document-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .document-description {
+            font-size: 12px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .document-mobile-info {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .document-categories {
+            margin-top: 8px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .category-tag {
+            font-size: 10px;
+            padding: 2px 8px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .category-tag.more {
+            background: var(--text-muted);
+        }
+
+        .document-badge,
+        .workspace-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .document-badge.team,
+        .workspace-badge.team {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .document-badge.private,
+        .workspace-badge.private {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .document-date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .modified-info,
+        .size-info {
+            text-align: left;
+        }
+
+        .modified-date,
+        .file-size {
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .modified-by,
+        .file-type {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .action-dropdown-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-dropdown-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+        }
+
+        /* Modern Dropdown */
+        .modern-dropdown {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            min-width: 180px;
+        }
+
+        .modern-dropdown .dropdown-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modern-dropdown .dropdown-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .modern-dropdown .dropdown-item.text-danger {
+            color: #ef4444;
+        }
+
+        .modern-dropdown .dropdown-item.text-success {
+            color: #10b981;
+        }
+
+        /* Enhanced Pagination */
+        .pagination-container {
+            margin-top: 32px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .pagination-nav {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .modern-pagination {
+            display: flex;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .pagination-item {
+            display: flex;
+        }
+
+        .pagination-link {
+            padding: 10px 16px;
+            border-radius: 8px;
+            background: var(--surface-secondary);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 44px;
+            justify-content: center;
+        }
+
+        .pagination-link:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .pagination-link.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent);
+        }
+
+        .pagination-link.prev,
+        .pagination-link.next {
+            font-size: 14px;
+            padding: 10px 20px;
+        }
+
+        /* Modern Modal Styling */
+        .modern-modal {
+            background: var(--surface-primary);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .modern-modal .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .modern-modal .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modern-modal .modal-body {
+            padding: 24px;
+        }
+
+        .modern-modal .modal-footer {
+            padding: 24px;
+            border-top: 1px solid var(--border-secondary);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .modern-card {
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .modern-card h6 {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .bulk-delete-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .bulk-delete-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .bulk-delete-item:last-child {
+            border-bottom: none;
+        }
+
+        .bulk-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bulk-item-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bulk-item-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .bulk-item-icon {
+            color: var(--text-muted);
+            margin-left: 12px;
+        }
+
+        .delete-document-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-item {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .modern-progress {
+            background: var(--surface-secondary);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .modern-progress-bar {
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .modern-form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modern-form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-secondary);
+            border-radius: 8px;
+            background: var(--surface-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .modern-form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+        }
+
+        .modern-btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 32px color-mix(in srgb, #ef4444 25%, transparent);
+        }
+
+        .modern-btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px color-mix(in srgb, #ef4444 35%, transparent);
+            color: white;
+        }
+
+        /* Responsive Design */
+        /* Large tablets and smaller desktops - 2x2 layout */
+        @@media (max-width: 1200px) {
+            .documents-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+        }
+
+        @@media (max-width: 1024px) {
+            .documents-container {
+                padding: 24px;
+            }
+
+            .documents-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+
+            .filter-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+            }
+
+            .page-header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .results-summary-card {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .bulk-action-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .bulk-action-buttons {
+                justify-content: center;
+            }
+
+            .table-card-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* Tablets - keep 2x2 layout */
+        @@media (max-width: 768px) {
+            .documents-container {
+                padding: 16px;
+            }
+
+            .documents-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+        }
+
+        /* Mobile phones - single column */
+        @@media (max-width: 480px) {
+            .documents-container {
+                padding: 12px;
+            }
+
+            .documents-stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+            }
+
+            .empty-state-actions {
+                flex-direction: column;
+            }
+
+            .page-header-info .page-title {
+                font-size: 28px;
+            }
+
+            .documents-stat-number {
+                font-size: 28px;
+            }
+
+            .modern-table thead th,
+            .modern-table tbody td {
+                padding: 12px 16px;
+            }
+
+            .pagination-link {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+
+            .pagination-link.prev,
+            .pagination-link.next {
+                padding: 8px 16px;
+            }
+        }
+
+        /* Animation */
+        @@keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 } 
