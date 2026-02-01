@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Mvc
+@using Microsoft.AspNetCore.Mvc
 @using Microsoft.AspNetCore.Mvc.RazorPages
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
@@ -490,14 +490,10 @@
                      <div class="sidebar-icon"><i class="bi bi-folder"></i></div>
                      <span>Documents</span>
                  </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Projects") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
-                     <div class="sidebar-icon"><i class="bi bi-kanban"></i></div>
-                     <span>Projects</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Folders") == true ? "active" : "")" asp-area="" asp-page="/Folders/Index">
-                     <div class="sidebar-icon"><i class="bi bi-folder2-open"></i></div>
-                     <span>Folders</span>
-                 </a>
+                <a class="sidebar-item @(currentPage?.StartsWith("/Projects") == true || currentPage?.StartsWith("/Folders") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
+                    <div class="sidebar-icon"><i class="bi bi-kanban"></i></div>
+                    <span>Projects</span>
+                </a>
                  <a class="sidebar-item @(currentPage?.StartsWith("/Teams") == true ? "active" : "")" asp-area="" asp-page="/Teams/Index">
                      <div class="sidebar-icon"><i class="bi bi-people"></i></div>
                      <span>Teams</span>

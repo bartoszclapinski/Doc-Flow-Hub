@@ -4,83 +4,96 @@
     ViewData["Title"] = "Folders";
 }
 
-<div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a asp-page="/Index" class="text-decoration-none">
-                    <i class="bi bi-house-door me-1"></i>Home
-                </a>
-            </li>
-            <li class="breadcrumb-item">
-                <a asp-page="/Projects/Index" class="text-decoration-none">
-                    <i class="bi bi-kanban me-1"></i>Projects
-                </a>
-            </li>
-            @if (Model.Project != null)
-            {
-                <li class="breadcrumb-item">
-                    <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="text-decoration-none">
-                        <i class="bi bi-@Model.Project.Icon me-1"></i>@Model.Project.Name
-                    </a>
-                </li>
-            }
-            <li class="breadcrumb-item active" aria-current="page">
-                <i class="bi bi-folder me-1"></i>Folders
-            </li>
-        </ol>
+<div class="folders-container">
+    <!-- Modern Breadcrumb -->
+    <nav class="modern-breadcrumb" aria-label="breadcrumb">
+        <a asp-page="/Index" class="breadcrumb-link">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <a asp-page="/Projects/Index" class="breadcrumb-link">
+            <i class="bi bi-kanban"></i>
+            <span>Projects</span>
+        </a>
+        @if (Model.Project != null)
+        {
+            <i class="bi bi-chevron-right breadcrumb-separator"></i>
+            <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="breadcrumb-link">
+                <i class="bi bi-@Model.Project.Icon"></i>
+                <span>@Model.Project.Name</span>
+            </a>
+        }
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-current">
+            <i class="bi bi-folder"></i>
+            Folders
+        </span>
     </nav>
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">
-                <i class="bi bi-folder me-2"></i>Folders
-            </h1>
-            @if (Model.Project != null)
-            {
-                <p class="text-muted mb-0">
-                    Managing folders in <strong>@Model.Project.Name</strong>
-                </p>
-            }
-        </div>
-        <div class="d-flex gap-2">
-            <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" 
-               class="btn btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>New Folder
-            </a>
-            <a asp-page="/Projects/Details" asp-route-id="@Model.ProjectId" 
-               class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Back to Project
-            </a>
+    <!-- Modern Page Header -->
+    <div class="folders-page-header">
+        <div class="page-header-content">
+            <div class="page-header-info">
+                <h1 class="page-title">
+                    <div class="page-icon">📁</div>
+                    Folders
+                </h1>
+                @if (Model.Project != null)
+                {
+                    <p class="page-subtitle">Managing folders in <strong>@Model.Project.Name</strong></p>
+                }
+            </div>
+            <div class="page-header-actions">
+                <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>New Folder</span>
+                </a>
+                <a asp-page="/Projects/Details" asp-route-id="@Model.ProjectId" class="modern-btn modern-btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back to Project</span>
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- Filters and Search -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <input type="hidden" asp-for="ProjectId" />
-                
-                <div class="col-md-4">
-                    <label asp-for="Filter.SearchTerm" class="form-label">Search Folders</label>
-                    <input asp-for="Filter.SearchTerm" class="form-control" 
-                           placeholder="Search by folder name..." />
+    <!-- Modern Filter Panel -->
+    <div class="folders-filter-panel">
+        <div class="filter-header">
+            <h3 class="filter-title">
+                <i class="bi bi-funnel"></i>
+                Filter Folders
+            </h3>
+        </div>
+        <form method="get" class="filter-form">
+            <input type="hidden" asp-for="ProjectId" />
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label asp-for="Filter.SearchTerm" class="filter-label">
+                        <i class="bi bi-search"></i>
+                        Search
+                    </label>
+                    <input asp-for="Filter.SearchTerm" class="filter-input" placeholder="Search by folder name..." />
                 </div>
                 
-                <div class="col-md-3">
-                    <label asp-for="Filter.Status" class="form-label">Status</label>
-                    <select asp-for="Filter.Status" class="form-select">
+                <div class="filter-group">
+                    <label asp-for="Filter.Status" class="filter-label">
+                        <i class="bi bi-toggle-on"></i>
+                        Status
+                    </label>
+                    <select asp-for="Filter.Status" class="filter-select">
                         <option value="">All Status</option>
                         <option value="Active">Active</option>
                         <option value="Archived">Archived</option>
                     </select>
                 </div>
                 
-                <div class="col-md-3">
-                    <label asp-for="Filter.SortBy" class="form-label">Sort By</label>
-                    <select asp-for="Filter.SortBy" class="form-select">
+                <div class="filter-group">
+                    <label asp-for="Filter.SortBy" class="filter-label">
+                        <i class="bi bi-sort-down"></i>
+                        Sort By
+                    </label>
+                    <select asp-for="Filter.SortBy" class="filter-select">
                         <option value="Name">Name</option>
                         <option value="CreatedAt">Created Date</option>
                         <option value="UpdatedAt">Modified Date</option>
@@ -88,48 +101,51 @@
                     </select>
                 </div>
                 
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search me-1"></i>Search
+                <div class="filter-actions">
+                    <button type="submit" class="filter-btn filter-btn-primary">
+                        <i class="bi bi-search"></i>
+                        Search
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 
-    <!-- Folder Tree View -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="bi bi-diagram-3 me-2"></i>Folder Structure
-            </h5>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="expandAll">
-                    <i class="bi bi-arrows-expand me-1"></i>Expand All
+    <!-- Folder Tree Card -->
+    <div class="folders-tree-card">
+        <div class="tree-card-header">
+            <div class="tree-header-title">
+                <div class="tree-icon">🗂️</div>
+                <h3>Folder Structure</h3>
+            </div>
+            <div class="tree-header-actions">
+                <button type="button" class="tree-action-btn" id="expandAll">
+                    <i class="bi bi-arrows-expand"></i>
+                    <span>Expand All</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseAll">
-                    <i class="bi bi-arrows-collapse me-1"></i>Collapse All
+                <button type="button" class="tree-action-btn" id="collapseAll">
+                    <i class="bi bi-arrows-collapse"></i>
+                    <span>Collapse All</span>
                 </button>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div class="p-3">
-                <input type="text" id="folderSearch" class="form-control form-control-sm" placeholder="Search folders..." />
-            </div>
+        
+        <div class="tree-search-bar">
+            <i class="bi bi-search"></i>
+            <input type="text" id="folderSearch" class="tree-search-input" placeholder="Quick search folders..." />
+        </div>
+        
+        <div class="tree-card-body">
             @if (!Model.Folders.Items.Any())
             {
                 <!-- Empty State -->
-                <div class="text-center py-5">
-                    <div class="mb-3">
-                        <i class="bi bi-folder-x display-1 text-muted"></i>
-                    </div>
-                    <h4 class="text-muted mb-2">No folders yet</h4>
-                    <p class="text-muted mb-4">
-                        Get started by creating your first folder to organize your documents.
-                    </p>
-                    <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" 
-                       class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i>Create First Folder
+                <div class="folders-empty-state">
+                    <div class="empty-icon">📂</div>
+                    <h3>No folders yet</h3>
+                    <p>Get started by creating your first folder to organize your documents.</p>
+                    <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" class="empty-action-btn">
+                        <i class="bi bi-plus-circle"></i>
+                        Create First Folder
                     </a>
                 </div>
             }
@@ -146,71 +162,67 @@
         </div>
     </div>
 
-    <!-- Pagination -->
+    <!-- Modern Pagination -->
     @if (Model.Folders.TotalPages > 1)
     {
-        <nav aria-label="Folder pagination" class="mt-4">
-            <ul class="pagination justify-content-center">
-                @if (Model.Folders.PageNumber > 1)
-                {
-                    <li class="page-item">
-                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber - 1)" 
-                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
-                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
-                            <i class="bi bi-chevron-left"></i>
-                        </a>
-                    </li>
-                }
+        <div class="folders-pagination">
+            @if (Model.Folders.PageNumber > 1)
+            {
+                <a class="pagination-btn" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber - 1)" 
+                   asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                   asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
+                    <i class="bi bi-chevron-left"></i>
+                    <span>Previous</span>
+                </a>
+            }
 
+            <div class="pagination-numbers">
                 @for (int i = 1; i <= Model.Folders.TotalPages; i++)
                 {
-                    <li class="page-item @(i == Model.Folders.PageNumber ? "active" : "")">
-                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@i" 
-                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
-                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
-                            @i
-                        </a>
-                    </li>
+                    <a class="pagination-number @(i == Model.Folders.PageNumber ? "active" : "")" 
+                       asp-page="./Index" asp-route-pageNumber="@i" 
+                       asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                       asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">@i</a>
                 }
+            </div>
 
-                @if (Model.Folders.PageNumber < Model.Folders.TotalPages)
-                {
-                    <li class="page-item">
-                        <a class="page-link" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber + 1)" 
-                           asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
-                           asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                    </li>
-                }
-            </ul>
-        </nav>
+            @if (Model.Folders.PageNumber < Model.Folders.TotalPages)
+            {
+                <a class="pagination-btn" asp-page="./Index" asp-route-pageNumber="@(Model.Folders.PageNumber + 1)" 
+                   asp-route-projectId="@Model.ProjectId" asp-route-searchTerm="@Model.Filter.SearchTerm" 
+                   asp-route-status="@Model.Filter.Status" asp-route-sortBy="@Model.Filter.SortBy">
+                    <span>Next</span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            }
+        </div>
     }
 </div>
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Delete Folder
-                </h5>
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon danger">🗑️</div>
+                    <h5 class="modal-title" id="deleteModalLabel">Delete Folder</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete the folder <strong id="folderName"></strong>?</p>
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.
+                <div class="modal-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span><strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" asp-page-handler="Delete" style="display: inline;">
                     <input type="hidden" id="folderIdToDelete" name="id" />
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Delete Folder
+                    <button type="submit" class="modal-btn modal-btn-danger">
+                        <i class="bi bi-trash"></i> Delete Folder
                     </button>
                 </form>
             </div>
@@ -218,9 +230,657 @@
     </div>
 </div>
 
+@section Styles {
+<style>
+    /* ===== FOLDERS PAGE STYLES ===== */
+    
+    .folders-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* Modern Breadcrumb */
+    .modern-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .breadcrumb-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-link:hover { color: var(--accent-color); }
+    .breadcrumb-separator { color: var(--text-tertiary); font-size: 0.75rem; }
+    .breadcrumb-current {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    /* Page Header */
+    .folders-page-header { margin-bottom: 2rem; }
+    
+    .folders-page-header .page-header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+    
+    .folders-page-header .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+    
+    .folders-page-header .page-icon { font-size: 2.5rem; }
+    
+    .folders-page-header .page-subtitle {
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+    }
+    
+    .page-header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .modern-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .modern-btn-primary {
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        color: white;
+        border: none;
+    }
+    
+    .modern-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        color: white;
+    }
+    
+    .modern-btn-secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .modern-btn-secondary:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    /* Filter Panel */
+    .folders-filter-panel {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        backdrop-filter: blur(20px);
+    }
+    
+    .filter-header { margin-bottom: 1.25rem; }
+    
+    .filter-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+    
+    .filter-title i { color: var(--accent-color); }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    
+    .filter-input,
+    .filter-select {
+        padding: 0.65rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-input:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+    
+    .filter-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .filter-btn-primary {
+        background: var(--accent-color);
+        color: white;
+    }
+    
+    .filter-btn-primary:hover {
+        background: rgba(5, 150, 105, 0.9);
+    }
+    
+    /* Folder Tree Card */
+    .folders-tree-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .tree-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .tree-header-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .tree-icon { font-size: 1.5rem; }
+    
+    .tree-header-title h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .tree-header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .tree-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .tree-action-btn:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    .tree-search-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--surface-secondary);
+    }
+    
+    .tree-search-bar i { color: var(--text-tertiary); }
+    
+    .tree-search-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        outline: none;
+    }
+    
+    .tree-search-input::placeholder { color: var(--text-tertiary); }
+    
+    .tree-card-body { padding: 1rem; }
+    
+    /* Folder Tree */
+    .folder-tree { padding: 0.5rem; }
+    
+    .folder-tree-node { margin-bottom: 0.5rem; }
+    
+    .folder-item {
+        display: flex;
+        align-items: center;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--surface-secondary);
+        transition: all 0.2s ease;
+    }
+    
+    .folder-item:hover {
+        background: var(--surface-primary);
+        border-color: var(--accent-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .folder-toggle {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .folder-toggle:hover {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+    }
+    
+    .folder-icon {
+        font-size: 1.5rem;
+        margin-right: 0.75rem;
+    }
+    
+    .folder-icon-img {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #eab308;
+        background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%);
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .folder-info { flex: 1; min-width: 0; }
+    
+    .folder-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.2rem;
+        word-break: break-word;
+    }
+    
+    .folder-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .tree-meta-item {
+        color: var(--text-tertiary);
+    }
+    
+    .tree-meta-separator {
+        color: var(--text-tertiary);
+        opacity: 0.5;
+    }
+    
+    .folder-actions {
+        display: flex;
+        gap: 0.35rem;
+        align-items: center;
+    }
+    
+    .folder-action-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .folder-action-btn:hover {
+        background: var(--surface-secondary);
+        color: var(--accent-color);
+    }
+    
+    .folder-action-btn.danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+    
+    .folder-children {
+        margin-left: 2.5rem;
+        margin-top: 0.5rem;
+        padding-left: 1rem;
+        border-left: 2px solid var(--border-color);
+    }
+    
+    .folder-tree-node.collapsed .folder-children { display: none; }
+    
+    .folder-toggle i { transition: transform 0.2s ease; }
+    .folder-tree-node:not(.collapsed) .folder-toggle i { transform: rotate(90deg); }
+    
+    /* Empty State */
+    .folders-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+    
+    .folders-empty-state .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.6;
+    }
+    
+    .folders-empty-state h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .folders-empty-state p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin: 0 0 1.5rem 0;
+    }
+    
+    .empty-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .empty-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        color: white;
+    }
+    
+    /* Pagination */
+    .folders-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem 0;
+    }
+    
+    .pagination-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    
+    .pagination-btn:hover {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+    }
+    
+    .pagination-numbers { display: flex; gap: 0.25rem; }
+    
+    .pagination-number {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+    
+    .pagination-number:hover {
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+    }
+    
+    .pagination-number.active {
+        background: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+    }
+    
+    /* Modern Modal */
+    .modern-modal {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+    
+    .modern-modal .modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .modal-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .modal-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .modal-icon.danger { background: rgba(239, 68, 68, 0.15); }
+    
+    .modern-modal .modal-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .modern-modal .modal-body { padding: 1.5rem; }
+    .modern-modal .modal-body p { color: var(--text-primary); margin: 0 0 1rem 0; }
+    
+    .modal-warning {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: #ca8a04;
+    }
+    
+    .modern-modal .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 1rem 1.5rem;
+        gap: 0.5rem;
+    }
+    
+    .modal-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .modal-btn-secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .modal-btn-secondary:hover { background: var(--surface-primary); color: var(--text-primary); }
+    
+    .modal-btn-danger { background: #dc2626; color: white; }
+    .modal-btn-danger:hover { background: #b91c1c; }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1200px) {
+        .filter-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .filter-actions {
+            grid-column: span 2;
+        }
+    }
+    
+    @@media (max-width: 768px) {
+        .folders-container { padding: 1rem; }
+        
+        .folders-page-header .page-header-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .folders-page-header .page-title { font-size: 1.5rem; }
+        
+        .page-header-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+        
+        .page-header-actions .modern-btn { width: 100%; justify-content: center; }
+        
+        .filter-grid { grid-template-columns: 1fr; }
+        .filter-actions { grid-column: 1; }
+        
+        .tree-card-header { flex-direction: column; align-items: flex-start; }
+        .tree-header-actions { width: 100%; justify-content: flex-start; }
+        
+        .folder-children { margin-left: 1.5rem; }
+        .folder-actions { flex-wrap: wrap; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .modern-breadcrumb { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .folders-filter-panel { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .folders-tree-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .tree-search-bar { background: rgba(60, 60, 60, 0.6); }
+    [data-theme="dark"] .folder-item { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .folder-item:hover { background: rgba(70, 70, 70, 0.7); }
+    [data-theme="dark"] .modern-modal { background: rgba(45, 45, 45, 0.98); }
+    [data-theme="dark"] .folders-empty-state { background: transparent; }
+</style>
+}
+
 @section Scripts {
     <script>
-        // Folder tree functionality
         document.addEventListener('DOMContentLoaded', function() {
             // Expand/Collapse all functionality
             document.getElementById('expandAll').addEventListener('click', function() {
@@ -283,215 +943,56 @@
 
             // Drag and drop functionality
             const tree = document.getElementById('folderTree');
-            tree.querySelectorAll('.folder-tree-node').forEach(n=>{
-                n.setAttribute('draggable','true');
-            });
-
-            let draggedId=null;
-            tree.addEventListener('dragstart',e=>{
-                const node=e.target.closest('.folder-tree-node');
-                if(!node)return;
-                draggedId=node.dataset.id;
-                e.dataTransfer.effectAllowed='move';
-            });
-            tree.addEventListener('dragover',e=>{
-                e.preventDefault();
-            });
-            tree.addEventListener('drop',async e=>{
-                e.preventDefault();
-                const targetNode=e.target.closest('.folder-tree-node');
-                if(!targetNode||draggedId===null)return;
-                const targetId=targetNode.dataset.id;
-                if(targetId===draggedId)return;
-                const payload={folderId:parseInt(draggedId), newParentFolderId:parseInt(targetId)};
-                const resp=await fetch('/Folders/Index?handler=MoveFolder',{
-                    method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
-                    body:JSON.stringify(payload)
+            if (tree) {
+                tree.querySelectorAll('.folder-tree-node').forEach(n => {
+                    n.setAttribute('draggable', 'true');
                 });
-                const data=await resp.json();
-                if(data.success){window.location.reload();}
-                else alert(data.error||'Move failed');
-            });
 
-            // folder search filter
-            const searchInput=document.getElementById('folderSearch');
-            searchInput.addEventListener('input',()=>{
-                const term=searchInput.value.toLowerCase();
-                tree.querySelectorAll('.folder-tree-node').forEach(n=>{
-                    const name=n.querySelector('.folder-name').textContent.toLowerCase();
-                    n.style.display = name.includes(term)?'':'none';
+                let draggedId = null;
+                tree.addEventListener('dragstart', e => {
+                    const node = e.target.closest('.folder-tree-node');
+                    if (!node) return;
+                    draggedId = node.dataset.id;
+                    e.dataTransfer.effectAllowed = 'move';
                 });
-            });
+                tree.addEventListener('dragover', e => {
+                    e.preventDefault();
+                });
+                tree.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    const targetNode = e.target.closest('.folder-tree-node');
+                    if (!targetNode || draggedId === null) return;
+                    const targetId = targetNode.dataset.id;
+                    if (targetId === draggedId) return;
+                    const payload = { folderId: parseInt(draggedId), newParentFolderId: parseInt(targetId) };
+                    const resp = await fetch('/Folders/Index?handler=MoveFolder', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Move failed');
+                    }
+                });
+            }
+
+            // Folder search filter
+            const searchInput = document.getElementById('folderSearch');
+            if (searchInput && tree) {
+                searchInput.addEventListener('input', () => {
+                    const term = searchInput.value.toLowerCase();
+                    tree.querySelectorAll('.folder-tree-node').forEach(n => {
+                        const name = n.querySelector('.folder-name').textContent.toLowerCase();
+                        n.style.display = name.includes(term) ? '' : 'none';
+                    });
+                });
+            }
         });
     </script>
 }
-
-<style>
-    .folder-tree {
-        padding: 1rem;
-    }
-
-    .folder-tree-node {
-        margin-bottom: 0.5rem;
-    }
-
-    .folder-item {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem;
-        border: 1px solid #e9ecef;
-        border-radius: 0.375rem;
-        background-color: #fff;
-        transition: all 0.2s ease-in-out;
-    }
-
-    .folder-item:hover {
-        background-color: #f8f9fa;
-        border-color: #dee2e6;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .folder-toggle {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 0.5rem;
-        cursor: pointer;
-        color: #6c757d;
-        transition: color 0.2s ease-in-out;
-    }
-
-    .folder-toggle:hover {
-        color: #495057;
-    }
-
-    .folder-icon {
-        color: #ffc107;
-        margin-right: 0.5rem;
-        font-size: 1.1rem;
-    }
-
-    .folder-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .folder-name {
-        font-weight: 500;
-        color: #212529;
-        margin-bottom: 0.25rem;
-        word-break: break-word;
-    }
-
-    .folder-meta {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-
-    .folder-actions {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-
-    .folder-children {
-        margin-left: 2rem;
-        margin-top: 0.5rem;
-        border-left: 2px solid #e9ecef;
-        padding-left: 1rem;
-    }
-
-    .folder-tree-node.collapsed .folder-children {
-        display: none;
-    }
-
-    .folder-tree-node.collapsed .folder-toggle i {
-        transform: rotate(0deg);
-    }
-
-    .folder-toggle i {
-        transition: transform 0.2s ease-in-out;
-    }
-
-    .folder-tree-node:not(.collapsed) .folder-toggle i {
-        transform: rotate(90deg);
-    }
-
-    .breadcrumb {
-        background-color: transparent;
-        padding: 0;
-        margin: 0;
-    }
-
-    .breadcrumb-item + .breadcrumb-item::before {
-        content: ">";
-        color: #6c757d;
-    }
-
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    .dropdown-menu {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .dropdown-item {
-        padding: 0.5rem 1rem;
-        transition: background-color 0.2s ease-in-out;
-    }
-
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    .dropdown-item i {
-        width: 1rem;
-        margin-right: 0.5rem;
-    }
-
-    .alert {
-        border: none;
-        border-radius: 0.375rem;
-    }
-
-    .alert-warning {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-
-    .pagination .page-link {
-        color: #0d6efd;
-        border-color: #dee2e6;
-    }
-
-    .pagination .page-item.active .page-link {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-    }
-
-    .pagination .page-link:hover {
-        background-color: #e9ecef;
-        border-color: #dee2e6;
-    }
-
-    @@media (max-width: 768px) {
-        .folder-actions {
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        
-        .folder-children {
-            margin-left: 1rem;
-        }
-        
-        .d-flex.gap-2 {
-            flex-direction: column;
-            gap: 0.5rem !important;
-        }
-    }
-</style>
