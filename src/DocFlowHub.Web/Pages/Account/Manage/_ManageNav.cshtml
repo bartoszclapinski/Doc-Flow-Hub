@@ -2,17 +2,159 @@
     var activePage = ViewData["ActivePage"]?.ToString() ?? "";
 }
 
-<div class="list-group">
-    <a asp-page="./Index" class="list-group-item list-group-item-action @(activePage == "Profile" ? "active" : "")">
-        <i class="fas fa-user me-2"></i> Profile
+<div class="manage-nav">
+    <h3 class="nav-title">Account Settings</h3>
+    
+    <a asp-page="./Index" class="manage-nav-item @(activePage == "Profile" ? "active" : "")">
+        <div class="nav-icon">
+            <i class="bi bi-person"></i>
+        </div>
+        <div class="nav-text">
+            <span class="nav-label">Profile</span>
+            <span class="nav-desc">View your profile info</span>
+        </div>
+        <i class="bi bi-chevron-right nav-arrow"></i>
     </a>
-    <a asp-page="./EditProfile" class="list-group-item list-group-item-action @(activePage == "EditProfile" ? "active" : "")">
-        <i class="fas fa-edit me-2"></i> Edit Profile
+    
+    <a asp-page="./EditProfile" class="manage-nav-item @(activePage == "EditProfile" ? "active" : "")">
+        <div class="nav-icon">
+            <i class="bi bi-pencil"></i>
+        </div>
+        <div class="nav-text">
+            <span class="nav-label">Edit Profile</span>
+            <span class="nav-desc">Update your details</span>
+        </div>
+        <i class="bi bi-chevron-right nav-arrow"></i>
     </a>
-    <a asp-page="./ChangePassword" class="list-group-item list-group-item-action @(activePage == "ChangePassword" ? "active" : "")">
-        <i class="fas fa-key me-2"></i> Change Password
+    
+    <a asp-page="./ChangePassword" class="manage-nav-item @(activePage == "ChangePassword" ? "active" : "")">
+        <div class="nav-icon">
+            <i class="bi bi-key"></i>
+        </div>
+        <div class="nav-text">
+            <span class="nav-label">Change Password</span>
+            <span class="nav-desc">Update your password</span>
+        </div>
+        <i class="bi bi-chevron-right nav-arrow"></i>
     </a>
-    <a asp-page="./UploadProfilePicture" class="list-group-item list-group-item-action @(activePage == "UploadProfilePicture" ? "active" : "")">
-        <i class="fas fa-camera me-2"></i> Profile Picture
+    
+    <a asp-page="./UploadProfilePicture" class="manage-nav-item @(activePage == "UploadProfilePicture" ? "active" : "")">
+        <div class="nav-icon">
+            <i class="bi bi-camera"></i>
+        </div>
+        <div class="nav-text">
+            <span class="nav-label">Profile Picture</span>
+            <span class="nav-desc">Change your photo</span>
+        </div>
+        <i class="bi bi-chevron-right nav-arrow"></i>
     </a>
-</div> 
+</div>
+
+<style>
+    .manage-nav {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.25rem;
+        position: sticky;
+        top: 2rem;
+    }
+    
+    .nav-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 1rem 0.5rem;
+    }
+    
+    .manage-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        margin-bottom: 0.25rem;
+    }
+    
+    .manage-nav-item:last-child { margin-bottom: 0; }
+    
+    .manage-nav-item:hover {
+        background: var(--surface-secondary);
+    }
+    
+    .manage-nav-item.active {
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+        border: 1px solid rgba(5, 150, 105, 0.3);
+    }
+    
+    .manage-nav-item .nav-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        transition: all 0.2s ease;
+    }
+    
+    .manage-nav-item.active .nav-icon {
+        background: var(--accent-color);
+        color: white;
+    }
+    
+    .manage-nav-item:hover .nav-icon {
+        color: var(--accent-color);
+    }
+    
+    .manage-nav-item.active:hover .nav-icon {
+        color: white;
+    }
+    
+    .nav-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    
+    .nav-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .nav-desc {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .nav-arrow {
+        color: var(--text-tertiary);
+        font-size: 0.8rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .manage-nav-item:hover .nav-arrow {
+        transform: translateX(3px);
+        color: var(--accent-color);
+    }
+    
+    .manage-nav-item.active .nav-arrow {
+        color: var(--accent-color);
+    }
+    
+    /* Dark theme */
+    [data-theme="dark"] .manage-nav {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .manage-nav-item:hover {
+        background: rgba(60, 60, 60, 0.5);
+    }
+</style>

@@ -6,270 +6,238 @@
     ViewData["Title"] = Model.Team?.Name ?? "Team Details";
 }
 
-<div class="container-fluid">
+<div class="team-details-container">
+    <!-- Modern Breadcrumb -->
+    <nav class="modern-breadcrumb" aria-label="breadcrumb">
+        <a asp-page="/Index" class="breadcrumb-link">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <a asp-page="./Index" class="breadcrumb-link">
+            <i class="bi bi-people"></i>
+            <span>Teams</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-current">@(Model.Team?.Name ?? "Details")</span>
+    </nav>
+
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            @Model.ErrorMessage
+        <div class="modern-alert modern-alert-danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">@Model.ErrorMessage</div>
+            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
         </div>
     }
     
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
-        <div class="alert alert-success" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            @Model.SuccessMessage
+        <div class="modern-alert modern-alert-success">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">@Model.SuccessMessage</div>
+            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
         </div>
     }
-    
+
     @if (Model.Team != null)
     {
-        <!-- Breadcrumb Navigation -->
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-page="./Index">Teams</a></li>
-                <li class="breadcrumb-item active" aria-current="page">@Model.Team.Name</li>
-            </ol>
-        </nav>
-
-        <div class="row">
-            <!-- Main Team Details -->
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h1 class="card-title mb-0 h4">
-                                <i class="bi bi-people-fill me-2"></i>
-                                @Model.Team.Name
-                            </h1>
-                            <div class="btn-group">
-                                @if (Model.Team.OwnerId == User.GetUserId())
-                                {
-                                    <a asp-page="./Edit" asp-route-id="@Model.Team.Id" class="btn btn-outline-light btn-sm">
-                                        <i class="bi bi-pencil"></i> Edit Team
-                                    </a>
-                                }
-                                <a asp-page="./Index" class="btn btn-light btn-sm">
-                                    <i class="bi bi-arrow-left"></i> Back to Teams
-                                </a>
+        <div class="team-details-layout">
+            <!-- Main Content -->
+            <div class="team-main-content">
+                <!-- Team Header Card -->
+                <div class="team-header-card">
+                    <div class="team-header-top">
+                        <div class="team-header-info">
+                            <div class="team-icon-large">
+                                <i class="bi bi-people-fill"></i>
                             </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        @if (!string.IsNullOrEmpty(Model.Team.Description))
-                        {
-                            <div class="mb-4">
-                                <h5>Description</h5>
-                                <p class="text-muted">@Model.Team.Description</p>
-                            </div>
-                        }
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <dl class="row">
-                                    <dt class="col-sm-5">Team Owner</dt>
-                                    <dd class="col-sm-7">
-                                        <i class="bi bi-person-circle text-success"></i>
-                                        @(Model.Team.OwnerName ?? "Unknown")
-                                    </dd>
-                                    
-                                    <dt class="col-sm-5">Members</dt>
-                                    <dd class="col-sm-7">
-                                        <span class="badge bg-info">@Model.Team.MemberCount member@(Model.Team.MemberCount != 1 ? "s" : "")</span>
-                                    </dd>
-                                </dl>
-                            </div>
-                            <div class="col-md-6">
-                                <dl class="row">
-                                    <dt class="col-sm-5">Created</dt>
-                                    <dd class="col-sm-7">
-                                        <span data-bs-toggle="tooltip" title="@Model.Team.CreatedAt.ToString("F")">
-                                            @Model.Team.CreatedAt.ToString("MMM dd, yyyy")
-                                        </span>
-                                    </dd>
-                                    
-                                    <dt class="col-sm-5">Last Updated</dt>
-                                    <dd class="col-sm-7">
-                                        @if (Model.Team.UpdatedAt.HasValue)
-                                        {
-                                            <span data-bs-toggle="tooltip" title="@Model.Team.UpdatedAt.Value.ToString("F")">
-                                                @Model.Team.UpdatedAt.Value.ToString("MMM dd, yyyy")
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Never</span>
-                                        }
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-
-                        @if (Model.Team.OwnerId == User.GetUserId())
-                        {
-                            <div class="mt-4">
-                                <div class="border rounded p-3 bg-light">
-                                    <h6 class="mb-3">
-                                        <i class="bi bi-person-plus text-primary me-1"></i>
-                                        Add New Member
-                                    </h6>
-                                    <form method="post" asp-page-handler="AddMember" class="row g-3">
-                                        <div class="col-md-8">
-                                            <input asp-for="NewMemberEmail" type="email" class="form-control" 
-                                                   placeholder="Enter member's email address" required />
-                                        </div>
-                                        <div class="col-md-4">
-                                            <button type="submit" class="btn btn-primary w-100">
-                                                <i class="bi bi-plus-circle me-1"></i>
-                                                Add Member
-                                            </button>
-                                        </div>
-                                    </form>
-                                    <small class="form-text text-muted">
-                                        New members will be added with "Member" role and can view shared team documents.
-                                    </small>
+                            <div class="team-title-section">
+                                <h1 class="team-title">@Model.Team.Name</h1>
+                                <div class="team-meta-row">
+                                    <span class="member-count">
+                                        <i class="bi bi-people"></i>
+                                        @Model.Team.MemberCount member@(Model.Team.MemberCount != 1 ? "s" : "")
+                                    </span>
+                                    <span class="team-owner">
+                                        <i class="bi bi-person-circle"></i>
+                                        Owner: @(Model.Team.OwnerName ?? "Unknown")
+                                    </span>
                                 </div>
                             </div>
-                        }
+                        </div>
+                        <div class="team-header-actions">
+                            @if (Model.Team.OwnerId == User.GetUserId())
+                            {
+                                <a asp-page="./Edit" asp-route-id="@Model.Team.Id" class="action-btn action-btn-primary">
+                                    <i class="bi bi-pencil"></i>
+                                    <span>Edit Team</span>
+                                </a>
+                            }
+                            <a asp-page="./Index" class="action-btn action-btn-secondary">
+                                <i class="bi bi-arrow-left"></i>
+                                <span>Back</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Team.Description))
+                    {
+                        <div class="team-description-section">
+                            <p>@Model.Team.Description</p>
+                        </div>
+                    }
+
+                    <div class="team-info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Created</span>
+                            <span class="info-value">@Model.Team.CreatedAt.ToString("MMM dd, yyyy")</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Last Updated</span>
+                            <span class="info-value">@(Model.Team.UpdatedAt?.ToString("MMM dd, yyyy") ?? "Never")</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Team Members Sidebar -->
-            <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-people"></i>
-                            Team Members (@Model.Team.MemberCount)
-                        </h5>
+
+                <!-- Add Member Section (Owner Only) -->
+                @if (Model.Team.OwnerId == User.GetUserId())
+                {
+                    <div class="add-member-card">
+                        <div class="card-header-section">
+                            <div class="card-icon green">
+                                <i class="bi bi-person-plus"></i>
+                            </div>
+                            <div>
+                                <h3>Add New Member</h3>
+                                <p>Invite team members by email address</p>
+                            </div>
+                        </div>
+                        <form method="post" asp-page-handler="AddMember" class="add-member-form">
+                            <input asp-for="NewMemberEmail" type="email" class="member-email-input" 
+                                   placeholder="Enter member's email address" required />
+                            <button type="submit" class="add-member-btn">
+                                <i class="bi bi-plus-circle"></i>
+                                Add Member
+                            </button>
+                        </form>
+                        <p class="form-hint">New members will be added with "Member" role and can view shared team documents.</p>
                     </div>
-                    <div class="card-body p-0">
+                }
+            </div>
+
+            <!-- Sidebar - Members List -->
+            <div class="team-sidebar">
+                <div class="members-card">
+                    <div class="members-header">
+                        <h3>
+                            <i class="bi bi-people"></i>
+                            Team Members
+                        </h3>
+                        <span class="members-count">@Model.Team.MemberCount</span>
+                    </div>
+                    
+                    <div class="members-list">
                         @if (Model.Members.Items.Any())
                         {
-                            <div class="list-group list-group-flush">
-                                @foreach (var member in Model.Members.Items)
-                                {
-                                    <div class="list-group-item">
-                                        <div class="d-flex w-100 justify-content-between align-items-center">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">
-                                                    <i class="bi bi-person-circle me-1"></i>
-                                                    @(member.UserName ?? member.UserId)
-                                                </h6>
-                                                <p class="mb-1 small text-muted">
-                                                    <i class="bi bi-envelope me-1"></i>
-                                                    @(member.UserEmail ?? "Unknown")
-                                                </p>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    @if (member.UserId == Model.Team.OwnerId)
-                                                    {
-                                                        <span class="badge bg-warning">
-                                                            <i class="bi bi-crown-fill me-1"></i>Owner
-                                                        </span>
-                                                    }
-                                                    else if (member.Role == TeamRole.Admin)
-                                                    {
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-star-fill me-1"></i>Admin
-                                                        </span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-info">
-                                                            <i class="bi bi-person-check me-1"></i>Member
-                                                        </span>
-                                                    }
-                                                    <small class="text-muted">
-                                                        Joined: @member.JoinedAt.ToString("MMM yyyy")
-                                                    </small>
-                                                </div>
-                                            </div>
-                                            @if (Model.Team.OwnerId == User.GetUserId() && member.UserId != User.GetUserId())
+                            @foreach (var member in Model.Members.Items)
+                            {
+                                <div class="member-item">
+                                    <div class="member-avatar">
+                                        <i class="bi bi-person-circle"></i>
+                                    </div>
+                                    <div class="member-info">
+                                        <h4 class="member-name">@(member.UserName ?? member.UserId)</h4>
+                                        <p class="member-email">@(member.UserEmail ?? "Unknown")</p>
+                                        <div class="member-meta">
+                                            @if (member.UserId == Model.Team.OwnerId)
                                             {
-                                                <div class="ms-2">
-                                                    <div class="btn-group" role="group">
-                                                        @if (member.Role == TeamRole.Member)
-                                                        {
-                                                            <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
-                                                                <input type="hidden" name="memberUserId" value="@member.UserId" />
-                                                                <input type="hidden" name="newRole" value="@TeamRole.Admin" />
-                                                                <button type="submit" class="btn btn-outline-success btn-sm" 
-                                                                        title="Promote to Admin" onclick="return confirm('Promote this member to Admin?')">
-                                                                    <i class="bi bi-arrow-up"></i>
-                                                                </button>
-                                                            </form>
-                                                        }
-                                                        else if (member.Role == TeamRole.Admin)
-                                                        {
-                                                            <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
-                                                                <input type="hidden" name="memberUserId" value="@member.UserId" />
-                                                                <input type="hidden" name="newRole" value="@TeamRole.Member" />
-                                                                <button type="submit" class="btn btn-outline-warning btn-sm" 
-                                                                        title="Demote to Member" onclick="return confirm('Demote this admin to Member?')">
-                                                                    <i class="bi bi-arrow-down"></i>
-                                                                </button>
-                                                            </form>
-                                                        }
-                                                        <form method="post" asp-page-handler="RemoveMember" class="d-inline">
-                                                            <input type="hidden" name="memberUserId" value="@member.UserId" />
-                                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
-                                                                    title="Remove from team" onclick="return confirm('Remove this member from the team?')">
-                                                                <i class="bi bi-person-x"></i>
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
+                                                <span class="member-role owner">
+                                                    <i class="bi bi-crown-fill"></i>
+                                                    Owner
+                                                </span>
                                             }
+                                            else if (member.Role == TeamRole.Admin)
+                                            {
+                                                <span class="member-role admin">
+                                                    <i class="bi bi-star-fill"></i>
+                                                    Admin
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="member-role member">
+                                                    <i class="bi bi-person-check"></i>
+                                                    Member
+                                                </span>
+                                            }
+                                            <span class="join-date">Joined @member.JoinedAt.ToString("MMM yyyy")</span>
                                         </div>
                                     </div>
-                                }
-                            </div>
+                                    @if (Model.Team.OwnerId == User.GetUserId() && member.UserId != User.GetUserId())
+                                    {
+                                        <div class="member-actions">
+                                            @if (member.Role == TeamRole.Member)
+                                            {
+                                                <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
+                                                    <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                    <input type="hidden" name="newRole" value="@TeamRole.Admin" />
+                                                    <button type="submit" class="member-action-btn promote" 
+                                                            title="Promote to Admin" onclick="return confirm('Promote this member to Admin?')">
+                                                        <i class="bi bi-arrow-up"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            else if (member.Role == TeamRole.Admin)
+                                            {
+                                                <form method="post" asp-page-handler="UpdateMemberRole" class="d-inline">
+                                                    <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                    <input type="hidden" name="newRole" value="@TeamRole.Member" />
+                                                    <button type="submit" class="member-action-btn demote" 
+                                                            title="Demote to Member" onclick="return confirm('Demote this admin to Member?')">
+                                                        <i class="bi bi-arrow-down"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            <form method="post" asp-page-handler="RemoveMember" class="d-inline">
+                                                <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                                <button type="submit" class="member-action-btn remove" 
+                                                        title="Remove from team" onclick="return confirm('Remove this member from the team?')">
+                                                    <i class="bi bi-person-x"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                </div>
+                            }
                             
                             @if (Model.Members.TotalPages > 1)
                             {
-                                <div class="card-footer">
-                                    <nav aria-label="Team members pagination">
-                                        <ul class="pagination pagination-sm justify-content-center mb-0">
-                                            @if (Model.Members.PageNumber > 1)
-                                            {
-                                                <li class="page-item">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber - 1)">
-                                                        <i class="bi bi-chevron-left"></i>
-                                                    </a>
-                                                </li>
-                                            }
-                                            
-                                            @for (int i = Math.Max(1, Model.Members.PageNumber - 2); i <= Math.Min(Model.Members.TotalPages, Model.Members.PageNumber + 2); i++)
-                                            {
-                                                <li class="page-item @(i == Model.Members.PageNumber ? "active" : "")">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@i">@i</a>
-                                                </li>
-                                            }
-                                            
-                                            @if (Model.Members.PageNumber < Model.Members.TotalPages)
-                                            {
-                                                <li class="page-item">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber + 1)">
-                                                        <i class="bi bi-chevron-right"></i>
-                                                    </a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </nav>
+                                <div class="members-pagination">
+                                    @if (Model.Members.PageNumber > 1)
+                                    {
+                                        <a class="pagination-btn" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber - 1)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    }
+                                    <span class="pagination-info">Page @Model.Members.PageNumber of @Model.Members.TotalPages</span>
+                                    @if (Model.Members.PageNumber < Model.Members.TotalPages)
+                                    {
+                                        <a class="pagination-btn" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Members.PageNumber + 1)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    }
                                 </div>
                             }
                         }
                         else
                         {
-                            <div class="card-body text-center text-muted">
-                                <i class="bi bi-people display-4"></i>
-                                <p class="mt-2">No members yet</p>
+                            <div class="members-empty">
+                                <div class="empty-icon">👥</div>
+                                <p>No members yet</p>
                                 @if (Model.Team.OwnerId == User.GetUserId())
                                 {
-                                    <small>Add the first member using the form on the left.</small>
+                                    <small>Add the first member using the form.</small>
                                 }
                             </div>
                         }
@@ -278,21 +246,17 @@
 
                 @if (Model.Team.OwnerId == User.GetUserId())
                 {
-                    <div class="card shadow-sm mt-3">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">
-                                <i class="bi bi-info-circle text-primary"></i>
-                                Team Management
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-unstyled small mb-0">
-                                <li><i class="bi bi-check text-success me-1"></i> Add/remove team members</li>
-                                <li><i class="bi bi-check text-success me-1"></i> Promote members to admins</li>
-                                <li><i class="bi bi-check text-success me-1"></i> Share documents with team</li>
-                                <li><i class="bi bi-check text-success me-1"></i> Manage team settings</li>
-                            </ul>
-                        </div>
+                    <div class="team-tips-card">
+                        <h4>
+                            <i class="bi bi-lightbulb"></i>
+                            Team Management
+                        </h4>
+                        <ul>
+                            <li><i class="bi bi-check"></i> Add/remove team members</li>
+                            <li><i class="bi bi-check"></i> Promote members to admins</li>
+                            <li><i class="bi bi-check"></i> Share documents with team</li>
+                            <li><i class="bi bi-check"></i> Manage team settings</li>
+                        </ul>
                     </div>
                 }
             </div>
@@ -300,81 +264,510 @@
     }
 </div>
 
+@section Styles {
+<style>
+    /* ===== TEAM DETAILS STYLES ===== */
+    
+    .team-details-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* Modern Breadcrumb */
+    .modern-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .breadcrumb-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-link:hover { color: var(--accent-color); }
+    .breadcrumb-separator { color: var(--text-tertiary); font-size: 0.75rem; }
+    .breadcrumb-current { color: var(--text-primary); font-weight: 600; font-size: 0.9rem; }
+    
+    /* Alerts */
+    .modern-alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-alert-success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #16a34a;
+    }
+    
+    .modern-alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+    }
+    
+    .modern-alert .alert-icon { font-size: 1.25rem; }
+    .modern-alert .alert-content { flex: 1; font-weight: 500; }
+    .modern-alert .alert-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0.6;
+        line-height: 1;
+    }
+    
+    /* Layout */
+    .team-details-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 2rem;
+    }
+    
+    /* Team Header Card */
+    .team-header-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .team-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .team-header-info {
+        display: flex;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .team-icon-large {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        color: #06b6d4;
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+        flex-shrink: 0;
+    }
+    
+    .team-title { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.5rem 0; }
+    
+    .team-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+    
+    .team-meta-row span {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    
+    .team-header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .action-btn-primary { background: var(--accent-color); color: white; }
+    .action-btn-primary:hover { background: rgba(5, 150, 105, 0.9); color: white; }
+    .action-btn-secondary { background: var(--surface-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .action-btn-secondary:hover { color: var(--text-primary); }
+    
+    .team-description-section {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .team-description-section p { color: var(--text-secondary); margin: 0; line-height: 1.6; }
+    
+    .team-info-grid {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .info-item { display: flex; flex-direction: column; gap: 0.25rem; }
+    .info-label { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+    
+    /* Add Member Card */
+    .add-member-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    
+    .card-header-section {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    
+    .card-icon.green {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+        color: #22c55e;
+    }
+    
+    .card-header-section h3 { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .card-header-section p { font-size: 0.85rem; color: var(--text-secondary); margin: 0.15rem 0 0 0; }
+    
+    .add-member-form {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .member-email-input {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+    
+    .member-email-input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+    
+    .add-member-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    
+    .add-member-btn:hover { background: rgba(5, 150, 105, 0.9); }
+    
+    .form-hint {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        margin: 0.75rem 0 0 0;
+    }
+    
+    /* Members Card (Sidebar) */
+    .members-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .members-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .members-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .members-count {
+        padding: 0.25rem 0.6rem;
+        background: var(--accent-color);
+        color: white;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .members-list { padding: 0.5rem; }
+    
+    .member-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 12px;
+        transition: background 0.2s ease;
+    }
+    
+    .member-item:hover { background: var(--surface-secondary); }
+    
+    .member-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .member-info { flex: 1; min-width: 0; }
+    .member-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .member-email { font-size: 0.8rem; color: var(--text-tertiary); margin: 0.15rem 0 0.5rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .member-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .member-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 5px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .member-role.owner { background: rgba(234, 179, 8, 0.15); color: #ca8a04; }
+    .member-role.admin { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+    .member-role.member { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    
+    .join-date { font-size: 0.7rem; color: var(--text-tertiary); }
+    
+    .member-actions { display: flex; gap: 0.25rem; flex-shrink: 0; }
+    
+    .member-action-btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .member-action-btn.promote { color: #16a34a; }
+    .member-action-btn.promote:hover { background: rgba(34, 197, 94, 0.15); }
+    .member-action-btn.demote { color: #ca8a04; }
+    .member-action-btn.demote:hover { background: rgba(234, 179, 8, 0.15); }
+    .member-action-btn.remove { color: #dc2626; }
+    .member-action-btn.remove:hover { background: rgba(239, 68, 68, 0.15); }
+    
+    .members-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .pagination-btn {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        background: var(--surface-secondary);
+        transition: all 0.2s ease;
+    }
+    
+    .pagination-btn:hover { background: var(--accent-color); color: white; }
+    .pagination-info { font-size: 0.8rem; color: var(--text-tertiary); }
+    
+    .members-empty {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .members-empty .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.6; }
+    .members-empty p { color: var(--text-secondary); margin: 0 0 0.5rem 0; }
+    .members-empty small { color: var(--text-tertiary); font-size: 0.8rem; }
+    
+    /* Team Tips Card */
+    .team-tips-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-top: 1rem;
+    }
+    
+    .team-tips-card h4 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 0.75rem 0;
+    }
+    
+    .team-tips-card h4 i { color: var(--accent-color); }
+    
+    .team-tips-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .team-tips-card li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        padding: 0.35rem 0;
+    }
+    
+    .team-tips-card li i { color: #22c55e; }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1024px) {
+        .team-details-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .team-sidebar {
+            order: -1;
+        }
+    }
+    
+    @@media (max-width: 768px) {
+        .team-details-container { padding: 1rem; }
+        
+        .team-header-top { flex-direction: column; }
+        .team-header-actions { width: 100%; }
+        .team-header-actions .action-btn { flex: 1; justify-content: center; }
+        
+        .team-title { font-size: 1.5rem; }
+        .team-info-grid { flex-direction: column; gap: 0.75rem; }
+        
+        .add-member-form { flex-direction: column; }
+        .add-member-btn { justify-content: center; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .modern-breadcrumb { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .team-header-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .add-member-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .members-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .team-tips-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .member-item:hover { background: rgba(60, 60, 60, 0.6); }
+    [data-theme="dark"] .member-avatar { background: rgba(60, 60, 60, 0.6); }
+</style>
+}
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+            // Auto-dismiss success messages
+            const successAlert = document.querySelector('.modern-alert-success');
+            if (successAlert) {
+                setTimeout(() => {
+                    successAlert.style.opacity = '0';
+                    successAlert.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => {
+                        successAlert.remove();
+                    }, 300);
+                }, 5000);
+            }
 
-            // Enhanced form submission for member actions
+            // Add loading state to forms
             const forms = document.querySelectorAll('form');
             forms.forEach(function(form) {
-                form.addEventListener('submit', function(e) {
+                form.addEventListener('submit', function() {
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn && !submitBtn.disabled) {
-                        const originalContent = submitBtn.innerHTML;
-                        
-                        // Set loading state
                         submitBtn.disabled = true;
-                        submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Processing...';
+                        const originalHTML = submitBtn.innerHTML;
+                        submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Processing...';
                         
-                        // Reset after timeout as fallback
                         setTimeout(() => {
-                            submitBtn.innerHTML = originalContent;
+                            submitBtn.innerHTML = originalHTML;
                             submitBtn.disabled = false;
                         }, 10000);
                     }
                 });
             });
-
-            // Auto-dismiss success messages
-            const successAlert = document.querySelector('.alert-success');
-            if (successAlert) {
-                setTimeout(() => {
-                    successAlert.style.opacity = '0';
-                    setTimeout(() => {
-                        successAlert.style.display = 'none';
-                    }, 300);
-                }, 5000);
-            }
         });
     </script>
-    
     <style>
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-        
+        .spin { animation: spin 1s linear infinite; }
         @@keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        
-        .list-group-item {
-            transition: background-color 0.2s ease;
-        }
-        
-        .list-group-item:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .btn-group .btn {
-            transition: all 0.2s ease;
-        }
-        
-        .btn-group .btn:hover {
-            transform: translateY(-1px);
-        }
-        
-        .card {
-            transition: box-shadow 0.2s ease;
-        }
-        
-        .card:hover {
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
-        }
     </style>
-} 
+}

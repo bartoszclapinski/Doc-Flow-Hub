@@ -5,67 +5,278 @@
     ViewData["ActivePage"] = "EditProfile";
 }
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-3">
+<div class="manage-container">
+    <div class="manage-layout">
+        <!-- Sidebar Navigation -->
+        <div class="manage-sidebar">
             <partial name="_ManageNav" />
         </div>
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-header">
-                    <h4>@ViewData["Title"]</h4>
-                </div>
-                <div class="card-body">
-                    <partial name="_StatusMessage" />
+        
+        <!-- Main Content -->
+        <div class="manage-content">
+            <!-- Page Header -->
+            <div class="manage-page-header">
+                <h1 class="page-title">
+                    <div class="page-icon">✏️</div>
+                    Edit Profile
+                </h1>
+                <p class="page-subtitle">Update your personal information</p>
+            </div>
+            
+            <partial name="_StatusMessage" />
+            
+            <div class="form-card">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
                     
-                    <form method="post">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label asp-for="Input.FirstName" class="form-label">
+                                <i class="bi bi-person"></i>
+                                First Name
+                            </label>
+                            <input asp-for="Input.FirstName" class="form-input" placeholder="Enter your first name" />
+                            <span asp-validation-for="Input.FirstName" class="validation-message"></span>
+                        </div>
                         
-                        <div class="mb-3">
-                            <label asp-for="Input.FirstName" class="form-label"></label>
-                            <input asp-for="Input.FirstName" class="form-control" />
-                            <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+                        <div class="form-group">
+                            <label asp-for="Input.LastName" class="form-label">
+                                <i class="bi bi-person"></i>
+                                Last Name
+                            </label>
+                            <input asp-for="Input.LastName" class="form-input" placeholder="Enter your last name" />
+                            <span asp-validation-for="Input.LastName" class="validation-message"></span>
                         </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Input.LastName" class="form-label"></label>
-                            <input asp-for="Input.LastName" class="form-control" />
-                            <span asp-validation-for="Input.LastName" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label asp-for="Input.Bio" class="form-label">
+                            <i class="bi bi-chat-quote"></i>
+                            Bio
+                        </label>
+                        <textarea asp-for="Input.Bio" class="form-textarea" rows="4" maxlength="500" placeholder="Tell us about yourself..."></textarea>
+                        <span asp-validation-for="Input.Bio" class="validation-message"></span>
+                        <div class="form-hint">
+                            <span id="charCounter">500</span> characters remaining
                         </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Input.Bio" class="form-label"></label>
-                            <textarea asp-for="Input.Bio" class="form-control" rows="3" maxlength="500"></textarea>
-                            <span asp-validation-for="Input.Bio" class="text-danger"></span>
-                            <div class="form-text">Maximum 500 characters.</div>
-                        </div>
-
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                            <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">
+                            <i class="bi bi-check2"></i>
+                            Save Changes
+                        </button>
+                        <a asp-page="./Index" class="cancel-btn">
+                            <i class="bi bi-x"></i>
+                            Cancel
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+@section Styles {
+<style>
+    /* ===== EDIT PROFILE STYLES ===== */
+    
+    .manage-container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .manage-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+    }
+    
+    /* Page Header */
+    .manage-page-header { margin-bottom: 2rem; }
+    
+    .manage-page-header .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+    
+    .manage-page-header .page-icon { font-size: 2rem; }
+    
+    .manage-page-header .page-subtitle {
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 1rem;
+    }
+    
+    /* Form Card */
+    .form-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+    
+    .validation-summary {
+        padding: 1rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 10px;
+        color: #dc2626;
+        margin-bottom: 1.5rem;
+    }
+    
+    .validation-summary:empty { display: none; }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+    
+    .form-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-label i { color: var(--accent-color); }
+    
+    .form-input,
+    .form-textarea {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    
+    .form-input:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+    
+    .form-textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+    
+    .validation-message {
+        display: block;
+        font-size: 0.8rem;
+        color: #dc2626;
+        margin-top: 0.35rem;
+    }
+    
+    .form-hint {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        margin-top: 0.5rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .submit-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    }
+    
+    .cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .cancel-btn:hover { color: var(--text-primary); }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1024px) {
+        .manage-layout { grid-template-columns: 1fr; }
+        .manage-sidebar { order: 2; }
+    }
+    
+    @@media (max-width: 768px) {
+        .manage-container { padding: 1rem; }
+        .form-card { padding: 1.5rem; }
+        .form-row { grid-template-columns: 1fr; }
+        .form-group.full-width { grid-column: span 1; }
+        .form-actions { flex-direction: column; }
+        .submit-btn, .cancel-btn { justify-content: center; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .form-card { background: rgba(45, 45, 45, 0.8); }
+</style>
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Add character counter for Bio field
+        // Character counter for Bio field
         const bioTextarea = document.querySelector('#Input_Bio');
-        const bioCounter = document.createElement('small');
-        bioCounter.className = 'text-muted';
-        bioTextarea.parentNode.insertBefore(bioCounter, bioTextarea.nextSibling);
+        const charCounter = document.getElementById('charCounter');
         
-        function updateBioCounter() {
-            const remaining = 500 - bioTextarea.value.length;
-            bioCounter.textContent = `${remaining} characters remaining`;
+        function updateCounter() {
+            const remaining = 500 - (bioTextarea?.value.length || 0);
+            if (charCounter) {
+                charCounter.textContent = remaining;
+                charCounter.style.color = remaining < 50 ? '#dc2626' : '';
+            }
         }
         
-        bioTextarea.addEventListener('input', updateBioCounter);
-        updateBioCounter();
+        bioTextarea?.addEventListener('input', updateCounter);
+        updateCounter();
     </script>
-} 
+}

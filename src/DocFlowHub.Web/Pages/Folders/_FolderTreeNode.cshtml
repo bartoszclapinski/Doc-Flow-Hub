@@ -15,52 +15,42 @@
             </div>
         }
         
-        <div class="folder-icon">
+        <div class="folder-icon-img">
             <i class="bi bi-folder-fill"></i>
         </div>
         
         <div class="folder-info">
             <div class="folder-name">@Model.Name</div>
             <div class="folder-meta">
-                <span class="me-3">
-                    <i class="bi bi-file-earmark me-1"></i>@Model.DocumentCount documents
-                </span>
-                <span class="me-3">
-                    <i class="bi bi-folder me-1"></i>@Model.Children?.Count() subfolders
-                </span>
-                <span>
-                    <i class="bi bi-calendar me-1"></i>Created @Model.CreatedAt.ToString("MMM dd, yyyy")
-                </span>
+                <span class="tree-meta-item">@Model.DocumentCount docs</span>
+                <span class="tree-meta-separator">•</span>
+                <span class="tree-meta-item">@(Model.Children?.Count() ?? 0) sub</span>
+                <span class="tree-meta-separator">•</span>
+                <span class="tree-meta-item">@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
             </div>
         </div>
         
         <div class="folder-actions">
+            <a asp-page="/Folders/Details" asp-route-id="@Model.Id" class="folder-action-btn" title="View Details">
+                <i class="bi bi-eye"></i>
+            </a>
+            <a asp-page="/Folders/Edit" asp-route-id="@Model.Id" class="folder-action-btn" title="Edit">
+                <i class="bi bi-pencil"></i>
+            </a>
+            <a asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" asp-route-parentFolderId="@Model.Id" 
+               class="folder-action-btn" title="Create Subfolder">
+                <i class="bi bi-folder-plus"></i>
+            </a>
             <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                        data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="folder-action-btn dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown" aria-expanded="false" title="More actions">
                     <i class="bi bi-three-dots"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                        <a class="dropdown-item" asp-page="/Folders/Details" asp-route-id="@Model.Id">
-                            <i class="bi bi-eye"></i>View Details
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" asp-page="/Folders/Edit" asp-route-id="@Model.Id">
-                            <i class="bi bi-pencil"></i>Edit Folder
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" asp-page="/Folders/Create" asp-route-projectId="@Model.ProjectId" asp-route-parentFolderId="@Model.Id">
-                            <i class="bi bi-folder-plus"></i>Create Subfolder
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
+                <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                     @if (Model.IsArchived)
                     {
                         <li>
-                            <form method="post" asp-page-handler="Restore" style="display: inline;">
+                            <form method="post" asp-page-handler="Restore" style="display: inline; width: 100%;">
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <button type="submit" class="dropdown-item">
                                     <i class="bi bi-arrow-clockwise"></i>Restore Folder
@@ -71,7 +61,7 @@
                     else
                     {
                         <li>
-                            <form method="post" asp-page-handler="Archive" style="display: inline;">
+                            <form method="post" asp-page-handler="Archive" style="display: inline; width: 100%;">
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <button type="submit" class="dropdown-item">
                                     <i class="bi bi-archive"></i>Archive Folder
@@ -79,6 +69,7 @@
                             </form>
                         </li>
                     }
+                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <button type="button" class="dropdown-item text-danger btn-delete-folder" 
                                 data-folder-id="@Model.Id" data-folder-name="@Model.Name">
@@ -99,4 +90,4 @@
             }
         </div>
     }
-</div> 
+</div>

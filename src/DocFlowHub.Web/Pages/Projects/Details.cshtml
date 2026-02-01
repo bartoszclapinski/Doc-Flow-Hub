@@ -4,73 +4,105 @@
     ViewData["Title"] = Model.Project?.Name ?? "Project Details";
 }
 
-<div class="container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-item"><a asp-page="./Index">Projects</a></li>
-            <li class="breadcrumb-item active" aria-current="page">@(Model.Project?.Name ?? "Details")</li>
-        </ol>
+<div class="project-details-container">
+    <!-- Modern Breadcrumb -->
+    <nav class="modern-breadcrumb" aria-label="breadcrumb">
+        <a asp-page="/Index" class="breadcrumb-link">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <a asp-page="./Index" class="breadcrumb-link">
+            <i class="bi bi-kanban"></i>
+            <span>Projects</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-current">@(Model.Project?.Name ?? "Details")</span>
     </nav>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            @Model.ErrorMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="modern-alert modern-alert-danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">@Model.ErrorMessage</div>
+            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
         </div>
         
-        <div class="text-center mt-5">
-            <h3 class="text-muted">Project Not Found</h3>
-            <p class="text-muted">The project you're looking for doesn't exist or you don't have permission to view it.</p>
-            <a asp-page="./Index" class="btn btn-primary">
-                <i class="bi bi-arrow-left me-1"></i> Back to Projects
+        <div class="project-not-found">
+            <div class="not-found-icon">🔍</div>
+            <h3>Project Not Found</h3>
+            <p>The project you're looking for doesn't exist or you don't have permission to view it.</p>
+            <a asp-page="./Index" class="back-btn">
+                <i class="bi bi-arrow-left"></i>
+                Back to Projects
             </a>
         </div>
     }
     else if (Model.Project != null)
     {
         <!-- Project Header -->
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="project-icon me-3">
-                        <i class="bi bi-@(Model.Project.Icon ?? "kanban")" style="color: @(Model.Project.Color ?? "#0d6efd"); font-size: 3rem;"></i>
-                    </div>
-                    <div>
-                        <h1 class="h2 mb-1">@Model.Project.Name</h1>
-                        <div class="text-muted">
-                            <i class="bi bi-calendar3 me-1"></i>
+        <div class="project-header">
+            <div class="project-header-main">
+                <div class="project-icon-large" style="--project-color: @(Model.Project.Color ?? "#059669")">
+                    <i class="bi bi-@(Model.Project.Icon ?? "kanban")"></i>
+                </div>
+                <div class="project-header-info">
+                    <h1 class="project-name">@Model.Project.Name</h1>
+                    <div class="project-meta">
+                        <span class="meta-item">
+                            <i class="bi bi-calendar3"></i>
                             Created @Model.Project.CreatedAt.ToString("MMMM dd, yyyy")
-                        </div>
+                        </span>
+                        @if (Model.Project.UpdatedAt.HasValue)
+                        {
+                            <span class="meta-item">
+                                <i class="bi bi-pencil"></i>
+                                Updated @Model.Project.UpdatedAt.Value.ToString("MMM dd, yyyy")
+                            </span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Project.Description))
+                    {
+                        <p class="project-description">@Model.Project.Description</p>
+                    }
+                    <!-- Status Badge -->
+                    <div class="project-status">
+                        @if (Model.Project.IsActive)
+                        {
+                            <span class="status-badge active">
+                                <i class="bi bi-check-circle"></i>
+                                Active
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="status-badge archived">
+                                <i class="bi bi-archive"></i>
+                                Archived
+                            </span>
+                        }
                     </div>
                 </div>
-                
-                @if (!string.IsNullOrEmpty(Model.Project.Description))
-                {
-                    <p class="text-muted mb-0">@Model.Project.Description</p>
-                }
             </div>
             
-            <div class="col-md-4 text-md-end">
-                @if (Model.IsOwner)
-                {
-                    <div class="btn-group" role="group">
-                        <a asp-page="./Edit" asp-route-id="@Model.Project.Id" class="btn btn-outline-primary">
-                            <i class="bi bi-pencil me-1"></i> Edit
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+            @if (Model.IsOwner)
+            {
+                <div class="project-header-actions">
+                    <a asp-page="./Edit" asp-route-id="@Model.Project.Id" class="action-btn action-btn-primary">
+                        <i class="bi bi-pencil"></i>
+                        <span>Edit</span>
+                    </a>
+                    <div class="dropdown">
+                        <button class="action-btn action-btn-secondary dropdown-toggle" type="button" 
                                 data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="visually-hidden">Toggle Dropdown</span>
+                            <i class="bi bi-three-dots-vertical"></i>
                         </button>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                             @if (Model.Project.IsActive)
                             {
                                 <li>
                                     <button type="button" class="dropdown-item" onclick="archiveProject(@Model.Project.Id)">
-                                        <i class="bi bi-archive me-2"></i> Archive Project
+                                        <i class="bi bi-archive"></i> Archive Project
                                     </button>
                                 </li>
                             }
@@ -78,109 +110,81 @@
                             {
                                 <li>
                                     <button type="button" class="dropdown-item" onclick="restoreProject(@Model.Project.Id)">
-                                        <i class="bi bi-arrow-clockwise me-2"></i> Restore Project
+                                        <i class="bi bi-arrow-clockwise"></i> Restore Project
                                     </button>
                                 </li>
                             }
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <button type="button" class="dropdown-item text-danger" onclick="deleteProject(@Model.Project.Id)">
-                                    <i class="bi bi-trash me-2"></i> Delete Project
+                                    <i class="bi bi-trash"></i> Delete Project
                                 </button>
                             </li>
                         </ul>
                     </div>
-                }
-            </div>
-        </div>
-
-        <!-- Project Status Badge -->
-        <div class="mb-4">
-            @if (Model.Project.IsActive)
-            {
-                <span class="badge bg-success fs-6">
-                    <i class="bi bi-check-circle me-1"></i> Active
-                </span>
-            }
-            else
-            {
-                <span class="badge bg-secondary fs-6">
-                    <i class="bi bi-archive me-1"></i> Archived
-                </span>
+                </div>
             }
         </div>
 
         <!-- Project Statistics -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <i class="bi bi-file-earmark display-4 mb-2"></i>
-                        <h3 class="card-title">@Model.TotalDocuments</h3>
-                        <p class="card-text">Document@(Model.TotalDocuments != 1 ? "s" : "")</p>
-                    </div>
+        <div class="project-stats-grid">
+            <div class="project-stat-card blue">
+                <div class="stat-card-icon">📄</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.TotalDocuments</div>
+                    <div class="stat-card-label">Document@(Model.TotalDocuments != 1 ? "s" : "")</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <i class="bi bi-folder display-4 mb-2"></i>
-                        <h3 class="card-title">@Model.TotalFolders</h3>
-                        <p class="card-text">Folder@(Model.TotalFolders != 1 ? "s" : "")</p>
-                    </div>
+            <div class="project-stat-card cyan">
+                <div class="stat-card-icon">📁</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.TotalFolders</div>
+                    <div class="stat-card-label">Folder@(Model.TotalFolders != 1 ? "s" : "")</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <i class="bi bi-hdd display-4 mb-2"></i>
-                        <h3 class="card-title">@((Model.TotalSize / 1024.0 / 1024.0).ToString("F1")) MB</h3>
-                        <p class="card-text">Total Size</p>
-                    </div>
+            <div class="project-stat-card green">
+                <div class="stat-card-icon">💾</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@((Model.TotalSize / 1024.0 / 1024.0).ToString("F1")) MB</div>
+                    <div class="stat-card-label">Total Size</div>
                 </div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-folder-plus me-2"></i> Folder Management
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">Organize your documents with folders and sub-folders.</p>
-                        <div class="d-grid gap-2">
-                            <a asp-page="/Folders/Create" asp-route-projectId="@Model.Project.Id" class="btn btn-outline-primary">
-                                <i class="bi bi-plus-circle me-1"></i> Create Folder
-                            </a>
-                            <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="btn btn-outline-secondary">
-                                <i class="bi bi-folder2-open me-1"></i> Browse Folders
-                            </a>
-                        </div>
-                    </div>
+        <div class="project-actions-grid">
+            <div class="project-action-card">
+                <div class="action-card-header">
+                    <div class="action-card-icon yellow">📁</div>
+                    <h3>Folder Management</h3>
+                </div>
+                <p class="action-card-description">Organize your documents with folders and sub-folders.</p>
+                <div class="action-card-buttons">
+                    <a asp-page="/Folders/Create" asp-route-projectId="@Model.Project.Id" class="action-card-btn primary">
+                        <i class="bi bi-plus-circle"></i>
+                        Create Folder
+                    </a>
+                    <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="action-card-btn secondary">
+                        <i class="bi bi-folder2-open"></i>
+                        Browse Folders
+                    </a>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-file-earmark-plus me-2"></i> Document Management
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-text">Upload and manage documents within this project.</p>
-                        <div class="d-grid gap-2">
-                            <a asp-page="/Documents/Upload" class="btn btn-outline-primary">
-                                <i class="bi bi-cloud-upload me-1"></i> Upload Document
-                            </a>
-                            <a asp-page="/Documents/Index" class="btn btn-outline-secondary">
-                                <i class="bi bi-list-ul me-1"></i> View Documents
-                            </a>
-                        </div>
-                    </div>
+            <div class="project-action-card">
+                <div class="action-card-header">
+                    <div class="action-card-icon blue">📄</div>
+                    <h3>Document Management</h3>
+                </div>
+                <p class="action-card-description">Upload and manage documents within this project.</p>
+                <div class="action-card-buttons">
+                    <a asp-page="/Documents/Upload" class="action-card-btn primary">
+                        <i class="bi bi-cloud-upload"></i>
+                        Upload Document
+                    </a>
+                    <a asp-page="/Documents/Index" class="action-card-btn secondary">
+                        <i class="bi bi-list-ul"></i>
+                        View Documents
+                    </a>
                 </div>
             </div>
         </div>
@@ -189,34 +193,34 @@
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteProjectModalLabel">
-                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
-                    Delete Project
-                </h5>
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon danger">🗑️</div>
+                    <h5 class="modal-title" id="deleteProjectModalLabel">Delete Project</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this project?</p>
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This action cannot be undone. All folders and documents in this project will also be deleted.
+                <div class="modal-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span><strong>Warning:</strong> This action cannot be undone. All folders and documents in this project will also be deleted.</span>
                 </div>
-                <div id="projectInfo" class="bg-light p-3 rounded">
-                    <strong>Project:</strong> @Model.Project?.Name<br>
-                    <strong>Created:</strong> @Model.Project?.CreatedAt.ToString("MMMM dd, yyyy")<br>
-                    <strong>Documents:</strong> @Model.TotalDocuments<br>
-                    <strong>Folders:</strong> @Model.TotalFolders
+                <div class="modal-info-box">
+                    <div class="info-row"><span class="info-label">Project:</span> <span class="info-value">@Model.Project?.Name</span></div>
+                    <div class="info-row"><span class="info-label">Created:</span> <span class="info-value">@Model.Project?.CreatedAt.ToString("MMMM dd, yyyy")</span></div>
+                    <div class="info-row"><span class="info-label">Documents:</span> <span class="info-value">@Model.TotalDocuments</span></div>
+                    <div class="info-row"><span class="info-label">Folders:</span> <span class="info-value">@Model.TotalFolders</span></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" id="deleteProjectForm" class="d-inline">
                     <input type="hidden" name="id" id="deleteProjectId" />
-                    <button type="submit" asp-page-handler="Delete" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i> Delete Project
+                    <button type="submit" asp-page-handler="Delete" class="modal-btn modal-btn-danger">
+                        <i class="bi bi-trash"></i> Delete Project
                     </button>
                 </form>
             </div>
@@ -226,28 +230,28 @@
 
 <!-- Archive Confirmation Modal -->
 <div class="modal fade" id="archiveProjectModal" tabindex="-1" aria-labelledby="archiveProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="archiveProjectModalLabel">
-                    <i class="bi bi-archive text-warning me-2"></i>
-                    Archive Project
-                </h5>
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon warning">📦</div>
+                    <h5 class="modal-title" id="archiveProjectModalLabel">Archive Project</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to archive this project?</p>
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Archived projects are hidden from the main list but can be restored later.
+                <div class="modal-info">
+                    <i class="bi bi-info-circle"></i>
+                    <span>Archived projects are hidden from the main list but can be restored later.</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" id="archiveProjectForm" class="d-inline">
                     <input type="hidden" name="id" id="archiveProjectId" />
-                    <button type="submit" asp-page-handler="Archive" class="btn btn-warning">
-                        <i class="bi bi-archive me-1"></i> Archive Project
+                    <button type="submit" asp-page-handler="Archive" class="modal-btn modal-btn-warning">
+                        <i class="bi bi-archive"></i> Archive Project
                     </button>
                 </form>
             </div>
@@ -257,28 +261,28 @@
 
 <!-- Restore Confirmation Modal -->
 <div class="modal fade" id="restoreProjectModal" tabindex="-1" aria-labelledby="restoreProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="restoreProjectModalLabel">
-                    <i class="bi bi-arrow-clockwise text-success me-2"></i>
-                    Restore Project
-                </h5>
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon success">✅</div>
+                    <h5 class="modal-title" id="restoreProjectModalLabel">Restore Project</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to restore this project?</p>
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle me-2"></i>
-                    The project will be restored and visible in the main projects list.
+                <div class="modal-success">
+                    <i class="bi bi-check-circle"></i>
+                    <span>The project will be restored and visible in the main projects list.</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" id="restoreProjectForm" class="d-inline">
                     <input type="hidden" name="id" id="restoreProjectId" />
-                    <button type="submit" asp-page-handler="Restore" class="btn btn-success">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Restore Project
+                    <button type="submit" asp-page-handler="Restore" class="modal-btn modal-btn-success">
+                        <i class="bi bi-arrow-clockwise"></i> Restore Project
                     </button>
                 </form>
             </div>
@@ -286,23 +290,710 @@
     </div>
 </div>
 
-<script>
-function deleteProject(projectId) {
-    document.getElementById('deleteProjectId').value = projectId;
-    new bootstrap.Modal(document.getElementById('deleteProjectModal')).show();
+@section Styles {
+<style>
+    /* ===== PROJECT DETAILS STYLES ===== */
+    
+    .project-details-container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    /* Modern Breadcrumb */
+    .modern-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .breadcrumb-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-link:hover {
+        color: var(--accent-color);
+    }
+    
+    .breadcrumb-separator {
+        color: var(--text-tertiary);
+        font-size: 0.75rem;
+    }
+    
+    .breadcrumb-current {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    /* Alert Styles */
+    .modern-alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+    }
+    
+    .modern-alert .alert-icon { font-size: 1.25rem; }
+    .modern-alert .alert-content { flex: 1; font-weight: 500; }
+    .modern-alert .alert-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0.6;
+        line-height: 1;
+    }
+    .modern-alert .alert-close:hover { opacity: 1; }
+    
+    /* Not Found State */
+    .project-not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+    
+    .project-not-found .not-found-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.6;
+    }
+    
+    .project-not-found h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .project-not-found p {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin: 0 0 1.5rem 0;
+    }
+    
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color);
+        color: white;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        color: white;
+    }
+    
+    /* Project Header */
+    .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 2rem;
+        padding: 2rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .project-header-main {
+        display: flex;
+        gap: 1.5rem;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .project-icon-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: var(--project-color);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%);
+        flex-shrink: 0;
+    }
+    
+    .project-header-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .project-name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .project-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+    
+    .project-description {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin: 0 0 1rem 0;
+        line-height: 1.6;
+    }
+    
+    .project-status {
+        margin-top: 0.5rem;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-badge.active {
+        background: rgba(34, 197, 94, 0.15);
+        color: #16a34a;
+    }
+    
+    .status-badge.archived {
+        background: rgba(107, 114, 128, 0.15);
+        color: #6b7280;
+    }
+    
+    /* Header Actions */
+    .project-header-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn-primary {
+        background: var(--accent-color);
+        color: white;
+    }
+    
+    .action-btn-primary:hover {
+        background: rgba(5, 150, 105, 0.9);
+        color: white;
+    }
+    
+    .action-btn-secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .action-btn-secondary:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    .modern-dropdown {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--surface-primary);
+        box-shadow: var(--shadow-glass);
+        padding: 0.5rem;
+    }
+    
+    .modern-dropdown .dropdown-item {
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .modern-dropdown .dropdown-item:hover {
+        background: var(--surface-secondary);
+    }
+    
+    .modern-dropdown .dropdown-divider {
+        margin: 0.35rem 0;
+        border-color: var(--border-color);
+    }
+    
+    /* Statistics Grid */
+    .project-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .project-stat-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .project-stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        border-radius: 16px 0 0 16px;
+    }
+    
+    .project-stat-card.blue::before { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); }
+    .project-stat-card.cyan::before { background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); }
+    .project-stat-card.green::before { background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%); }
+    
+    .project-stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-glass);
+    }
+    
+    .stat-card-icon {
+        font-size: 2.5rem;
+    }
+    
+    .stat-card-info {
+        flex: 1;
+    }
+    
+    .stat-card-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.1;
+    }
+    
+    .stat-card-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    /* Actions Grid */
+    .project-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .project-action-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .project-action-card:hover {
+        box-shadow: var(--shadow-glass);
+    }
+    
+    .action-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .action-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .action-card-icon.yellow {
+        background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%);
+    }
+    
+    .action-card-icon.blue {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+    }
+    
+    .action-card-header h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .action-card-description {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0 0 1.25rem 0;
+    }
+    
+    .action-card-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .action-card-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .action-card-btn.primary {
+        background: var(--accent-color);
+        color: white;
+    }
+    
+    .action-card-btn.primary:hover {
+        background: rgba(5, 150, 105, 0.9);
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .action-card-btn.secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .action-card-btn.secondary:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    /* Modern Modal Styles */
+    .modern-modal {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+    
+    .modern-modal .modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .modal-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .modal-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .modal-icon.danger { background: rgba(239, 68, 68, 0.15); }
+    .modal-icon.warning { background: rgba(234, 179, 8, 0.15); }
+    .modal-icon.success { background: rgba(34, 197, 94, 0.15); }
+    
+    .modern-modal .modal-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .modern-modal .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modern-modal .modal-body p {
+        color: var(--text-primary);
+        margin: 0 0 1rem 0;
+    }
+    
+    .modal-warning, .modal-info, .modal-success {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    
+    .modal-warning {
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: #ca8a04;
+    }
+    
+    .modal-info {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #2563eb;
+    }
+    
+    .modal-success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #16a34a;
+    }
+    
+    .modal-info-box {
+        background: var(--surface-secondary);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .info-row:last-child { border-bottom: none; }
+    
+    .info-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    
+    .info-value {
+        color: var(--text-primary);
+    }
+    
+    .modern-modal .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 1rem 1.5rem;
+        gap: 0.5rem;
+    }
+    
+    .modal-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .modal-btn-secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .modal-btn-secondary:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    .modal-btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+    
+    .modal-btn-danger:hover {
+        background: #b91c1c;
+    }
+    
+    .modal-btn-warning {
+        background: #ca8a04;
+        color: white;
+    }
+    
+    .modal-btn-warning:hover {
+        background: #a16207;
+    }
+    
+    .modal-btn-success {
+        background: #16a34a;
+        color: white;
+    }
+    
+    .modal-btn-success:hover {
+        background: #15803d;
+    }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 992px) {
+        .project-stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .project-actions-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @@media (max-width: 768px) {
+        .project-details-container {
+            padding: 1rem;
+        }
+        
+        .project-header {
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+        
+        .project-header-main {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .project-name {
+            font-size: 1.5rem;
+        }
+        
+        .project-meta {
+            justify-content: center;
+        }
+        
+        .project-header-actions {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .project-stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stat-card-value {
+            font-size: 1.5rem;
+        }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .modern-breadcrumb {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .project-header {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .project-stat-card {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .project-action-card {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .modern-modal {
+        background: rgba(45, 45, 45, 0.98);
+    }
+    
+    [data-theme="dark"] .modal-info-box {
+        background: rgba(60, 60, 60, 0.6);
+    }
+    
+    [data-theme="dark"] .project-not-found {
+        background: rgba(45, 45, 45, 0.8);
+    }
+    
+    [data-theme="dark"] .modern-dropdown {
+        background: rgba(45, 45, 45, 0.95);
+    }
+</style>
 }
-
-function archiveProject(projectId) {
-    document.getElementById('archiveProjectId').value = projectId;
-    new bootstrap.Modal(document.getElementById('archiveProjectModal')).show();
-}
-
-function restoreProject(projectId) {
-    document.getElementById('restoreProjectId').value = projectId;
-    new bootstrap.Modal(document.getElementById('restoreProjectModal')).show();
-}
-</script>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-} 
+    <script>
+    function deleteProject(projectId) {
+        document.getElementById('deleteProjectId').value = projectId;
+        new bootstrap.Modal(document.getElementById('deleteProjectModal')).show();
+    }
+
+    function archiveProject(projectId) {
+        document.getElementById('archiveProjectId').value = projectId;
+        new bootstrap.Modal(document.getElementById('archiveProjectModal')).show();
+    }
+
+    function restoreProject(projectId) {
+        document.getElementById('restoreProjectId').value = projectId;
+        new bootstrap.Modal(document.getElementById('restoreProjectModal')).show();
+    }
+    </script>
+}

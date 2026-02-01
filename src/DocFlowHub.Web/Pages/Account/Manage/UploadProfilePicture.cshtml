@@ -5,112 +5,504 @@
     ViewData["ActivePage"] = "UploadProfilePicture";
 }
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-3">
+<div class="manage-container">
+    <div class="manage-layout">
+        <!-- Sidebar Navigation -->
+        <div class="manage-sidebar">
             <partial name="_ManageNav" />
         </div>
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-header">
-                    <h4>@ViewData["Title"]</h4>
+        
+        <!-- Main Content -->
+        <div class="manage-content">
+            <!-- Page Header -->
+            <div class="manage-page-header">
+                <h1 class="page-title">
+                    <div class="page-icon">📷</div>
+                    Profile Picture
+                </h1>
+                <p class="page-subtitle">Upload a new profile picture</p>
+            </div>
+            
+            @if (TempData["StatusMessage"] != null)
+            {
+                <div class="modern-alert @(TempData["StatusMessage"]?.ToString()?.Contains("error", StringComparison.OrdinalIgnoreCase) == true ? "modern-alert-danger" : "modern-alert-success")">
+                    <div class="alert-icon">@(TempData["StatusMessage"]?.ToString()?.Contains("error", StringComparison.OrdinalIgnoreCase) == true ? "⚠️" : "✅")</div>
+                    <div class="alert-content">@TempData["StatusMessage"]</div>
+                    <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
                 </div>
-                <div class="card-body">
-                    @if (TempData["StatusMessage"] != null)
-                    {
-                        <div class="alert @(TempData["StatusMessage"]?.ToString()?.Contains("error", StringComparison.OrdinalIgnoreCase) == true ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
-                            @TempData["StatusMessage"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    }
+            }
+            
+            <div class="upload-card">
+                <form method="post" enctype="multipart/form-data">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
                     
-                    <form method="post" enctype="multipart/form-data">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="upload-layout">
+                        <!-- Current Picture Preview -->
+                        <div class="picture-preview-section">
+                            <div class="picture-preview-container">
+                                @if (!string.IsNullOrEmpty(Model.CurrentPictureUrl))
+                                {
+                                    <img src="@Model.CurrentPictureUrl" alt="Current Profile Picture" class="preview-image" id="previewImage" />
+                                }
+                                else
+                                {
+                                    <div class="preview-placeholder" id="previewPlaceholder">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                    <img src="" alt="Preview" class="preview-image" id="previewImage" style="display: none;" />
+                                }
+                            </div>
+                            <p class="preview-label">@(string.IsNullOrEmpty(Model.CurrentPictureUrl) ? "No picture uploaded" : "Current picture")</p>
+                        </div>
                         
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Input.ProfilePicture" class="form-label">Upload New Picture</label>
-                                    <input asp-for="Input.ProfilePicture" class="form-control" type="file" accept="image/jpeg,image/png,image/gif" />
-                                    <span asp-validation-for="Input.ProfilePicture" class="text-danger"></span>
-                                    <div class="form-text">Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.</div>
+                        <!-- Upload Section -->
+                        <div class="upload-form-section">
+                            <div class="upload-dropzone" id="dropzone">
+                                <div class="dropzone-icon">
+                                    <i class="bi bi-cloud-upload"></i>
                                 </div>
-
-                                <div class="mt-4">
-                                    <button type="submit" class="btn btn-primary">Upload Picture</button>
-                                    <a asp-page="./Index" class="btn btn-outline-secondary">Cancel</a>
+                                <h4>Drag & drop your image here</h4>
+                                <p>or click to browse</p>
+                                <input asp-for="Input.ProfilePicture" type="file" class="file-input" id="fileInput" accept="image/jpeg,image/png,image/gif" />
+                            </div>
+                            
+                            <div class="upload-info">
+                                <div class="info-item">
+                                    <i class="bi bi-file-earmark-image"></i>
+                                    <span>Supported: JPG, PNG, GIF</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="bi bi-hdd"></i>
+                                    <span>Max size: 5MB</span>
                                 </div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <div class="text-center">
-                                    <h5>Current Picture</h5>
-                                    <div class="profile-picture-container">
-                                        @if (!string.IsNullOrEmpty(Model.CurrentPictureUrl))
-                                        {
-                                            <img src="@Model.CurrentPictureUrl" alt="Current Profile Picture" class="img-fluid rounded-circle mb-3 profile-picture" />
-                                        }
-                                        else
-                                        {
-                                            <img src="~/images/default-profile.svg" alt="Default Profile Picture" class="img-fluid rounded-circle mb-3 profile-picture" />
-                                        }
-                                    </div>
-                                </div>
+                            <span asp-validation-for="Input.ProfilePicture" class="validation-message"></span>
+                            
+                            <div class="selected-file" id="selectedFile" style="display: none;">
+                                <i class="bi bi-check-circle"></i>
+                                <span id="fileName"></span>
+                                <button type="button" class="clear-file" onclick="clearFile()">×</button>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="submit-btn" id="uploadBtn" disabled>
+                                    <i class="bi bi-upload"></i>
+                                    Upload Picture
+                                </button>
+                                <a asp-page="./Index" class="cancel-btn">
+                                    <i class="bi bi-x"></i>
+                                    Cancel
+                                </a>
                             </div>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+@section Styles {
+<style>
+    /* ===== UPLOAD PROFILE PICTURE STYLES ===== */
+    
+    .manage-container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .manage-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+    }
+    
+    /* Page Header */
+    .manage-page-header { margin-bottom: 2rem; }
+    
+    .manage-page-header .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+    
+    .manage-page-header .page-icon { font-size: 2rem; }
+    
+    .manage-page-header .page-subtitle {
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 1rem;
+    }
+    
+    /* Alerts */
+    .modern-alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-alert-success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #16a34a;
+    }
+    
+    .modern-alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+    }
+    
+    .modern-alert .alert-icon { font-size: 1.25rem; }
+    .modern-alert .alert-content { flex: 1; font-weight: 500; }
+    .modern-alert .alert-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0.6;
+        line-height: 1;
+    }
+    
+    /* Upload Card */
+    .upload-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+    
+    .validation-summary {
+        padding: 1rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 10px;
+        color: #dc2626;
+        margin-bottom: 1.5rem;
+    }
+    
+    .validation-summary:empty { display: none; }
+    
+    .upload-layout {
+        display: flex;
+        gap: 3rem;
+        align-items: flex-start;
+    }
+    
+    /* Picture Preview Section */
+    .picture-preview-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .picture-preview-container {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--border-color);
+        background: var(--surface-secondary);
+    }
+    
+    .preview-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .preview-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: var(--text-tertiary);
+    }
+    
+    .preview-label {
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+        margin: 0;
+    }
+    
+    /* Upload Form Section */
+    .upload-form-section { flex: 1; }
+    
+    .upload-dropzone {
+        position: relative;
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 2.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-dropzone:hover,
+    .upload-dropzone.dragover {
+        border-color: var(--accent-color);
+        background: rgba(5, 150, 105, 0.05);
+    }
+    
+    .dropzone-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+        color: var(--accent-color);
+        font-size: 1.75rem;
+    }
+    
+    .upload-dropzone h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 0.35rem 0;
+    }
+    
+    .upload-dropzone p {
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
+        margin: 0;
+    }
+    
+    .file-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .upload-info {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        padding: 0.75rem 0;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.85rem;
+        color: var(--text-tertiary);
+    }
+    
+    .info-item i { color: var(--accent-color); }
+    
+    .validation-message {
+        display: block;
+        font-size: 0.8rem;
+        color: #dc2626;
+        margin-top: 0.35rem;
+    }
+    
+    .selected-file {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        border-radius: 10px;
+        margin-top: 1rem;
+        color: #16a34a;
+    }
+    
+    .selected-file i { font-size: 1.1rem; }
+    .selected-file span { flex: 1; font-size: 0.9rem; font-weight: 500; }
+    
+    .clear-file {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        opacity: 0.6;
+        line-height: 1;
+    }
+    
+    .clear-file:hover { opacity: 1; }
+    
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    
+    .submit-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .submit-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .cancel-btn:hover { color: var(--text-primary); }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1024px) {
+        .manage-layout { grid-template-columns: 1fr; }
+        .manage-sidebar { order: 2; }
+    }
+    
+    @@media (max-width: 768px) {
+        .manage-container { padding: 1rem; }
+        .upload-card { padding: 1.5rem; }
+        .upload-layout { flex-direction: column; align-items: center; }
+        .upload-form-section { width: 100%; }
+        .upload-info { flex-direction: column; gap: 0.5rem; }
+        .form-actions { flex-direction: column; }
+        .submit-btn, .cancel-btn { justify-content: center; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .upload-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .upload-dropzone:hover { background: rgba(5, 150, 105, 0.1); }
+</style>
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Preview the selected image before upload
-        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
-                
-                // Validate file type
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('Please select a valid image file (JPG, PNG, or GIF).');
-                    this.value = '';
-                    return;
-                }
-                
-                // Validate file size (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB.');
-                    this.value = '';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const profilePicture = document.querySelector('.profile-picture');
-                    profilePicture.src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewImage = document.getElementById('previewImage');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const selectedFile = document.getElementById('selectedFile');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        // Drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
         });
-    </script>
-    <style>
-        .profile-picture-container {
-            width: 200px;
-            height: 200px;
-            margin: 0 auto;
-            overflow: hidden;
-            border-radius: 50%;
-            border: 2px solid #dee2e6;
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
         
-        .profile-picture {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+        });
+        
+        dropzone.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) {
+                fileInput.files = files;
+                handleFile(files[0]);
+            }
         }
-    </style>
-} 
+        
+        // File input change
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG, PNG, or GIF).');
+                clearFile();
+                return;
+            }
+            
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB.');
+                clearFile();
+                return;
+            }
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+            
+            // Show selected file info
+            fileName.textContent = file.name;
+            selectedFile.style.display = 'flex';
+            uploadBtn.disabled = false;
+        }
+        
+        function clearFile() {
+            fileInput.value = '';
+            selectedFile.style.display = 'none';
+            uploadBtn.disabled = true;
+            
+            // Reset preview if needed
+            if (previewPlaceholder) {
+                previewPlaceholder.style.display = 'flex';
+                previewImage.style.display = 'none';
+            }
+        }
+        
+        // Make clearFile globally accessible
+        window.clearFile = clearFile;
+    </script>
+}

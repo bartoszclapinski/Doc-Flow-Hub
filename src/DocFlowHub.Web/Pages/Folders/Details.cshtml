@@ -5,103 +5,104 @@
     ViewData["Title"] = $"Folder: {Model.Folder?.Name}";
 }
 
-<div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a asp-page="/Index" class="text-decoration-none">
-                    <i class="bi bi-house-door me-1"></i>Home
-                </a>
-            </li>
-            <li class="breadcrumb-item">
-                <a asp-page="/Projects/Index" class="text-decoration-none">
-                    <i class="bi bi-kanban me-1"></i>Projects
-                </a>
-            </li>
-            @if (Model.Project != null)
+<div class="folder-details-container">
+    <!-- Modern Breadcrumb -->
+    <nav class="modern-breadcrumb" aria-label="breadcrumb">
+        <a asp-page="/Index" class="breadcrumb-link">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <a asp-page="/Projects/Index" class="breadcrumb-link">
+            <i class="bi bi-kanban"></i>
+            <span>Projects</span>
+        </a>
+        @if (Model.Project != null)
+        {
+            <i class="bi bi-chevron-right breadcrumb-separator"></i>
+            <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="breadcrumb-link">
+                <i class="bi bi-@Model.Project.Icon"></i>
+                <span>@Model.Project.Name</span>
+            </a>
+            <i class="bi bi-chevron-right breadcrumb-separator"></i>
+            <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="breadcrumb-link">
+                <i class="bi bi-folder"></i>
+                <span>Folders</span>
+            </a>
+        }
+        @if (Model.Folder != null && Model.FolderPath.Any())
+        {
+            @foreach (var pathItem in Model.FolderPath)
             {
-                <li class="breadcrumb-item">
-                    <a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id" class="text-decoration-none">
-                        <i class="bi bi-@Model.Project.Icon me-1"></i>@Model.Project.Name
-                    </a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id" class="text-decoration-none">
-                        <i class="bi bi-folder me-1"></i>Folders
-                    </a>
-                </li>
+                <i class="bi bi-chevron-right breadcrumb-separator"></i>
+                <a asp-page="/Folders/Details" asp-route-id="@pathItem.Id" class="breadcrumb-link">
+                    <i class="bi bi-folder"></i>
+                    <span>@pathItem.Name</span>
+                </a>
             }
-            @if (Model.Folder != null && Model.FolderPath.Any())
-            {
-                @foreach (var pathItem in Model.FolderPath)
-                {
-                    <li class="breadcrumb-item">
-                        <a asp-page="/Folders/Details" asp-route-id="@pathItem.Id" class="text-decoration-none">
-                            <i class="bi bi-folder me-1"></i>@pathItem.Name
-                        </a>
-                    </li>
-                }
-            }
-            <li class="breadcrumb-item active" aria-current="page">
-                <i class="bi bi-folder me-1"></i>@Model.Folder?.Name
-            </li>
-        </ol>
+        }
+        <i class="bi bi-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-current">
+            <i class="bi bi-folder-fill"></i>
+            @Model.Folder?.Name
+        </span>
     </nav>
 
     @if (Model.Folder == null)
     {
         <!-- Error State -->
-        <div class="text-center py-5">
-            <div class="mb-3">
-                <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
-            </div>
-            <h4 class="text-muted mb-2">Folder not found</h4>
-            <p class="text-muted mb-4">
-                The folder you're looking for doesn't exist or you don't have access to it.
-            </p>
-            <a asp-page="/Projects/Index" class="btn btn-primary">
-                <i class="bi bi-arrow-left me-1"></i>Back to Projects
+        <div class="folder-not-found">
+            <div class="not-found-icon">🔍</div>
+            <h3>Folder not found</h3>
+            <p>The folder you're looking for doesn't exist or you don't have access to it.</p>
+            <a asp-page="/Projects/Index" class="back-btn">
+                <i class="bi bi-arrow-left"></i>
+                Back to Projects
             </a>
         </div>
     }
     else
     {
         <!-- Folder Header -->
-        <div class="d-flex justify-content-between align-items-start mb-4">
-            <div>
-                <div class="d-flex align-items-center mb-2">
-                    <i class="bi bi-folder-fill text-warning me-3" style="font-size: 2rem;"></i>
-                    <div>
-                        <h1 class="h2 mb-1">@Model.Folder.Name</h1>
-                        @if (!string.IsNullOrEmpty(Model.Folder.Description))
+        <div class="folder-header">
+            <div class="folder-header-main">
+                <div class="folder-icon-large">📁</div>
+                <div class="folder-header-info">
+                    <h1 class="folder-name">@Model.Folder.Name</h1>
+                    @if (!string.IsNullOrEmpty(Model.Folder.Description))
+                    {
+                        <p class="folder-description">@Model.Folder.Description</p>
+                    }
+                    <div class="folder-meta">
+                        <span class="meta-item">
+                            <i class="bi bi-calendar3"></i>
+                            Created @Model.Folder.CreatedAt.ToString("MMM dd, yyyy")
+                        </span>
+                        @if (Model.Folder.UpdatedAt.HasValue)
                         {
-                            <p class="text-muted mb-0">@Model.Folder.Description</p>
+                            <span class="meta-item">
+                                <i class="bi bi-clock"></i>
+                                Modified @Model.Folder.UpdatedAt.Value.ToString("MMM dd, yyyy")
+                            </span>
                         }
+                        <span class="status-badge @(Model.Folder.IsArchived ? "archived" : "active")">
+                            <i class="bi bi-@(Model.Folder.IsArchived ? "archive" : "check-circle")"></i>
+                            @(Model.Folder.IsArchived ? "Archived" : "Active")
+                        </span>
                     </div>
                 </div>
-                <div class="text-muted small">
-                    <span class="me-3">
-                        <i class="bi bi-calendar me-1"></i>Created @Model.Folder.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
-                    </span>
-                    @if (Model.Folder.UpdatedAt.HasValue)
-                    {
-                        <span>
-                            <i class="bi bi-clock me-1"></i>Modified @Model.Folder.UpdatedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
-                        </span>
-                    }
-                </div>
             </div>
-            <div class="d-flex gap-2">
-                <a asp-page="/Folders/Edit" asp-route-id="@Model.Folder.Id" class="btn btn-primary">
-                    <i class="bi bi-pencil me-1"></i>Edit Folder
+            <div class="folder-header-actions">
+                <a asp-page="/Folders/Edit" asp-route-id="@Model.Folder.Id" class="action-btn action-btn-primary">
+                    <i class="bi bi-pencil"></i>
+                    <span>Edit Folder</span>
                 </a>
                 <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                    <button class="action-btn action-btn-secondary dropdown-toggle" type="button" 
                             data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-three-dots"></i>
+                        <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                         <li>
                             <a class="dropdown-item" asp-page="/Folders/Create" asp-route-projectId="@Model.Folder.ProjectId" asp-route-parentFolderId="@Model.Folder.Id">
                                 <i class="bi bi-folder-plus"></i>Create Subfolder
@@ -116,7 +117,7 @@
                         @if (Model.Folder.IsArchived)
                         {
                             <li>
-                                <form method="post" asp-page-handler="Restore" style="display: inline;">
+                                <form method="post" asp-page-handler="Restore" style="display: inline; width: 100%;">
                                     <input type="hidden" name="id" value="@Model.Folder.Id" />
                                     <button type="submit" class="dropdown-item">
                                         <i class="bi bi-arrow-clockwise"></i>Restore Folder
@@ -127,7 +128,7 @@
                         else
                         {
                             <li>
-                                <form method="post" asp-page-handler="Archive" style="display: inline;">
+                                <form method="post" asp-page-handler="Archive" style="display: inline; width: 100%;">
                                     <input type="hidden" name="id" value="@Model.Folder.Id" />
                                     <button type="submit" class="dropdown-item">
                                         <i class="bi bi-archive"></i>Archive Folder
@@ -135,6 +136,7 @@
                                 </form>
                             </li>
                         }
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <button type="button" class="dropdown-item text-danger btn-delete-folder" 
                                     data-folder-id="@Model.Folder.Id" data-folder-name="@Model.Folder.Name">
@@ -147,153 +149,122 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <div class="h3 mb-0 text-primary">@Model.TotalDocuments</div>
-                        <div class="text-muted">Documents</div>
-                    </div>
+        <div class="folder-stats-grid">
+            <div class="folder-stat-card blue">
+                <div class="stat-card-icon">📄</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.TotalDocuments</div>
+                    <div class="stat-card-label">Documents</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <div class="h3 mb-0 text-info">@Model.TotalSubfolders</div>
-                        <div class="text-muted">Subfolders</div>
-                    </div>
+            <div class="folder-stat-card cyan">
+                <div class="stat-card-icon">📂</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.TotalSubfolders</div>
+                    <div class="stat-card-label">Subfolders</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <div class="h3 mb-0 text-success">@Model.FormatFileSize(Model.TotalSize)</div>
-                        <div class="text-muted">Folder Size</div>
-                    </div>
+            <div class="folder-stat-card green">
+                <div class="stat-card-icon">💾</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.FormatFileSize(Model.TotalSize)</div>
+                    <div class="stat-card-label">Folder Size</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <div class="h3 mb-0 text-warning">@Model.FolderPath.Count()</div>
-                        <div class="text-muted">Path Depth</div>
-                    </div>
+            <div class="folder-stat-card yellow">
+                <div class="stat-card-icon">📊</div>
+                <div class="stat-card-info">
+                    <div class="stat-card-value">@Model.FolderPath.Count()</div>
+                    <div class="stat-card-label">Path Depth</div>
                 </div>
             </div>
         </div>
 
         <!-- Content Tabs -->
-        <div class="card">
-            <div class="card-header">
-                <ul class="nav nav-tabs card-header-tabs" id="folderTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="documents-tab" data-bs-toggle="tab" 
+        <div class="folder-content-card">
+            <div class="content-tabs-header">
+                <ul class="modern-tabs" id="folderTabs" role="tablist">
+                    <li role="presentation">
+                        <button class="tab-btn active" id="documents-tab" data-bs-toggle="tab" 
                                 data-bs-target="#documents" type="button" role="tab">
-                            <i class="bi bi-file-earmark me-1"></i>Documents (@Model.Folder.DocumentCount)
+                            <i class="bi bi-file-earmark"></i>
+                            <span>Documents</span>
+                            <span class="tab-badge">@Model.Folder.DocumentCount</span>
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="subfolders-tab" data-bs-toggle="tab" 
+                    <li role="presentation">
+                        <button class="tab-btn" id="subfolders-tab" data-bs-toggle="tab" 
                                 data-bs-target="#subfolders" type="button" role="tab">
-                            <i class="bi bi-folder me-1"></i>Subfolders (@Model.Folder.Children?.Count())
+                            <i class="bi bi-folder"></i>
+                            <span>Subfolders</span>
+                            <span class="tab-badge">@(Model.Folder.Children?.Count() ?? 0)</span>
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="details-tab" data-bs-toggle="tab" 
+                    <li role="presentation">
+                        <button class="tab-btn" id="details-tab" data-bs-toggle="tab" 
                                 data-bs-target="#details" type="button" role="tab">
-                            <i class="bi bi-info-circle me-1"></i>Details
+                            <i class="bi bi-info-circle"></i>
+                            <span>Details</span>
                         </button>
                     </li>
                 </ul>
             </div>
-            <div class="card-body">
+            <div class="content-tabs-body">
                 <div class="tab-content" id="folderTabsContent">
                     <!-- Documents Tab -->
                     <div class="tab-pane fade show active" id="documents" role="tabpanel">
                         @if (Model.Documents.Any())
                         {
-                            <div class="table-container">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Document</th>
-                                            <th>Type</th>
-                                            <th>Size</th>
-                                            <th>Modified</th>
-                                            <th width="120">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var document in Model.Documents)
-                                        {
-                                            <tr>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="bi bi-file-earmark me-2 text-muted"></i>
-                                                        <div class="min-w-0 flex-grow-1">
-                                                            <div class="fw-medium text-truncate">@document.Title</div>
-                                                            @if (!string.IsNullOrEmpty(document.Description))
-                                                            {
-                                                                <small class="text-muted text-truncate d-block">@document.Description</small>
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-secondary">@document.FileType</span>
-                                                </td>
-                                                <td>@(document.FileSize / 1024) KB</td>
-                                                <td>@document.UpdatedAt?.ToString("MMM dd, yyyy")</td>
-                                                <td>
-                                                    <div class="dropdown">
-                                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                            <i class="bi bi-three-dots"></i>
-                                                        </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
-                                                            <li>
-                                                                <a class="dropdown-item" asp-page="/Documents/Details" asp-route-id="@document.Id">
-                                                                    <i class="bi bi-eye me-2"></i>View Details
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item" asp-page="/Documents/Edit" asp-route-id="@document.Id">
-                                                                    <i class="bi bi-pencil me-2"></i>Edit
-                                                                </a>
-                                                            </li>
-                                                            <li><hr class="dropdown-divider"></li>
-                                                            <li>
-                                                                <a class="dropdown-item" href="#" onclick="downloadDocument(@document.Id); return false;">
-                                                                    <i class="bi bi-download me-2"></i>Download
-                                                                </a>
-                                                            </li>
-                                                            @if (document.OwnerId == User.GetUserId())
-                                                            {
-                                                                <li><hr class="dropdown-divider"></li>
-                                                                <li>
-                                                                    <a class="dropdown-item text-danger" href="#" onclick="confirmDeleteDocument(@document.Id, '@Html.Raw(Html.Encode(document.Title))'); return false;">
-                                                                        <i class="bi bi-trash me-2"></i>Delete
-                                                                    </a>
-                                                                </li>
-                                                            }
-                                                        </ul>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                            <div class="documents-list">
+                                @foreach (var document in Model.Documents)
+                                {
+                                    <div class="document-item">
+                                        <div class="document-icon @GetFileIconClass(document.FileType)">
+                                            <i class="bi @GetFileIcon(document.FileType)"></i>
+                                        </div>
+                                        <div class="document-info">
+                                            <h4 class="document-title">@document.Title</h4>
+                                            @if (!string.IsNullOrEmpty(document.Description))
+                                            {
+                                                <p class="document-desc">@document.Description</p>
+                                            }
+                                            <div class="document-meta">
+                                                <span class="meta-badge">@document.FileType</span>
+                                                <span>@(document.FileSize / 1024) KB</span>
+                                                <span>@document.UpdatedAt?.ToString("MMM dd, yyyy")</span>
+                                            </div>
+                                        </div>
+                                        <div class="document-actions">
+                                            <a asp-page="/Documents/Details" asp-route-id="@document.Id" class="doc-action-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-page="/Documents/Edit" asp-route-id="@document.Id" class="doc-action-btn" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button class="doc-action-btn" onclick="downloadDocument(@document.Id)" title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                            @if (document.OwnerId == User.GetUserId())
+                                            {
+                                                <button class="doc-action-btn danger" onclick="confirmDeleteDocument(@document.Id, '@Html.Raw(Html.Encode(document.Title))')" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                         else
                         {
-                            <div class="text-center py-5">
-                                <i class="bi bi-file-earmark display-4 text-muted mb-3"></i>
-                                <h5 class="text-muted">No documents in this folder</h5>
-                                <p class="text-muted mb-3">Upload documents to get started.</p>
+                            <div class="tab-empty-state">
+                                <div class="empty-icon">📄</div>
+                                <h4>No documents in this folder</h4>
+                                <p>Upload documents to get started.</p>
                                 <a asp-page="/Documents/Upload" asp-route-projectId="@Model.Folder.ProjectId" asp-route-folderId="@Model.Folder.Id" 
-                                   class="btn btn-primary">
-                                    <i class="bi bi-upload me-1"></i>Upload Document
+                                   class="empty-action-btn">
+                                    <i class="bi bi-upload"></i>
+                                    Upload Document
                                 </a>
                             </div>
                         }
@@ -303,39 +274,29 @@
                     <div class="tab-pane fade" id="subfolders" role="tabpanel">
                         @if (Model.Folder.Children?.Any() == true)
                         {
-                            <div class="row">
+                            <div class="subfolders-grid">
                                 @foreach (var subfolder in Model.Folder.Children)
                                 {
-                                    <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="card h-100">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="bi bi-folder-fill text-warning me-2"></i>
-                                                    <h6 class="mb-0">@subfolder.Name</h6>
-                                                </div>
-                                                @if (!string.IsNullOrEmpty(subfolder.Description))
-                                                {
-                                                    <p class="text-muted small mb-2">@subfolder.Description</p>
-                                                }
-                                                <div class="text-muted small mb-3">
-                                                    <span class="me-2">
-                                                        <i class="bi bi-file-earmark me-1"></i>@subfolder.DocumentCount docs
-                                                    </span>
-                                                    <span>
-                                                        <i class="bi bi-folder me-1"></i>@subfolder.Children?.Count() subfolders
-                                                    </span>
-                                                </div>
-                                                <div class="d-flex gap-1">
-                                                    <a asp-page="/Folders/Details" asp-route-id="@subfolder.Id" 
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-eye"></i>View
-                                                    </a>
-                                                    <a asp-page="/Folders/Edit" asp-route-id="@subfolder.Id" 
-                                                       class="btn btn-sm btn-outline-secondary">
-                                                        <i class="bi bi-pencil"></i>Edit
-                                                    </a>
-                                                </div>
+                                    <div class="subfolder-card">
+                                        <div class="subfolder-icon">📁</div>
+                                        <div class="subfolder-info">
+                                            <h4>@subfolder.Name</h4>
+                                            @if (!string.IsNullOrEmpty(subfolder.Description))
+                                            {
+                                                <p class="subfolder-desc">@subfolder.Description</p>
+                                            }
+                                            <div class="subfolder-meta">
+                                                <span><i class="bi bi-file-earmark"></i> @subfolder.DocumentCount docs</span>
+                                                <span><i class="bi bi-folder"></i> @(subfolder.Children?.Count() ?? 0) sub</span>
                                             </div>
+                                        </div>
+                                        <div class="subfolder-actions">
+                                            <a asp-page="/Folders/Details" asp-route-id="@subfolder.Id" class="subfolder-btn primary">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                            <a asp-page="/Folders/Edit" asp-route-id="@subfolder.Id" class="subfolder-btn secondary">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
                                         </div>
                                     </div>
                                 }
@@ -343,13 +304,14 @@
                         }
                         else
                         {
-                            <div class="text-center py-5">
-                                <i class="bi bi-folder display-4 text-muted mb-3"></i>
-                                <h5 class="text-muted">No subfolders</h5>
-                                <p class="text-muted mb-3">Create subfolders to organize your content.</p>
+                            <div class="tab-empty-state">
+                                <div class="empty-icon">📂</div>
+                                <h4>No subfolders</h4>
+                                <p>Create subfolders to organize your content.</p>
                                 <a asp-page="/Folders/Create" asp-route-projectId="@Model.Folder.ProjectId" asp-route-parentFolderId="@Model.Folder.Id" 
-                                   class="btn btn-primary">
-                                    <i class="bi bi-folder-plus me-1"></i>Create Subfolder
+                                   class="empty-action-btn">
+                                    <i class="bi bi-folder-plus"></i>
+                                    Create Subfolder
                                 </a>
                             </div>
                         }
@@ -357,57 +319,62 @@
 
                     <!-- Details Tab -->
                     <div class="tab-pane fade" id="details" role="tabpanel">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6 class="mb-3">Folder Information</h6>
-                                <dl class="row">
-                                    <dt class="col-sm-4">Name</dt>
-                                    <dd class="col-sm-8">@Model.Folder.Name</dd>
-                                    
-                                    <dt class="col-sm-4">Description</dt>
-                                    <dd class="col-sm-8">
-                                        @(string.IsNullOrEmpty(Model.Folder.Description) ? "No description" : Model.Folder.Description)
-                                    </dd>
-                                    
-                                    <dt class="col-sm-4">Created</dt>
-                                    <dd class="col-sm-8">@Model.Folder.CreatedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")</dd>
-                                    
-                                    <dt class="col-sm-4">Modified</dt>
-                                    <dd class="col-sm-8">
-                                        @(Model.Folder.UpdatedAt?.ToString("MMMM dd, yyyy 'at' h:mm tt") ?? "Never")
-                                    </dd>
-                                </dl>
+                        <div class="details-grid">
+                            <div class="details-section">
+                                <h5 class="details-section-title">
+                                    <i class="bi bi-folder"></i>
+                                    Folder Information
+                                </h5>
+                                <div class="details-list">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Name</span>
+                                        <span class="detail-value">@Model.Folder.Name</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Description</span>
+                                        <span class="detail-value">@(string.IsNullOrEmpty(Model.Folder.Description) ? "No description" : Model.Folder.Description)</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Created</span>
+                                        <span class="detail-value">@Model.Folder.CreatedAt.ToString("MMMM dd, yyyy 'at' h:mm tt")</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Modified</span>
+                                        <span class="detail-value">@(Model.Folder.UpdatedAt?.ToString("MMMM dd, yyyy 'at' h:mm tt") ?? "Never")</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <h6 class="mb-3">Hierarchy Information</h6>
-                                <dl class="row">
-                                    <dt class="col-sm-4">Project</dt>
-                                    <dd class="col-sm-8">
-                                        <a asp-page="/Projects/Details" asp-route-id="@Model.Project?.Id" class="text-decoration-none">
-                                            @Model.Project?.Name
-                                        </a>
-                                    </dd>
-                                    
-                                    <dt class="col-sm-4">Level</dt>
-                                    <dd class="col-sm-8">@Model.Folder.Level</dd>
-                                    
-                                    <dt class="col-sm-4">Path</dt>
-                                    <dd class="col-sm-8">
-                                        <small class="text-muted">@Model.Folder.Path</small>
-                                    </dd>
-                                    
-                                    <dt class="col-sm-4">Status</dt>
-                                    <dd class="col-sm-8">
-                                        @if (Model.Folder.IsArchived)
-                                        {
-                                            <span class="badge bg-warning">Archived</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                    </dd>
-                                </dl>
+                            <div class="details-section">
+                                <h5 class="details-section-title">
+                                    <i class="bi bi-diagram-3"></i>
+                                    Hierarchy Information
+                                </h5>
+                                <div class="details-list">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Project</span>
+                                        <span class="detail-value">
+                                            <a asp-page="/Projects/Details" asp-route-id="@Model.Project?.Id" class="detail-link">
+                                                @Model.Project?.Name
+                                            </a>
+                                        </span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Level</span>
+                                        <span class="detail-value">@Model.Folder.Level</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Path</span>
+                                        <span class="detail-value detail-path">@Model.Folder.Path</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Status</span>
+                                        <span class="detail-value">
+                                            <span class="status-badge @(Model.Folder.IsArchived ? "archived" : "active")">
+                                                @(Model.Folder.IsArchived ? "Archived" : "Active")
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -419,33 +386,605 @@
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modern-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Delete Folder
-                </h5>
+                <div class="modal-title-wrapper">
+                    <div class="modal-icon danger">🗑️</div>
+                    <h5 class="modal-title" id="deleteModalLabel">Delete Folder</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete the folder <strong id="folderName"></strong>?</p>
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.
+                <div class="modal-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span><strong>Warning:</strong> This action cannot be undone. All documents and subfolders in this folder will also be deleted.</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="post" asp-page-handler="Delete" style="display: inline;">
                     <input type="hidden" id="folderIdToDelete" name="id" />
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i>Delete Folder
+                    <button type="submit" class="modal-btn modal-btn-danger">
+                        <i class="bi bi-trash"></i> Delete Folder
                     </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+@functions {
+    private string GetFileIcon(string fileType)
+    {
+        return fileType?.ToLower() switch
+        {
+            ".pdf" => "bi-file-earmark-pdf",
+            ".doc" or ".docx" => "bi-file-earmark-word",
+            ".txt" => "bi-file-earmark-text",
+            ".md" => "bi-markdown",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
+            _ => "bi-file-earmark"
+        };
+    }
+
+    private string GetFileIconClass(string fileType)
+    {
+        return fileType?.ToLower() switch
+        {
+            ".pdf" => "red",
+            ".doc" or ".docx" => "blue",
+            ".txt" => "cyan",
+            ".md" => "purple",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "green",
+            _ => "gray"
+        };
+    }
+}
+
+@section Styles {
+<style>
+    /* ===== FOLDER DETAILS STYLES ===== */
+    
+    .folder-details-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* Modern Breadcrumb */
+    .modern-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .breadcrumb-link {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-link:hover { color: var(--accent-color); }
+    .breadcrumb-separator { color: var(--text-tertiary); font-size: 0.75rem; }
+    .breadcrumb-current {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    /* Not Found State */
+    .folder-not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+    
+    .folder-not-found .not-found-icon { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.6; }
+    .folder-not-found h3 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.5rem 0; }
+    .folder-not-found p { font-size: 1rem; color: var(--text-secondary); margin: 0 0 1.5rem 0; }
+    
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color);
+        color: white;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        color: white;
+    }
+    
+    /* Folder Header */
+    .folder-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 2rem;
+        padding: 2rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .folder-header-main {
+        display: flex;
+        gap: 1.5rem;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .folder-icon-large { font-size: 3.5rem; flex-shrink: 0; }
+    .folder-header-info { flex: 1; min-width: 0; }
+    .folder-name { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.5rem 0; }
+    .folder-description { font-size: 1rem; color: var(--text-secondary); margin: 0 0 0.75rem 0; }
+    
+    .folder-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.65rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-badge.active { background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+    .status-badge.archived { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+    
+    .folder-header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+    
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn-primary { background: var(--accent-color); color: white; }
+    .action-btn-primary:hover { background: rgba(5, 150, 105, 0.9); color: white; }
+    .action-btn-secondary { background: var(--surface-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .action-btn-secondary:hover { background: var(--surface-primary); color: var(--text-primary); }
+    
+    .modern-dropdown {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--surface-primary);
+        box-shadow: var(--shadow-glass);
+        padding: 0.5rem;
+    }
+    
+    .modern-dropdown .dropdown-item {
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .modern-dropdown .dropdown-item:hover { background: var(--surface-secondary); }
+    .modern-dropdown .dropdown-divider { margin: 0.35rem 0; border-color: var(--border-color); }
+    
+    /* Statistics Grid */
+    .folder-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .folder-stat-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .folder-stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 4px; height: 100%;
+        border-radius: 16px 0 0 16px;
+    }
+    
+    .folder-stat-card.blue::before { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); }
+    .folder-stat-card.cyan::before { background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); }
+    .folder-stat-card.green::before { background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%); }
+    .folder-stat-card.yellow::before { background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%); }
+    
+    .folder-stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-glass); }
+    .stat-card-icon { font-size: 2rem; }
+    .stat-card-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+    .stat-card-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+    
+    /* Content Tabs Card */
+    .folder-content-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .content-tabs-header {
+        padding: 0 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--surface-secondary);
+    }
+    
+    .modern-tabs {
+        display: flex;
+        gap: 0.5rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.25rem;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+    
+    .tab-btn::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 3px;
+        background: transparent;
+        border-radius: 3px 3px 0 0;
+        transition: background 0.2s ease;
+    }
+    
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent-color); }
+    .tab-btn.active::after { background: var(--accent-color); }
+    
+    .tab-badge {
+        padding: 0.15rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: var(--surface-primary);
+        color: var(--text-secondary);
+    }
+    
+    .tab-btn.active .tab-badge { background: rgba(5, 150, 105, 0.15); color: var(--accent-color); }
+    
+    .content-tabs-body { padding: 1.5rem; }
+    
+    /* Documents List */
+    .documents-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    
+    .document-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+    
+    .document-item:hover { border-color: var(--accent-color); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+    
+    .document-icon {
+        width: 44px; height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    
+    .document-icon.blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%); color: #3b82f6; }
+    .document-icon.red { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%); color: #ef4444; }
+    .document-icon.cyan { background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%); color: #06b6d4; }
+    .document-icon.green { background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%); color: #22c55e; }
+    .document-icon.purple { background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%); color: #a855f7; }
+    .document-icon.gray { background: linear-gradient(135deg, rgba(107, 114, 128, 0.15) 0%, rgba(107, 114, 128, 0.05) 100%); color: #6b7280; }
+    
+    .document-info { flex: 1; min-width: 0; }
+    .document-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .document-desc { font-size: 0.8rem; color: var(--text-secondary); margin: 0.25rem 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .document-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .meta-badge {
+        padding: 0.15rem 0.5rem;
+        border-radius: 6px;
+        background: rgba(107, 114, 128, 0.15);
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .document-actions { display: flex; gap: 0.35rem; }
+    
+    .doc-action-btn {
+        width: 34px; height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .doc-action-btn:hover { background: var(--surface-primary); color: var(--accent-color); }
+    .doc-action-btn.danger:hover { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+    
+    /* Subfolders Grid */
+    .subfolders-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    
+    .subfolder-card {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .subfolder-card:hover { border-color: var(--accent-color); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+    .subfolder-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .subfolder-info h4 { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.35rem 0; }
+    .subfolder-desc { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.5rem 0; line-height: 1.4; }
+    
+    .subfolder-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        margin-bottom: 1rem;
+    }
+    
+    .subfolder-actions { display: flex; gap: 0.5rem; }
+    
+    .subfolder-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .subfolder-btn.primary { background: var(--accent-color); color: white; }
+    .subfolder-btn.primary:hover { background: rgba(5, 150, 105, 0.9); color: white; }
+    .subfolder-btn.secondary { background: var(--surface-primary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .subfolder-btn.secondary:hover { color: var(--text-primary); }
+    
+    /* Details Tab */
+    .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+    
+    .details-section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 1rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .details-section-title i { color: var(--accent-color); }
+    .details-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-weight: 500; color: var(--text-secondary); }
+    .detail-value { color: var(--text-primary); text-align: right; }
+    .detail-link { color: var(--accent-color); text-decoration: none; }
+    .detail-link:hover { text-decoration: underline; }
+    .detail-path { font-size: 0.8rem; color: var(--text-tertiary); word-break: break-all; }
+    
+    /* Tab Empty State */
+    .tab-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    
+    .tab-empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.6; }
+    .tab-empty-state h4 { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.5rem 0; }
+    .tab-empty-state p { font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1.25rem 0; }
+    
+    .empty-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        border-radius: 10px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .empty-action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(5, 150, 105, 0.25); color: white; }
+    
+    /* Modal Styles */
+    .modern-modal {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+    }
+    
+    .modern-modal .modal-header { border-bottom: 1px solid var(--border-color); padding: 1.25rem 1.5rem; }
+    .modal-title-wrapper { display: flex; align-items: center; gap: 0.75rem; }
+    .modal-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+    .modal-icon.danger { background: rgba(239, 68, 68, 0.15); }
+    .modern-modal .modal-title { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .modern-modal .modal-body { padding: 1.5rem; }
+    .modern-modal .modal-body p { color: var(--text-primary); margin: 0 0 1rem 0; }
+    
+    .modal-warning {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+        color: #ca8a04;
+    }
+    
+    .modern-modal .modal-footer { border-top: 1px solid var(--border-color); padding: 1rem 1.5rem; gap: 0.5rem; }
+    
+    .modal-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .modal-btn-secondary { background: var(--surface-secondary); color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .modal-btn-secondary:hover { background: var(--surface-primary); color: var(--text-primary); }
+    .modal-btn-danger { background: #dc2626; color: white; }
+    .modal-btn-danger:hover { background: #b91c1c; }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1200px) {
+        .folder-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .subfolders-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @@media (max-width: 768px) {
+        .folder-details-container { padding: 1rem; }
+        .folder-header { flex-direction: column; padding: 1.5rem; }
+        .folder-header-main { flex-direction: column; text-align: center; }
+        .folder-icon-large { align-self: center; }
+        .folder-meta { justify-content: center; }
+        .folder-header-actions { width: 100%; justify-content: center; }
+        .folder-name { font-size: 1.5rem; }
+        .folder-stats-grid { grid-template-columns: 1fr; }
+        .stat-card-value { font-size: 1.5rem; }
+        .modern-tabs { flex-wrap: wrap; }
+        .tab-btn { padding: 0.75rem 1rem; font-size: 0.85rem; }
+        .subfolders-grid { grid-template-columns: 1fr; }
+        .details-grid { grid-template-columns: 1fr; }
+        .document-actions { flex-wrap: wrap; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .modern-breadcrumb { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .folder-header { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .folder-stat-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .folder-content-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .content-tabs-header { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .document-item { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .subfolder-card { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .modern-modal { background: rgba(45, 45, 45, 0.98); }
+    [data-theme="dark"] .folder-not-found { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .modern-dropdown { background: rgba(45, 45, 45, 0.95); }
+</style>
+}
 
 @section Scripts {
     <script>
@@ -467,14 +1006,11 @@
             });
         });
 
-        // Document download function
         function downloadDocument(documentId) {
-            // Create a form and submit it to trigger download
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/Documents/Details/' + documentId + '?handler=Download';
             
-            // Add anti-forgery token
             const token = document.querySelector('input[name="__RequestVerificationToken"]');
             if (token) {
                 const tokenInput = document.createElement('input');
@@ -489,15 +1025,12 @@
             document.body.removeChild(form);
         }
 
-        // Document deletion confirmation
         function confirmDeleteDocument(documentId, documentTitle) {
             if (confirm(`Are you sure you want to delete "${documentTitle}"?\n\nThis action cannot be undone.`)) {
-                // Create a form and submit it to trigger deletion
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/Documents/Details/' + documentId + '?handler=Delete';
                 
-                // Add anti-forgery token
                 const token = document.querySelector('input[name="__RequestVerificationToken"]');
                 if (token) {
                     const tokenInput = document.createElement('input');
@@ -514,189 +1047,3 @@
         }
     </script>
 }
-
-<style>
-    .breadcrumb {
-        background-color: transparent;
-        padding: 0;
-        margin: 0;
-    }
-
-    .breadcrumb-item + .breadcrumb-item::before {
-        content: ">";
-        color: #6c757d;
-    }
-
-    .card {
-        border: 1px solid #e9ecef;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    }
-
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
-    }
-
-    .nav-tabs .nav-link {
-        border: none;
-        color: #6c757d;
-        padding: 0.75rem 1rem;
-    }
-
-    .nav-tabs .nav-link.active {
-        color: #0d6efd;
-        background-color: transparent;
-        border-bottom: 2px solid #0d6efd;
-    }
-
-    .nav-tabs .nav-link:hover {
-        border-color: transparent;
-        color: #0d6efd;
-    }
-
-    /* Table container fixes - remove unwanted scrollbars */
-    .table-container {
-        width: 100%;
-        overflow: visible; /* Changed from auto to visible */
-        border: none;
-    }
-
-    .table {
-        margin-bottom: 0;
-        width: 100%;
-        table-layout: fixed; /* Fixed table layout to prevent column width issues */
-    }
-
-    .table th {
-        border-top: none;
-        font-weight: 600;
-        color: #495057;
-        white-space: nowrap; /* Prevent header text wrapping */
-    }
-
-    .table td {
-        vertical-align: middle;
-        border-top: 1px solid #dee2e6;
-    }
-
-    /* Text truncation fixes for table cells */
-    .table td .text-truncate {
-        max-width: 200px; /* Set max width for proper truncation */
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        display: block;
-    }
-
-    .table td .fw-medium.text-truncate {
-        max-width: 250px; /* Slightly larger for titles */
-    }
-
-    /* Dropdown menu fixes for proper visibility */
-    .dropdown-menu {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        z-index: 1050; /* Ensure dropdown appears above other elements */
-        min-width: 160px; /* Minimum width for better readability */
-    }
-
-    .dropdown-menu-end {
-        right: 0;
-        left: auto;
-    }
-
-    .dropdown-item {
-        padding: 0.5rem 1rem;
-        transition: background-color 0.2s ease-in-out;
-        white-space: nowrap; /* Prevent text wrapping in dropdown items */
-    }
-
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-
-    .dropdown-item i {
-        width: 1rem;
-        margin-right: 0.5rem;
-    }
-
-    .dropdown-divider {
-        margin: 0.25rem 0;
-    }
-
-    /* Button and action column fixes */
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* Ensure actions column has proper width and doesn't overflow */
-    .table th:last-child,
-    .table td:last-child {
-        width: 120px;
-        min-width: 120px;
-        text-align: right;
-    }
-
-    /* Flex container fixes for document info */
-    .d-flex.align-items-center .min-w-0 {
-        min-width: 0;
-        overflow: hidden;
-    }
-
-    .alert {
-        border: none;
-        border-radius: 0.375rem;
-    }
-
-    .alert-warning {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-
-    .badge {
-        font-size: 0.75rem;
-    }
-
-    .btn {
-        border-radius: 0.375rem;
-        font-weight: 500;
-    }
-
-    /* Tab content container - prevent scrollbars */
-    .tab-content {
-        overflow: visible;
-    }
-
-    .tab-pane {
-        overflow: visible;
-    }
-
-    /* Card body overflow fix */
-    .card-body {
-        overflow: visible;
-    }
-
-    @@media (max-width: 768px) {
-        .d-flex.gap-2 {
-            flex-direction: column;
-            gap: 0.5rem !important;
-        }
-        
-        .card-body {
-            padding: 1rem;
-        }
-
-        /* Mobile table adjustments */
-        .table-container {
-            overflow-x: auto; /* Only allow horizontal scroll on mobile */
-            overflow-y: visible;
-        }
-
-        .dropdown-menu {
-            position: fixed !important; /* Use fixed positioning on mobile */
-            z-index: 1055;
-        }
-    }
-</style>

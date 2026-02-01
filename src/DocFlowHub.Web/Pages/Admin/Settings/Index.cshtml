@@ -6,192 +6,541 @@
     Layout = "_AdminLayout";
 }
 
-<div class="row mb-4">
-    <div class="col">
-        <h2>@ViewData["Title"]</h2>
-        <p class="text-muted">Configure application settings and preferences.</p>
-    </div>
-</div>
-
-@if (!string.IsNullOrEmpty(Model.SuccessMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="admin-settings-container">
+    <!-- Page Header -->
+    <div class="settings-page-header">
+        <div class="page-header-content">
+            <div class="page-header-info">
+                <h1 class="page-title">
+                    <div class="page-icon">⚙️</div>
+                    System Settings
+                </h1>
+                <p class="page-subtitle">Configure application settings and preferences</p>
             </div>
-}
-
-@if (!string.IsNullOrEmpty(Model.ErrorMessage))
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="page-header-actions">
+                <a href="/Admin" class="action-btn action-btn-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back to Admin</span>
+                </a>
+            </div>
+        </div>
     </div>
-}
-    
-<form method="post" asp-page-handler="UpdateSettings">
-    <div class="row">
-        @foreach (var group in Model.SettingsGroups)
-        {
-    <div class="col-md-6 mb-4">
-        <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="modern-alert modern-alert-success">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">@Model.SuccessMessage</div>
+            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="modern-alert modern-alert-danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">@Model.ErrorMessage</div>
+            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+    }
+
+    <form method="post" asp-page-handler="UpdateSettings">
+        <div class="settings-grid">
+            @foreach (var group in Model.SettingsGroups)
+            {
+                <div class="settings-category-card">
+                    <div class="category-header">
+                        <div class="category-icon @group.Category.ToLower()">
                             @switch (group.Category)
                             {
                                 case "AI":
-                                    <i class="bi bi-robot me-2"></i>
+                                    <i class="bi bi-robot"></i>
                                     break;
                                 case "Security":
-                                    <i class="bi bi-shield-check me-2"></i>
+                                    <i class="bi bi-shield-check"></i>
                                     break;
                                 case "Performance":
-                                    <i class="bi bi-speedometer2 me-2"></i>
+                                    <i class="bi bi-speedometer2"></i>
                                     break;
                                 case "System":
-                                    <i class="bi bi-gear me-2"></i>
+                                    <i class="bi bi-gear"></i>
                                     break;
                                 default:
-                                    <i class="bi bi-wrench me-2"></i>
+                                    <i class="bi bi-wrench"></i>
                                     break;
                             }
-                            @group.Category Settings
-                </h5>
+                        </div>
+                        <div class="category-title-section">
+                            <h3>@group.Category Settings</h3>
+                            <span class="settings-count">@group.Settings.Count() settings</span>
+                        </div>
                         <button type="submit" asp-page-handler="ResetCategory" asp-route-category="@group.Category" 
-                                class="btn btn-outline-secondary btn-sm" 
+                                class="category-reset-btn" 
                                 onclick="return confirm('Are you sure you want to reset all @group.Category settings to default values?')">
-                            <i class="bi bi-arrow-clockwise"></i> Reset
-                </button>
-            </div>
-            <div class="card-body">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Reset
+                        </button>
+                    </div>
+                    <div class="category-body">
                         @foreach (var setting in group.Settings)
                         {
-                <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <label class="form-label">
+                            <div class="setting-item">
+                                <div class="setting-header">
+                                    <label class="setting-label">
                                         @setting.Key.Split('.').Last()
                                         @if (setting.RequiresRestart)
                                         {
-                                            <span class="badge bg-warning text-dark ms-1">Restart Required</span>
+                                            <span class="setting-badge warning">Restart Required</span>
                                         }
                                         @if (setting.IsSensitive)
                                         {
-                                            <span class="badge bg-danger ms-1">Sensitive</span>
+                                            <span class="setting-badge danger">Sensitive</span>
                                         }
-                        </label>
+                                    </label>
                                     @if (!string.IsNullOrEmpty(setting.DefaultValue))
                                     {
                                         <button type="submit" asp-page-handler="ResetSetting" asp-route-key="@setting.Key"
-                                                class="btn btn-outline-secondary btn-sm" 
+                                                class="setting-reset-btn" 
                                                 onclick="return confirm('Reset @setting.Key to default value?')">
                                             <i class="bi bi-arrow-clockwise"></i>
                                         </button>
                                     }
-                </div>
-                
-                                @switch (setting.DataType.ToUpper())
-                                {
-                                    case "BOOLEAN":
-                                        <select class="form-select" name="SettingsRequest.Settings[@setting.Key]">
-                                            <option value="true" selected="@(setting.Value.ToLower() == "true")">True</option>
-                                            <option value="false" selected="@(setting.Value.ToLower() == "false")">False</option>
-                                        </select>
-                                        break;
-                                    case "NUMBER":
-                                        <input type="number" class="form-control" 
-                                               name="SettingsRequest.Settings[@setting.Key]" 
-                                               value="@setting.Value" 
-                                               step="any">
-                                        break;
-                                    case "JSON":
-                                        <textarea class="form-control" rows="3" 
-                                                  name="SettingsRequest.Settings[@setting.Key]">@setting.Value</textarea>
-                                        break;
-                                    default:
-                                        if (setting.IsSensitive)
-                                        {
-                                            <input type="password" class="form-control" 
+                                </div>
+                                
+                                <div class="setting-input-wrapper">
+                                    @switch (setting.DataType.ToUpper())
+                                    {
+                                        case "BOOLEAN":
+                                            <select class="setting-select" name="SettingsRequest.Settings[@setting.Key]">
+                                                <option value="true" selected="@(setting.Value.ToLower() == "true")">True</option>
+                                                <option value="false" selected="@(setting.Value.ToLower() == "false")">False</option>
+                                            </select>
+                                            break;
+                                        case "NUMBER":
+                                            <input type="number" class="setting-input" 
                                                    name="SettingsRequest.Settings[@setting.Key]" 
-                                                   value="@setting.Value">
-                                        }
-                                        else
-                                        {
-                                            <input type="text" class="form-control" 
-                                                   name="SettingsRequest.Settings[@setting.Key]" 
-                                                   value="@setting.Value">
-                                        }
-                                        break;
-                                }
+                                                   value="@setting.Value" 
+                                                   step="any">
+                                            break;
+                                        case "JSON":
+                                            <textarea class="setting-textarea" rows="3" 
+                                                      name="SettingsRequest.Settings[@setting.Key]">@setting.Value</textarea>
+                                            break;
+                                        default:
+                                            if (setting.IsSensitive)
+                                            {
+                                                <input type="password" class="setting-input" 
+                                                       name="SettingsRequest.Settings[@setting.Key]" 
+                                                       value="@setting.Value">
+                                            }
+                                            else
+                                            {
+                                                <input type="text" class="setting-input" 
+                                                       name="SettingsRequest.Settings[@setting.Key]" 
+                                                       value="@setting.Value">
+                                            }
+                                            break;
+                                    }
+                                </div>
                                 
                                 @if (!string.IsNullOrEmpty(setting.Description))
                                 {
-                                    <div class="form-text">@setting.Description</div>
+                                    <p class="setting-description">@setting.Description</p>
                                 }
                                 @if (!string.IsNullOrEmpty(setting.DefaultValue))
                                 {
-                                    <div class="form-text text-muted">Default: @setting.DefaultValue</div>
+                                    <p class="setting-default">Default: @setting.DefaultValue</p>
                                 }
                             </div>
                         }
                     </div>
                 </div>
-            </div>
-        }
-    </div>
-    
-    <div class="row">
-        <div class="col-12">
-        <div class="card">
-                <div class="card-body text-center">
-                    <button type="submit" class="btn btn-primary btn-lg me-2">
-                        <i class="bi bi-check2"></i> Save All Settings
-                    </button>
-                    <a href="/Admin" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to Admin
-                    </a>
-                </div>
-            </div>
+            }
         </div>
-    </div>
-</form>
+
+        <!-- Save Actions -->
+        <div class="settings-actions-card">
+            <button type="submit" class="save-btn">
+                <i class="bi bi-check2"></i>
+                Save All Settings
+            </button>
+            <a href="/Admin" class="cancel-btn">
+                <i class="bi bi-arrow-left"></i>
+                Back to Admin
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Styles {
+<style>
+    /* ===== ADMIN SETTINGS STYLES ===== */
+    
+    .admin-settings-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    /* Page Header */
+    .settings-page-header { margin-bottom: 2rem; }
+    
+    .settings-page-header .page-header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+    
+    .settings-page-header .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+    
+    .settings-page-header .page-icon { font-size: 2.5rem; }
+    
+    .settings-page-header .page-subtitle {
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+    }
+    
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .action-btn-secondary {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .action-btn-secondary:hover { color: var(--text-primary); }
+    
+    /* Alerts */
+    .modern-alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-alert-success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #16a34a;
+    }
+    
+    .modern-alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+    }
+    
+    .modern-alert .alert-icon { font-size: 1.25rem; }
+    .modern-alert .alert-content { flex: 1; font-weight: 500; }
+    .modern-alert .alert-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: 0.6;
+        line-height: 1;
+    }
+    
+    /* Settings Grid */
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Category Card */
+    .settings-category-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .category-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--surface-secondary);
+    }
+    
+    .category-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    
+    .category-icon.ai { background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%); color: #a855f7; }
+    .category-icon.security { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%); color: #ef4444; }
+    .category-icon.performance { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%); color: #22c55e; }
+    .category-icon.system { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%); color: #3b82f6; }
+    
+    .category-title-section { flex: 1; }
+    .category-title-section h3 { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .settings-count { font-size: 0.8rem; color: var(--text-tertiary); }
+    
+    .category-reset-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.75rem;
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .category-reset-btn:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    .category-body { padding: 1rem; }
+    
+    /* Setting Item */
+    .setting-item {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        transition: background 0.2s ease;
+    }
+    
+    .setting-item:hover { background: var(--surface-secondary); }
+    .setting-item:last-child { margin-bottom: 0; }
+    
+    .setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .setting-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .setting-badge {
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+    }
+    
+    .setting-badge.warning { background: rgba(234, 179, 8, 0.2); color: #ca8a04; }
+    .setting-badge.danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    
+    .setting-reset-btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--text-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .setting-reset-btn:hover {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    
+    .setting-input,
+    .setting-select,
+    .setting-textarea {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    
+    .setting-input:focus,
+    .setting-select:focus,
+    .setting-textarea:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+    }
+    
+    .setting-textarea { font-family: monospace; resize: vertical; }
+    
+    .setting-description {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .setting-default {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        margin: 0.25rem 0 0 0;
+    }
+    
+    /* Actions Card */
+    .settings-actions-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .save-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 2rem;
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .save-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    }
+    
+    .cancel-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .cancel-btn:hover { color: var(--text-primary); }
+    
+    /* ===== RESPONSIVE DESIGN ===== */
+    @@media (max-width: 1024px) {
+        .settings-grid { grid-template-columns: 1fr; }
+    }
+    
+    @@media (max-width: 768px) {
+        .admin-settings-container { padding: 1rem; }
+        .settings-page-header .page-title { font-size: 1.5rem; }
+        .category-header { flex-wrap: wrap; }
+        .category-reset-btn { width: 100%; justify-content: center; margin-top: 0.5rem; }
+        .settings-actions-card { flex-direction: column; }
+        .save-btn, .cancel-btn { justify-content: center; }
+    }
+    
+    /* ===== DARK THEME ADJUSTMENTS ===== */
+    [data-theme="dark"] .settings-category-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .category-header { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .setting-item:hover { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .settings-actions-card { background: rgba(45, 45, 45, 0.8); }
+</style>
+}
 
 @section Scripts {
     <script>
-        // Auto-save warning for settings that require restart
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-save warning for settings that require restart
             const restartRequiredInputs = document.querySelectorAll('input[name*="Security"], input[name*="Performance.Upload"]');
             restartRequiredInputs.forEach(input => {
                 input.addEventListener('change', function() {
-                    if (this.closest('.mb-3').querySelector('.badge.bg-warning')) {
-                        this.style.borderColor = '#ffc107';
-                        this.style.backgroundColor = '#fff3cd';
+                    if (this.closest('.setting-item').querySelector('.setting-badge.warning')) {
+                        this.style.borderColor = '#eab308';
+                        this.style.backgroundColor = 'rgba(234, 179, 8, 0.1)';
                     }
                 });
             });
-        });
-        
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const jsonInputs = document.querySelectorAll('textarea[name*="Settings"]');
-            let hasErrors = false;
             
-            jsonInputs.forEach(input => {
-                try {
-                    if (input.value.trim()) {
-                        JSON.parse(input.value);
+            // Form validation
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const jsonInputs = document.querySelectorAll('textarea[name*="Settings"]');
+                let hasErrors = false;
+                
+                jsonInputs.forEach(input => {
+                    try {
+                        if (input.value.trim()) {
+                            JSON.parse(input.value);
+                        }
+                        input.classList.remove('is-invalid');
+                        input.style.borderColor = '';
+                    } catch (error) {
+                        input.classList.add('is-invalid');
+                        input.style.borderColor = '#ef4444';
+                        hasErrors = true;
                     }
-                    input.classList.remove('is-invalid');
-                } catch (error) {
-                    input.classList.add('is-invalid');
-                    hasErrors = true;
+                });
+                
+                if (hasErrors) {
+                    e.preventDefault();
+                    alert('Please fix JSON syntax errors before saving.');
+                    return false;
                 }
             });
             
-            if (hasErrors) {
-                e.preventDefault();
-                alert('Please fix JSON syntax errors before saving.');
-                return false;
+            // Auto-dismiss success messages
+            const successAlert = document.querySelector('.modern-alert-success');
+            if (successAlert) {
+                setTimeout(() => {
+                    successAlert.style.opacity = '0';
+                    successAlert.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => successAlert.remove(), 300);
+                }, 5000);
             }
         });
     </script>
-} 
+}
