@@ -83,3 +83,5 @@ github-*.*
 
 # Test files
 tests/DocFlowHub.Tests/appsettings.Test.json
+
+screenshots/

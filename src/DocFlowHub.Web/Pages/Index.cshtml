@@ -1,4 +1,4 @@
-﻿@page
+@page
 @using DocFlowHub.Web.Pages
 @model IndexModel
 @{
@@ -613,295 +613,284 @@
 }
 else
 {
-    <!-- ===== EXISTING DASHBOARD FOR AUTHENTICATED USERS ===== -->
-    <div class="container-fluid py-4 page-transition">
-        <!-- Welcome Section -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <h1 class="h3 mb-0">
-                    <i class="bi bi-house-door me-2 text-primary"></i>
-                    Welcome, @Model.UserName!
-                </h1>
-                <p class="text-muted">Here's what's happening with your documents today.</p>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm bg-primary text-white">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <h5 class="card-title mb-1">Ready to get started?</h5>
-                                <p class="card-text mb-0">Upload documents, manage teams, and collaborate with others</p>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="row g-2">
-                                    <div class="col-lg-6">
-                                        <a asp-page="/Documents/Upload" class="btn btn-light w-100">
-                                    <i class="bi bi-cloud-upload me-1"></i> Upload Document
-                                </a>
-                                    </div>
-                                    <div class="col-lg-6">
-                                        <a asp-page="/Documents/Index" class="btn btn-outline-light w-100">
-                                    <i class="bi bi-folder me-1"></i> Browse Documents
-                                </a>
-                                    </div>
-                                    <div class="col-lg-6">
-                                        <a asp-page="/Teams/Create" class="btn btn-light w-100">
-                                            <i class="bi bi-people me-1"></i> Create Team
-                                        </a>
-                                    </div>
-                                    <div class="col-lg-6">
-                                        <a asp-page="/Teams/Index" class="btn btn-outline-light w-100">
-                                            <i class="bi bi-people-fill me-1"></i> Manage Teams
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <!-- ===== MODERN DASHBOARD FOR AUTHENTICATED USERS ===== -->
+    <div class="dashboard-container">
+        <!-- Modern Page Header -->
+        <div class="dashboard-page-header">
+            <div class="page-header-content">
+                <div class="page-header-info">
+                    <h1 class="page-title">
+                        <div class="page-icon">🏠</div>
+                        Welcome, @Model.UserName!
+                    </h1>
+                    <p class="page-subtitle">Here's what's happening with your documents today</p>
+                </div>
+                <div class="page-header-actions">
+                    <a asp-page="/Documents/Upload" class="modern-btn modern-btn-primary">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>Upload Document</span>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 card-stats">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="icon-container bg-primary-subtle text-primary">
-                                    <i class="bi bi-file-earmark-text fs-1"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="card-title mb-0 text-muted">Total Documents</h6>
-                                <h2 class="mt-2 mb-0 counter" data-target="@Model.TotalDocuments">0</h2>
-                            </div>
-                        </div>
+        <!-- Quick Actions Panel -->
+        <div class="dashboard-quick-actions">
+            <div class="quick-actions-header">
+                <h3 class="quick-actions-title">
+                    <i class="bi bi-lightning-charge"></i>
+                    Quick Actions
+                </h3>
+                <p class="quick-actions-subtitle">Get started with common tasks</p>
+            </div>
+            <div class="quick-actions-grid">
+                <a asp-page="/Documents/Upload" class="quick-action-card">
+                    <div class="quick-action-icon blue">
+                        <i class="bi bi-cloud-upload"></i>
                     </div>
+                    <div class="quick-action-info">
+                        <h4>Upload Document</h4>
+                        <p>Add new files to your library</p>
+                    </div>
+                </a>
+                <a asp-page="/Documents/Index" class="quick-action-card">
+                    <div class="quick-action-icon green">
+                        <i class="bi bi-folder2-open"></i>
+                    </div>
+                    <div class="quick-action-info">
+                        <h4>Browse Documents</h4>
+                        <p>View and manage your files</p>
+                    </div>
+                </a>
+                <a asp-page="/Teams/Create" class="quick-action-card">
+                    <div class="quick-action-icon cyan">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="quick-action-info">
+                        <h4>Create Team</h4>
+                        <p>Start collaborating with others</p>
+                    </div>
+                </a>
+                <a asp-page="/Projects/Index" class="quick-action-card">
+                    <div class="quick-action-icon yellow">
+                        <i class="bi bi-kanban"></i>
+                    </div>
+                    <div class="quick-action-info">
+                        <h4>View Projects</h4>
+                        <p>Organize your work</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards Grid -->
+        <div class="dashboard-stats-grid">
+            <div class="dashboard-stat-card blue">
+                <div class="dashboard-stat-header">
+                    <div class="dashboard-stat-info">
+                        <h3>Total Documents</h3>
+                        <div class="dashboard-stat-number counter" data-target="@Model.TotalDocuments">0</div>
+                        <div class="dashboard-stat-change">in your library</div>
+                    </div>
+                    <div class="dashboard-stat-icon">📄</div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 card-stats">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="icon-container bg-success-subtle text-success">
-                                    <i class="bi bi-people fs-1"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="card-title mb-0 text-muted">Teams</h6>
-                                <h2 class="mt-2 mb-0 counter" data-target="@Model.TotalTeams">0</h2>
-                                <div class="mt-1">
-                                    <small class="text-success">
-                                        <i class="bi bi-star-fill me-1"></i>@Model.TeamsAsOwner owner
-                                    </small>
-                                    <small class="text-info ms-2">
-                                        <i class="bi bi-person-check me-1"></i>@Model.TeamsAsMember member
-                                    </small>
-                                </div>
-                            </div>
+
+            <div class="dashboard-stat-card green">
+                <div class="dashboard-stat-header">
+                    <div class="dashboard-stat-info">
+                        <h3>Teams</h3>
+                        <div class="dashboard-stat-number counter" data-target="@Model.TotalTeams">0</div>
+                        <div class="dashboard-stat-change">
+                            <span class="stat-badge owner">@Model.TeamsAsOwner owner</span>
+                            <span class="stat-badge member">@Model.TeamsAsMember member</span>
                         </div>
                     </div>
+                    <div class="dashboard-stat-icon">👥</div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 card-stats">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="icon-container bg-warning-subtle text-warning">
-                                    <i class="bi bi-clock-history fs-1"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="card-title mb-0 text-muted">Recent Updates</h6>
-                                <h2 class="mt-2 mb-0 counter" data-target="@Model.RecentUpdates">0</h2>
-                                <small class="text-muted">Last 7 days</small>
-                            </div>
-                        </div>
+
+            <div class="dashboard-stat-card cyan">
+                <div class="dashboard-stat-header">
+                    <div class="dashboard-stat-info">
+                        <h3>Recent Updates</h3>
+                        <div class="dashboard-stat-number counter" data-target="@Model.RecentUpdates">0</div>
+                        <div class="dashboard-stat-change">last 7 days</div>
                     </div>
+                    <div class="dashboard-stat-icon">🕐</div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm h-100 card-stats">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0">
-                                <div class="icon-container bg-info-subtle text-info">
-                                    <i class="bi bi-share fs-1"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="card-title mb-0 text-muted">Shared With Me</h6>
-                                <h2 class="mt-2 mb-0 counter" data-target="@Model.SharedDocuments">0</h2>
-                            </div>
-                        </div>
+
+            <div class="dashboard-stat-card yellow">
+                <div class="dashboard-stat-header">
+                    <div class="dashboard-stat-info">
+                        <h3>Shared With Me</h3>
+                        <div class="dashboard-stat-number counter" data-target="@Model.SharedDocuments">0</div>
+                        <div class="dashboard-stat-change">team documents</div>
                     </div>
+                    <div class="dashboard-stat-icon">🔗</div>
                 </div>
             </div>
         </div>
 
         <!-- Recent Documents, Teams, and Activity -->
-        <div class="row">
+        <div class="dashboard-content-grid">
             <!-- Recent Documents -->
-            <div class="col-lg-4 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-transparent border-0 pb-0">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-file-earmark-text me-2 text-primary"></i>
-                                Recent Documents
-                            </h5>
-                            <a asp-page="/Documents/Index" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye me-1"></i> View All
-                            </a>
+            <div class="dashboard-content-card">
+                <div class="content-card-header">
+                    <div class="content-card-title">
+                        <div class="content-card-icon blue">📄</div>
+                        <div>
+                            <h3>Recent Documents</h3>
+                            <p>Your latest files</p>
                         </div>
                     </div>
-                    <div class="card-body">
-                        @if (Model.RecentDocuments.Any())
-                        {
-                            <div class="list-group list-group-flush">
-                                @foreach (var doc in Model.RecentDocuments.Take(3))
-                                {
-                                    <a asp-page="/Documents/Details" asp-route-id="@doc.Id" class="list-group-item list-group-item-action border-0 document-item">
-                                        <div class="d-flex align-items-start">
-                                            <div class="flex-shrink-0 me-2">
-                                                <i class="bi @GetFileIcon(doc.FileType) text-muted"></i>
-                                                </div>
-                                            <div class="flex-grow-1 min-w-0">
-                                                <h6 class="mb-1 text-truncate">@doc.Title</h6>
-                                                <p class="mb-1 text-muted small text-truncate dashboard-text-truncate">@doc.Description</p>
-                                                <small class="text-muted">
-                                                    @doc.LastModified.ToString("MMM dd, yyyy")
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </a>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-center py-4">
-                                <div class="empty-state">
-                                    <i class="bi bi-file-earmark-text text-muted fs-2 mb-2"></i>
-                                    <h6 class="text-muted">No documents yet</h6>
-                                    <p class="text-muted small mb-3">Start by uploading your first document</p>
-                                    <a asp-page="/Documents/Upload" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-cloud-upload me-1"></i> Upload Document
-                                    </a>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    <a asp-page="/Documents/Index" class="content-card-action">
+                        <span>View All</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="content-card-body">
+                    @if (Model.RecentDocuments.Any())
+                    {
+                        <div class="content-items-list">
+                            @foreach (var doc in Model.RecentDocuments.Take(4))
+                            {
+                                <a asp-page="/Documents/Details" asp-route-id="@doc.Id" class="content-item document-item">
+                                    <div class="content-item-icon @GetFileIconClass(doc.FileType)">
+                                        <i class="bi @GetFileIcon(doc.FileType)"></i>
+                                    </div>
+                                    <div class="content-item-info">
+                                        <h4>@doc.Title</h4>
+                                        <p>@(string.IsNullOrEmpty(doc.Description) ? "No description" : doc.Description)</p>
+                                        <span class="content-item-meta">
+                                            <i class="bi bi-calendar3"></i>
+                                            @doc.LastModified.ToString("MMM dd, yyyy")
+                                        </span>
+                                    </div>
+                                    <div class="content-item-arrow">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="content-empty-state">
+                            <div class="empty-icon">📄</div>
+                            <h4>No documents yet</h4>
+                            <p>Start by uploading your first document</p>
+                            <a asp-page="/Documents/Upload" class="empty-action-btn">
+                                <i class="bi bi-cloud-upload"></i>
+                                Upload Document
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
 
             <!-- Recent Teams -->
-            <div class="col-lg-4 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-transparent border-0 pb-0">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">
-                                <i class="bi bi-people me-2 text-success"></i>
-                                Recent Teams
-                            </h5>
-                            <a asp-page="/Teams/Index" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-eye me-1"></i> View All
-                            </a>
+            <div class="dashboard-content-card">
+                <div class="content-card-header">
+                    <div class="content-card-title">
+                        <div class="content-card-icon green">👥</div>
+                        <div>
+                            <h3>Recent Teams</h3>
+                            <p>Your collaborations</p>
                         </div>
                     </div>
-                    <div class="card-body">
-                        @if (Model.RecentTeams.Any())
-                        {
-                            <div class="list-group list-group-flush">
-                                @foreach (var team in Model.RecentTeams.Take(3))
-                                {
-                                    <a asp-page="/Teams/Details" asp-route-id="@team.Id" class="list-group-item list-group-item-action border-0 team-item">
-                                        <div class="d-flex align-items-start">
-                                            <div class="flex-shrink-0 me-2">
-                                                <i class="bi @(team.IsOwner ? "bi-star-fill text-warning" : "bi-people text-success")"></i>
-                                            </div>
-                                            <div class="flex-grow-1 min-w-0">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <h6 class="mb-1 text-truncate flex-grow-1 min-w-0 me-2">@team.Name</h6>
-                                                    <span class="badge bg-secondary-subtle text-secondary small flex-shrink-0">@team.MemberCount</span>
-                                                </div>
-                                                <p class="mb-1 text-muted small text-truncate dashboard-text-truncate">@team.Description</p>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="text-muted text-truncate flex-grow-1 min-w-0 me-2">
-                                                        @team.LastModified.ToString("MMM dd, yyyy")
-                                                    </small>
-                                                    <small class="badge @(team.IsOwner ? "bg-warning-subtle text-warning" : "bg-info-subtle text-info") flex-shrink-0">
-                                                        @(team.IsOwner ? "Owner" : "Member")
-                                                    </small>
-                                                </div>
-                                            </div>
+                    <a asp-page="/Teams/Index" class="content-card-action">
+                        <span>View All</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="content-card-body">
+                    @if (Model.RecentTeams.Any())
+                    {
+                        <div class="content-items-list">
+                            @foreach (var team in Model.RecentTeams.Take(4))
+                            {
+                                <a asp-page="/Teams/Details" asp-route-id="@team.Id" class="content-item team-item">
+                                    <div class="content-item-icon @(team.IsOwner ? "yellow" : "cyan")">
+                                        <i class="bi @(team.IsOwner ? "bi-star-fill" : "bi-people-fill")"></i>
+                                    </div>
+                                    <div class="content-item-info">
+                                        <div class="content-item-header">
+                                            <h4>@team.Name</h4>
+                                            <span class="member-count-badge">@team.MemberCount members</span>
                                         </div>
-                                    </a>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-center py-4">
-                                <div class="empty-state">
-                                    <i class="bi bi-people text-muted fs-2 mb-2"></i>
-                                    <h6 class="text-muted">No teams yet</h6>
-                                    <p class="text-muted small mb-3">Create or join a team to collaborate</p>
-                                    <a asp-page="/Teams/Create" class="btn btn-sm btn-success">
-                                        <i class="bi bi-plus-circle me-1"></i> Create Team
-                                    </a>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                                        <p>@(string.IsNullOrEmpty(team.Description) ? "No description" : team.Description)</p>
+                                        <div class="content-item-footer">
+                                            <span class="content-item-meta">
+                                                <i class="bi bi-calendar3"></i>
+                                                @team.LastModified.ToString("MMM dd, yyyy")
+                                            </span>
+                                            <span class="role-badge @(team.IsOwner ? "owner" : "member")">
+                                                @(team.IsOwner ? "Owner" : "Member")
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="content-item-arrow">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="content-empty-state">
+                            <div class="empty-icon">👥</div>
+                            <h4>No teams yet</h4>
+                            <p>Create or join a team to collaborate</p>
+                            <a asp-page="/Teams/Create" class="empty-action-btn green">
+                                <i class="bi bi-plus-circle"></i>
+                                Create Team
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
 
             <!-- Recent Activity -->
-            <div class="col-lg-4 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-transparent border-0 pb-0">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-activity me-2 text-info"></i>
-                            Recent Activity
-                        </h5>
+            <div class="dashboard-content-card">
+                <div class="content-card-header">
+                    <div class="content-card-title">
+                        <div class="content-card-icon cyan">⚡</div>
+                        <div>
+                            <h3>Recent Activity</h3>
+                            <p>What's happening</p>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        @if (Model.RecentActivities.Any())
-                        {
-                            <div class="timeline">
-                                @foreach (var activity in Model.RecentActivities.Take(4))
-                                {
-                                    <div class="timeline-item">
-                                        <div class="timeline-marker @GetActivityMarkerClass(activity.Title)"></div>
-                                        <div class="timeline-content">
-                                            <h6 class="mb-1 small text-truncate">@activity.Title</h6>
-                                            <p class="mb-1 text-muted small text-truncate dashboard-text-truncate">@activity.Description</p>
-                                                <small class="text-muted">@GetRelativeTime(activity.Timestamp)</small>
+                </div>
+                <div class="content-card-body">
+                    @if (Model.RecentActivities.Any())
+                    {
+                        <div class="activity-timeline">
+                            @foreach (var activity in Model.RecentActivities.Take(5))
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-marker @GetActivityColorClass(activity.Title)"></div>
+                                    <div class="activity-content">
+                                        <div class="activity-header">
+                                            <h4>@activity.Title</h4>
+                                            <span class="activity-time">@GetRelativeTime(activity.Timestamp)</span>
                                         </div>
+                                        <p>@activity.Description</p>
                                     </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-center py-4">
-                                <div class="empty-state">
-                                    <i class="bi bi-activity text-muted fs-2 mb-2"></i>
-                                    <h6 class="text-muted">No recent activity</h6>
-                                    <p class="text-muted small mb-0">Activity will appear here as you work</p>
                                 </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="content-empty-state">
+                            <div class="empty-icon">⚡</div>
+                            <h4>No recent activity</h4>
+                            <p>Activity will appear here as you work</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -919,6 +908,19 @@ else
             ".md" => "bi-markdown",
             ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
             _ => "bi-file-earmark"
+        };
+    }
+
+    private string GetFileIconClass(string fileType)
+    {
+        return fileType.ToLower() switch
+        {
+            ".pdf" => "red",
+            ".doc" or ".docx" => "blue",
+            ".txt" => "cyan",
+            ".md" => "purple",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "green",
+            _ => "gray"
         };
     }
 
@@ -946,6 +948,17 @@ else
         };
     }
 
+    private string GetActivityColorClass(string activityTitle)
+    {
+        return activityTitle switch
+        {
+            "Document Created" => "green",
+            "Document Updated" => "blue",
+            "New Version Uploaded" => "yellow",
+            _ => "gray"
+        };
+    }
+
     private string GetRelativeTime(DateTime timestamp)
     {
         var timeSpan = DateTime.Now - timestamp;
@@ -965,79 +978,606 @@ else
 
 @section Styles {
     <style>
-        .card-stats {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        /* ===== MODERN DASHBOARD STYLES ===== */
+        
+        /* Dashboard Container */
+        .dashboard-container {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
         }
         
-        .card-stats:hover {
+        /* Page Header */
+        .dashboard-page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-page-header .page-header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+        
+        .dashboard-page-header .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0;
+        }
+        
+        .dashboard-page-header .page-icon {
+            font-size: 2.5rem;
+        }
+        
+        .dashboard-page-header .page-subtitle {
+            color: var(--text-secondary);
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+        }
+        
+        .dashboard-page-header .modern-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-page-header .modern-btn-primary {
+            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .dashboard-page-header .modern-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+            color: white;
         }
         
-        .icon-container {
-            width: 60px;
-            height: 60px;
+        /* Quick Actions Panel */
+        .dashboard-quick-actions {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(20px);
+        }
+        
+        .quick-actions-header {
+            margin-bottom: 1.25rem;
+        }
+        
+        .quick-actions-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+        
+        .quick-actions-title i {
+            color: var(--accent-color);
+        }
+        
+        .quick-actions-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0.25rem 0 0 0;
+        }
+        
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        
+        .quick-action-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-action-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-glass);
+            border-color: var(--accent-color);
+        }
+        
+        .quick-action-icon {
+            width: 48px;
+            height: 48px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
         }
         
-        .timeline {
+        .quick-action-icon.blue {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+            color: #3b82f6;
+        }
+        
+        .quick-action-icon.green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+            color: #22c55e;
+        }
+        
+        .quick-action-icon.cyan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+            color: #06b6d4;
+        }
+        
+        .quick-action-icon.yellow {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%);
+            color: #eab308;
+        }
+        
+        .quick-action-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .quick-action-info p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0.25rem 0 0 0;
+        }
+        
+        /* Statistics Cards Grid */
+        .dashboard-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-stat-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
             position: relative;
-            padding-left: 30px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
         }
         
-        .timeline-item {
-            position: relative;
-            padding-bottom: 1.5rem;
-        }
-        
-        .timeline-marker {
+        .dashboard-stat-card::before {
+            content: '';
             position: absolute;
-            left: -30px;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: 16px 0 0 16px;
+        }
+        
+        .dashboard-stat-card.blue::before { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); }
+        .dashboard-stat-card.green::before { background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%); }
+        .dashboard-stat-card.cyan::before { background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); }
+        .dashboard-stat-card.yellow::before { background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%); }
+        
+        .dashboard-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glass);
+        }
+        
+        .dashboard-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .dashboard-stat-info h3 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin: 0 0 0.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .dashboard-stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+        
+        .dashboard-stat-change {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .stat-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            margin-right: 0.25rem;
+        }
+        
+        .stat-badge.owner {
+            background: rgba(234, 179, 8, 0.15);
+            color: #ca8a04;
+        }
+        
+        .stat-badge.member {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+        
+        .dashboard-stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        
+        /* ===== CONTENT CARDS GRID ===== */
+        .dashboard-content-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-content-card {
+            background: var(--surface-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dashboard-content-card:hover {
+            box-shadow: var(--shadow-glass);
+        }
+        
+        .content-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .content-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .content-card-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        
+        .content-card-icon.blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%); }
+        .content-card-icon.green { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%); }
+        .content-card-icon.cyan { background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%); }
+        .content-card-icon.yellow { background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%); }
+        
+        .content-card-title h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .content-card-title p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0.15rem 0 0 0;
+        }
+        
+        .content-card-action {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--accent-color);
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .content-card-action:hover {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .content-card-body {
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Content Items List */
+        .content-items-list {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .content-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+        
+        .content-item:last-child {
+            border-bottom: none;
+        }
+        
+        .content-item:hover {
+            background: rgba(5, 150, 105, 0.05);
+        }
+        
+        .content-item-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .content-item-icon.blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%); color: #3b82f6; }
+        .content-item-icon.green { background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%); color: #22c55e; }
+        .content-item-icon.cyan { background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%); color: #06b6d4; }
+        .content-item-icon.yellow { background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%); color: #eab308; }
+        .content-item-icon.red { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%); color: #ef4444; }
+        .content-item-icon.purple { background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%); color: #a855f7; }
+        .content-item-icon.gray { background: linear-gradient(135deg, rgba(107, 114, 128, 0.15) 0%, rgba(107, 114, 128, 0.05) 100%); color: #6b7280; }
+        
+        .content-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .content-item-info h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .content-item-info p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0.25rem 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .content-item-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .content-item-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        
+        .content-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .content-item-arrow {
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+            transition: transform 0.2s ease;
+        }
+        
+        .content-item:hover .content-item-arrow {
+            transform: translateX(3px);
+            color: var(--accent-color);
+        }
+        
+        .member-count-badge {
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            background: rgba(107, 114, 128, 0.15);
+            color: var(--text-secondary);
+        }
+        
+        .role-badge {
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+        }
+        
+        .role-badge.owner {
+            background: rgba(234, 179, 8, 0.15);
+            color: #ca8a04;
+        }
+        
+        .role-badge.member {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+        
+        /* Activity Timeline */
+        .activity-timeline {
+            padding: 1rem 1.5rem;
+        }
+        
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            position: relative;
+        }
+        
+        .activity-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 28px;
+            bottom: -8px;
+            width: 2px;
+            background: var(--border-color);
+        }
+        
+        .activity-marker {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #0d6efd;
-            border: 3px solid #fff;
-            box-shadow: 0 0 0 2px #e9ecef;
+            flex-shrink: 0;
+            margin-top: 4px;
         }
         
-        .timeline-item:not(:last-child)::before {
-            content: '';
-            position: absolute;
-            left: -24px;
-            top: 15px;
-            height: calc(100% - 15px);
-            width: 2px;
-            background: #e9ecef;
+        .activity-marker.blue { background: #3b82f6; }
+        .activity-marker.green { background: #22c55e; }
+        .activity-marker.yellow { background: #eab308; }
+        .activity-marker.cyan { background: #06b6d4; }
+        .activity-marker.gray { background: #6b7280; }
+        
+        .activity-content {
+            flex: 1;
+            min-width: 0;
         }
         
-        .document-item {
-            transition: all 0.2s ease;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
         }
         
-        .document-item:hover {
-            background-color: rgba(13, 110, 253, 0.05);
-            transform: translateX(4px);
+        .activity-content h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
         }
         
-        .team-item {
-            transition: all 0.2s ease;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            white-space: nowrap;
         }
         
-        .team-item:hover {
-            background-color: rgba(25, 135, 84, 0.05);
-            transform: translateX(4px);
+        .activity-content p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin: 0.25rem 0 0 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
-        .empty-state {
-            opacity: 0.8;
+        /* Empty State */
+        .content-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .content-empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+        
+        .content-empty-state h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .content-empty-state p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0 0 1.25rem 0;
+        }
+        
+        .empty-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+            border-radius: 10px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .empty-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.25);
+            color: white;
+        }
+        
+        .empty-action-btn.green {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        }
+        
+        .empty-action-btn.green:hover {
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
         }
         
         .counter {
@@ -1052,6 +1592,111 @@ else
         
         .counter {
             animation: countUp 0.6s ease-out;
+        }
+        
+        /* ===== RESPONSIVE DESIGN ===== */
+        @@media (max-width: 1200px) {
+            .dashboard-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .dashboard-content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @@media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+            
+            .dashboard-page-header .page-header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .dashboard-page-header .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .dashboard-page-header .page-icon {
+                font-size: 2rem;
+            }
+            
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-stat-number {
+                font-size: 2rem;
+            }
+            
+            .content-card-header {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .content-card-action {
+                align-self: flex-start;
+            }
+            
+            .activity-header {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+        }
+        
+        /* ===== DARK THEME ADJUSTMENTS ===== */
+        [data-theme="dark"] .dashboard-stat-card {
+            background: rgba(45, 45, 45, 0.8);
+        }
+        
+        [data-theme="dark"] .dashboard-quick-actions {
+            background: rgba(45, 45, 45, 0.8);
+        }
+        
+        [data-theme="dark"] .quick-action-card {
+            background: rgba(60, 60, 60, 0.6);
+        }
+        
+        [data-theme="dark"] .quick-action-card:hover {
+            background: rgba(70, 70, 70, 0.8);
+        }
+        
+        [data-theme="dark"] .stat-badge.owner {
+            background: rgba(234, 179, 8, 0.25);
+        }
+        
+        [data-theme="dark"] .stat-badge.member {
+            background: rgba(59, 130, 246, 0.25);
+        }
+        
+        [data-theme="dark"] .dashboard-content-card {
+            background: rgba(45, 45, 45, 0.8);
+        }
+        
+        [data-theme="dark"] .content-item:hover {
+            background: rgba(5, 150, 105, 0.1);
+        }
+        
+        [data-theme="dark"] .member-count-badge {
+            background: rgba(107, 114, 128, 0.25);
+        }
+        
+        [data-theme="dark"] .role-badge.owner {
+            background: rgba(234, 179, 8, 0.25);
+        }
+        
+        [data-theme="dark"] .role-badge.member {
+            background: rgba(59, 130, 246, 0.25);
         }
     </style>
 }
