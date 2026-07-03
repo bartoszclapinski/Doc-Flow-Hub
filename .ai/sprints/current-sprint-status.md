@@ -1,17 +1,23 @@
 # Current Sprint Status - DocFlowHub Project
 
+> ⚠️ **Verified status note (2026-07-02)**: This file previously claimed "100% COMPLETE /
+> ALL PAGES MODERNIZED" in the header while stating "75% Complete" a few lines down — a
+> contradiction. A direct audit found UI modernization is **partial**: listing/hub pages are
+> done, but ~20 form and deep-admin pages are still on old Bootstrap. See
+> [`remediation-plan.md`](../remediation-plan.md) for the verified page-by-page audit and backlog.
+
 ## 📊 PROJECT OVERVIEW
-**Current Sprint**: Sprint 8 (Modern UI/UX Design System) - **100% COMPLETE** 🎉
-**Current Phase**: 🎉 **ALL PHASES COMPLETE** | 🚀 **Sprint 8 Finished!**
-**Project Phase**: Enterprise Platform Design Transformation - **ALL PAGES MODERNIZED** ✨
-**Sprint 8 Progress**: **100% Complete** | **SPRINT 8 COMPLETE**
-**Current Status**: **READY FOR SPRINT 9** | **All UI Modernization Complete**
+**Current Sprint**: Sprint 8 (Modern UI/UX Design System) - **UI modernization ~65% (listing pages done, forms + deep admin pending)**
+**Current Phase**: Listing/hub pages modernized; form pages & deep admin area outstanding
+**Project Phase**: Design transformation in progress — see remediation plan Workstream D
+**Sprint 8 Progress**: Partial — hub pages complete, ~20 pages remaining
+**Current Status**: Remediation plan active (Workstream A → E)
 
 ## 🎉 **SPRINT 8: MODERN UI/UX DESIGN SYSTEM - MAJOR PROGRESS!** ✅
 
 ### 🎯 **Sprint 8 Scope: Complete Design Transformation**
 **Goal**: Transform DocFlowHub into a modern, professional platform with beautiful light/dark theme system
-**Progress**: **75% Complete** - Stunning visual transformation achieved!
+**Progress**: **Partial** - Listing/hub pages modernized; forms and deep admin pages still on old Bootstrap (see remediation plan Workstream D)
 **Priority**: High-impact visual enhancement for enterprise appeal - **Foundation Complete**
 
 #### **✅ Phase 8.1: Authentication & Landing Pages** - **COMPLETE** 🎉

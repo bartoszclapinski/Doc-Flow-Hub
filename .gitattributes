@@ -1,0 +1,36 @@
+# Normalize line endings: store LF in the repo, check out native on each platform.
+# This stops the constant LF<->CRLF churn that made ~20 files show as "modified"
+# with no real content change. After adding this file, run once:
+#   git add --renormalize .
+* text=auto
+
+# Source / text
+*.cs      text diff=csharp
+*.cshtml  text
+*.razor   text
+*.csproj  text
+*.sln     text
+*.props   text
+*.targets text
+*.json    text
+*.md      text
+*.css     text
+*.js      text
+*.html    text
+*.xml     text
+*.config  text
+*.yml     text
+*.yaml    text
+
+# Binary (never touch line endings)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.svg  text
+*.pdf  binary
+*.doc  binary
+*.docx binary
+*.zip  binary
+*.dll  binary
