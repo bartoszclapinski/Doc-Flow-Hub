@@ -93,6 +93,17 @@ page-by-page UI modernization audit.
 
 ---
 
+**2026-07-03 — committed.** Work landed on `feature/sprint8-modern-ui-design` as five focused
+commits: `chore(A)` hygiene+docs, `feat(B)` magic-byte upload validation, `feat(C)` PDF/DOCX
+extraction+retry, `feat(D)` UI modernization, `test(E)` validation+extraction tests. The LF/CRLF
+churn resolved itself once `.gitattributes` was committed (working tree now clean except local
+`.claude/settings.local.json`, intentionally untracked). Full build 0 errors, 45/45 tests green.
+Still open: **key rotation (B1, user)**, **visual light/dark pass (needs the app)**, and the two
+flagged test items — **E1** (inject a chat-client seam into `OpenAIService`) and **E2**
+(`WebApplicationFactory` harness for authorization tests).
+
+---
+
 ## Verified findings (2026-07-02)
 
 - **AI text extraction is stubbed** — `TextExtractionService.cs` still has `TODO: Implement`
