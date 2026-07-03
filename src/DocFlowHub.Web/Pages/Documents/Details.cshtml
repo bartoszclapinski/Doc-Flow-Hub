@@ -841,15 +841,18 @@
             if (!modelSelect || !qualitySelect) return;
 
             function updateModelInfo() {
-                const selectedModel = modelSelect.value || 'gpt-4o-mini';
+                const selectedModel = modelSelect.value || 'claude-haiku-4-5';
                 const selectedQuality = qualitySelect.value || 'balanced';
 
                 // Update description
                 const descriptions = {
-                    'gpt-4.1': 'Most capable model - highest quality analysis',
+                    'gpt-4.1': 'Most capable GPT model - highest quality analysis',
                     'gpt-4.1-mini': 'Fast & efficient - high quality with good speed',
                     'gpt-4o': 'Advanced model - good balance of quality and cost',
-                    'gpt-4o-mini': 'Cost effective - good quality, lowest cost'
+                    'gpt-4o-mini': 'Cost effective - good quality, lowest cost',
+                    'claude-haiku-4-5': 'Fast & cost effective - great quality, lowest Claude cost',
+                    'claude-sonnet-5': 'Near-Opus quality - excellent balance of quality and cost',
+                    'claude-opus-4-8': 'Most capable Claude model - highest quality analysis'
                 };
 
                 const description = descriptions[selectedModel] || 'AI-powered version comparison';
@@ -860,7 +863,10 @@
                     'gpt-4.1': 0.020,
                     'gpt-4.1-mini': 0.008,
                     'gpt-4o': 0.015,
-                    'gpt-4o-mini': 0.005
+                    'gpt-4o-mini': 0.005,
+                    'claude-haiku-4-5': 0.004,
+                    'claude-sonnet-5': 0.010,
+                    'claude-opus-4-8': 0.018
                 };
 
                 const qualityMultipliers = {

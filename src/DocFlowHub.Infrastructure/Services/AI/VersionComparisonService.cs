@@ -47,7 +47,7 @@ public class VersionComparisonService : IVersionComparisonService
     /// </summary>
     public async Task<ServiceResult<VersionComparison>> CompareVersionsAsync(int fromVersionId, int toVersionId)
     {
-        return await CompareVersionsAsync(fromVersionId, toVersionId, AIModel.Gpt4oMini);
+        return await CompareVersionsAsync(fromVersionId, toVersionId, AIModelHelper.GetDefaultModel());
     }
 
     /// <summary>
@@ -152,7 +152,7 @@ public class VersionComparisonService : IVersionComparisonService
     /// </summary>
     public async Task<ServiceResult<VersionComparison>> CompareDocumentVersionsAsync(int documentId, int fromVersionNumber, int toVersionNumber)
     {
-        return await CompareDocumentVersionsAsync(documentId, fromVersionNumber, toVersionNumber, AIModel.Gpt4oMini);
+        return await CompareDocumentVersionsAsync(documentId, fromVersionNumber, toVersionNumber, AIModelHelper.GetDefaultModel());
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class VersionComparisonService : IVersionComparisonService
     /// </summary>
     public async Task<ServiceResult<VersionComparison>> CompareVersionsAsync(int fromVersionId, int toVersionId, string userId)
     {
-        return await CompareVersionsAsync(fromVersionId, toVersionId, AIModel.Gpt4oMini, userId);
+        return await CompareVersionsAsync(fromVersionId, toVersionId, AIModelHelper.GetDefaultModel(), userId);
     }
 
     /// <summary>
@@ -296,7 +296,7 @@ public class VersionComparisonService : IVersionComparisonService
     /// </summary>
     public async Task<ServiceResult<VersionComparison>> CompareDocumentVersionsAsync(int documentId, int fromVersionNumber, int toVersionNumber, string userId)
     {
-        return await CompareDocumentVersionsAsync(documentId, fromVersionNumber, toVersionNumber, AIModel.Gpt4oMini, userId);
+        return await CompareDocumentVersionsAsync(documentId, fromVersionNumber, toVersionNumber, AIModelHelper.GetDefaultModel(), userId);
     }
 
     /// <summary>

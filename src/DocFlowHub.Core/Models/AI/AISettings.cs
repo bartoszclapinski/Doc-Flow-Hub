@@ -24,10 +24,10 @@ public class AISettings
     /// <summary>
     /// Preferred AI model for document processing
     /// </summary>
-    public AIModel PreferredModel { get; set; } = AIModel.Gpt4oMini;
-    
+    public AIModel PreferredModel { get; set; } = AIModel.ClaudeHaiku45;
+
     /// <summary>
-    /// Custom API key for OpenAI (if user wants to use their own)
+    /// Custom API key for the AI provider (if user wants to use their own)
     /// </summary>
     [StringLength(200)]
     public string? CustomApiKey { get; set; }
@@ -149,7 +149,7 @@ public static class AISettingsHelper
     public static AISettings GetDefaultSettings(string userId) => new()
     {
         UserId = userId,
-        PreferredModel = AIModel.Gpt4oMini,
+        PreferredModel = AIModel.ClaudeHaiku45,
         UseCustomApiKey = false,
         SummarizationEnabled = true,
         VersionComparisonEnabled = true,

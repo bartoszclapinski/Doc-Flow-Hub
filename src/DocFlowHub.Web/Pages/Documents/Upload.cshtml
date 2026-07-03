@@ -607,7 +607,7 @@
                     return;
                 }
 
-                const selectedModel = modelSelect ? modelSelect.value : 'Gpt4oMini';
+                const selectedModel = modelSelect ? modelSelect.value : 'ClaudeHaiku45';
                 const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
 
                 // Calculate real-time estimates
@@ -653,7 +653,10 @@
                     'Gpt4oMini': 0.00015 / 1000,
                     'Gpt4o': 0.005 / 1000,
                     'Gpt41Mini': 0.003 / 1000,
-                    'Gpt41': 0.01 / 1000
+                    'Gpt41': 0.01 / 1000,
+                    'ClaudeHaiku45': 0.001 / 1000,
+                    'ClaudeSonnet5': 0.003 / 1000,
+                    'ClaudeOpus48': 0.005 / 1000
                 };
                 return costs[model] || 0.001 / 1000;
             };
@@ -663,7 +666,10 @@
                     'Gpt4oMini': 8,
                     'Gpt4o': 12,
                     'Gpt41Mini': 18,
-                    'Gpt41': 25
+                    'Gpt41': 25,
+                    'ClaudeHaiku45': 6,
+                    'ClaudeSonnet5': 12,
+                    'ClaudeOpus48': 20
                 };
                 return times[model] || 15;
             };
@@ -673,7 +679,10 @@
                     'Gpt4oMini': 'Fast, cost-effective, good for basic summaries',
                     'Gpt4o': 'Balanced speed and quality, excellent for most documents',
                     'Gpt41Mini': 'High quality analysis, ideal for important documents',
-                    'Gpt41': 'Highest quality insights, best for complex or critical content'
+                    'Gpt41': 'Highest quality insights, best for complex or critical content',
+                    'ClaudeHaiku45': 'Fast and cost-effective Claude model, great for summaries',
+                    'ClaudeSonnet5': 'Near-Opus quality, excellent for most documents',
+                    'ClaudeOpus48': 'Most capable Claude model, best for complex or critical content'
                 };
                 return capabilities[model] || 'AI-powered document analysis';
             };
@@ -875,7 +884,7 @@
 
             // Process AI stages with realistic timing
             const processAIStages = async (selectedModel, quality) => {
-                const baseTime = getBaseProcessingTime(selectedModel || 'Gpt4oMini');
+                const baseTime = getBaseProcessingTime(selectedModel || 'ClaudeHaiku45');
                 const qualityMultiplier = quality <= 0.3 ? 0.7 : quality <= 0.7 ? 1.0 : 1.4;
                 
                 for (let i = 0; i < aiStages.length; i++) {
@@ -963,7 +972,7 @@
                 const qualitySlider = document.getElementById('quality-slider');
                 
                 const aiEnabled = aiToggle && aiToggle.checked;
-                const selectedModel = modelSelect ? modelSelect.value : 'Gpt4oMini';
+                const selectedModel = modelSelect ? modelSelect.value : 'ClaudeHaiku45';
                 const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
                 
                 showUploadProgress();

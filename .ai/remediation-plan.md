@@ -104,6 +104,26 @@ flagged test items — **E1** (inject a chat-client seam into `OpenAIService`) a
 
 ---
 
+**2026-07-03 — G: Anthropic Claude provider added (user request, post-remediation):**
+- **Multi-provider AI**: added the official `Anthropic` C# SDK (12.35.1) and `ClaudeAIService`
+  implementing the existing `IAIService`. New `AIServiceRouter` registered as `IAIService`
+  dispatches per requested model ("claude-*" → Anthropic, otherwise OpenAI; null → default
+  provider). Providers resolve lazily — a missing API key for the unused provider surfaces as a
+  clean failed `AIResponse`, never a startup crash.
+- **Models are user-selectable everywhere** (Upload, Settings/AI, Details comparison): `AIModel`
+  enum gained `ClaudeHaiku45`, `ClaudeSonnet5`, `ClaudeOpus48` — APPENDED (PreferredModel is
+  persisted as int; positions pinned by a unit test). **Default model is now Claude Haiku 4.5**
+  (`AIModelHelper.GetDefaultModel()`, used by all former hardcoded `Gpt4oMini` defaults —
+  7 call sites centralized). String→enum parsing centralized in `AIModelHelper.FromApiString`.
+- Config: `Anthropic:Model` (claude-haiku-4-5) + `Anthropic:MaxTokens` in appsettings.json;
+  **`Anthropic:ApiKey` must be set via user-secrets** (`dotnet user-secrets set "Anthropic:ApiKey"
+  "<KEY>" --project src/DocFlowHub.Web`). Claude SDK auto-retries 429/5xx (no hand-rolled retry).
+- Cost/time/capability UI maps (Upload + Details JS and page models) extended with Claude entries.
+- Tests: `AIModelHelperTests` (24 cases — enum pinning, round-trips, provider routing, defaults).
+  **Full suite: 69/69 passing.** Not yet exercised against the live Anthropic API (needs a key).
+
+---
+
 ## Verified findings (2026-07-02)
 
 - **AI text extraction is stubbed** — `TextExtractionService.cs` still has `TODO: Implement`

@@ -299,7 +299,7 @@ public class AISettingsService : IAISettingsService
                     DisplayName = model.ToDisplayName(),
                     Description = model.GetCostDescription(),
                     CostLevel = GetCostLevel(model),
-                    IsRecommended = model == AIModel.Gpt4oMini,
+                    IsRecommended = model == AIModel.ClaudeHaiku45,
                     MaxTokens = GetMaxTokens(model)
                 });
             }

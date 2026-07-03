@@ -43,8 +43,12 @@ public static class DependencyInjection
         // Role Services
         services.AddScoped<IRoleService, RoleService>();
         
-        // AI Services
-        services.AddScoped<IAIService, OpenAIService>();
+        // AI Services — IAIService routes per requested model ("claude-*" → Anthropic,
+        // otherwise OpenAI). Provider services are registered as themselves and resolved
+        // lazily by the router, so only the provider actually used needs an API key.
+        services.AddScoped<OpenAIService>();
+        services.AddScoped<ClaudeAIService>();
+        services.AddScoped<IAIService, AIServiceRouter>();
         services.AddScoped<IDocumentSummaryService, DocumentSummaryService>();
         services.AddScoped<IVersionComparisonService, VersionComparisonService>();
         services.AddScoped<ITextExtractionService, TextExtractionService>();

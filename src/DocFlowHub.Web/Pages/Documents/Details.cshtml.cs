@@ -507,18 +507,10 @@ namespace DocFlowHub.Web.Pages.Documents
         /// </summary>
         private AIModel GetSelectedAIModel()
         {
-            // If user explicitly selected a model, use that
+            // If user explicitly selected a model, use that (Claude + GPT both supported)
             if (!string.IsNullOrEmpty(ComparisonAIModel))
             {
-                return ComparisonAIModel.ToLower() switch
-                {
-                    "gpt-4o" => AIModel.Gpt4o,
-                    "gpt-4o-mini" => AIModel.Gpt4oMini,
-                    "gpt-4-turbo" => AIModel.Gpt4o, // Map turbo to 4o for now
-                    "gpt-4.1" => AIModel.Gpt41,
-                    "gpt-4.1-mini" => AIModel.Gpt41Mini,
-                    _ => GetUserPreferredModel()
-                };
+                return AIModelHelper.FromApiString(ComparisonAIModel);
             }
 
             return GetUserPreferredModel();
@@ -530,7 +522,7 @@ namespace DocFlowHub.Web.Pages.Documents
         private AIModel GetUserPreferredModel()
         {
             // PreferredModel is already an AIModel enum, so just return it directly
-            return UserAISettings?.PreferredModel ?? AIModel.Gpt4oMini;
+            return UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
         }
 
         /// <summary>
@@ -538,7 +530,7 @@ namespace DocFlowHub.Web.Pages.Documents
         /// </summary>
         public string GetPreferredModelDisplay()
         {
-            var preferredModel = UserAISettings?.PreferredModel ?? AIModel.Gpt4oMini;
+            var preferredModel = UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
             return preferredModel switch
             {
                 AIModel.Gpt41 => "gpt-4.1",

@@ -75,7 +75,7 @@ public class UploadModel : PageModel
 
     [BindProperty]
     [Display(Name = "AI Model")]
-    public AIModel SelectedAIModel { get; set; } = AIModel.Gpt4oMini;
+    public AIModel SelectedAIModel { get; set; } = AIModelHelper.GetDefaultModel();
 
     [BindProperty]
     [Display(Name = "AI Quality")]
@@ -388,7 +388,7 @@ public class UploadModel : PageModel
     private void SetFallbackDefaults()
     {
         GenerateAISummary = true; // Default to enabled (will be overridden if AI features disabled)
-        SelectedAIModel = AIModel.Gpt4oMini; // Most cost-effective option
+        SelectedAIModel = AIModelHelper.GetDefaultModel(); // Claude Haiku 4.5 — most cost-effective
         AIQuality = 0.7; // Balanced quality setting
     }
 
@@ -400,7 +400,7 @@ public class UploadModel : PageModel
                 Model = model,
                 Name = model.ToDisplayName(),
                 Description = model.GetCostDescription(),
-                IsRecommended = model == AIModel.Gpt4oMini || model == AIModel.Gpt4o
+                IsRecommended = model == AIModel.ClaudeHaiku45 || model == AIModel.ClaudeSonnet5
             })
             .ToList();
     }
@@ -471,6 +471,9 @@ public class UploadModel : PageModel
             AIModel.Gpt4o => "Balanced speed and quality, excellent for most documents",
             AIModel.Gpt41Mini => "High quality analysis, ideal for important documents",
             AIModel.Gpt41 => "Highest quality insights, best for complex or critical content",
+            AIModel.ClaudeHaiku45 => "Fast and cost-effective Claude model, great for summaries",
+            AIModel.ClaudeSonnet5 => "Near-Opus quality, excellent for most documents",
+            AIModel.ClaudeOpus48 => "Most capable Claude model, best for complex or critical content",
             _ => "AI-powered document analysis"
         };
     }
@@ -488,11 +491,14 @@ public class UploadModel : PageModel
         // These would ideally come from a configuration or real-time pricing API
         return model switch
         {
-            AIModel.Gpt4oMini => 0.00015 / 1000, // $0.15 per 1M tokens
-            AIModel.Gpt4o => 0.005 / 1000,       // $5.00 per 1M tokens
-            AIModel.Gpt41Mini => 0.003 / 1000,   // $3.00 per 1M tokens
-            AIModel.Gpt41 => 0.01 / 1000,        // $10.00 per 1M tokens
-            _ => 0.001 / 1000                     // Default fallback
+            AIModel.Gpt4oMini => 0.00015 / 1000,     // $0.15 per 1M tokens
+            AIModel.Gpt4o => 0.005 / 1000,           // $5.00 per 1M tokens
+            AIModel.Gpt41Mini => 0.003 / 1000,       // $3.00 per 1M tokens
+            AIModel.Gpt41 => 0.01 / 1000,            // $10.00 per 1M tokens
+            AIModel.ClaudeHaiku45 => 0.001 / 1000,   // $1.00 per 1M input tokens
+            AIModel.ClaudeSonnet5 => 0.003 / 1000,   // $3.00 per 1M input tokens
+            AIModel.ClaudeOpus48 => 0.005 / 1000,    // $5.00 per 1M input tokens
+            _ => 0.001 / 1000                         // Default fallback
         };
     }
 
@@ -501,11 +507,14 @@ public class UploadModel : PageModel
         // Estimated base processing time in seconds
         return model switch
         {
-            AIModel.Gpt4oMini => 8,   // Fast model
-            AIModel.Gpt4o => 12,      // Balanced model
-            AIModel.Gpt41Mini => 18,  // Higher quality, slower
-            AIModel.Gpt41 => 25,      // Highest quality, slowest
-            _ => 15                   // Default
+            AIModel.Gpt4oMini => 8,        // Fast model
+            AIModel.Gpt4o => 12,           // Balanced model
+            AIModel.Gpt41Mini => 18,       // Higher quality, slower
+            AIModel.Gpt41 => 25,           // Highest quality, slowest
+            AIModel.ClaudeHaiku45 => 6,    // Fastest Claude model
+            AIModel.ClaudeSonnet5 => 12,   // Balanced Claude model
+            AIModel.ClaudeOpus48 => 20,    // Most capable, slower
+            _ => 15                        // Default
         };
     }
 
