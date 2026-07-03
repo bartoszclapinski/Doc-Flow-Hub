@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.AI;
 using System.Diagnostics;
+using System.ClientModel;
 
 namespace DocFlowHub.Infrastructure.Services.AI;
 
@@ -52,7 +53,7 @@ public class OpenAIService : IAIService
                 new UserChatMessage("Test connection")
             };
 
-            var response = await chatClient.CompleteChatAsync(messages);
+            var response = await CompleteChatWithRetryAsync(chatClient, messages);
             var content = response.Value.Content[0].Text;
 
             _logger.LogInformation("OpenAI connectivity test successful. Response: {Response}", content);
@@ -117,7 +118,7 @@ public class OpenAIService : IAIService
                 new UserChatMessage(prompt)
             };
 
-            var response = await chatClient.CompleteChatAsync(messages);
+            var response = await CompleteChatWithRetryAsync(chatClient, messages);
             stopwatch.Stop();
             
             var content = response.Value.Content[0].Text;
@@ -171,7 +172,7 @@ public class OpenAIService : IAIService
                 new UserChatMessage(prompt)
             };
 
-            var response = await chatClient.CompleteChatAsync(messages);
+            var response = await CompleteChatWithRetryAsync(chatClient, messages);
             stopwatch.Stop();
             
             var content = response.Value.Content[0].Text;
@@ -203,5 +204,49 @@ public class OpenAIService : IAIService
                 GeneratedAt = DateTime.UtcNow
             };
         }
+    }
+
+    /// <summary>
+    /// Calls the OpenAI chat completion endpoint with exponential-backoff retries on
+    /// transient failures (HTTP 429 rate limits, 5xx, and network glitches). Non-transient
+    /// errors (e.g. 400/401) are thrown immediately so callers surface them without delay.
+    /// </summary>
+    private async Task<ClientResult<ChatCompletion>> CompleteChatWithRetryAsync(
+        ChatClient chatClient, List<ChatMessage> messages)
+    {
+        const int maxAttempts = 3;
+        var delay = TimeSpan.FromSeconds(1);
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await chatClient.CompleteChatAsync(messages);
+            }
+            catch (Exception ex) when (attempt < maxAttempts && IsTransient(ex))
+            {
+                _logger.LogWarning(ex,
+                    "Transient OpenAI failure on attempt {Attempt}/{MaxAttempts}; retrying in {Delay}s",
+                    attempt, maxAttempts, delay.TotalSeconds);
+                await Task.Delay(delay);
+                delay *= 2;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A failure is transient (worth retrying) if it is a rate-limit/server-side error
+    /// from OpenAI or a transport-level network error.
+    /// </summary>
+    private static bool IsTransient(Exception ex)
+    {
+        if (ex is ClientResultException clientError)
+        {
+            return clientError.Status == 429 || clientError.Status >= 500;
+        }
+
+        return ex is System.Net.Http.HttpRequestException
+            or TaskCanceledException
+            or TimeoutException;
     }
 } 
