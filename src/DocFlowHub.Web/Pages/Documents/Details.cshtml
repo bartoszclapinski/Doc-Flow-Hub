@@ -5,7 +5,7 @@
     ViewData["Title"] = Model.Document?.Title ?? "Document Details";
 }
 
-<div class="container-fluid">
+<div class="page-container page-transition">
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -27,53 +27,56 @@
     @if (Model.Document != null)
     {
         <!-- Breadcrumb Navigation with Team Context -->
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb-modern">
+                <li><a asp-page="/Index">Home</a></li>
                 @if (Model.Document.TeamId.HasValue && !string.IsNullOrEmpty(Model.Document.TeamName))
                 {
-                    <li class="breadcrumb-item"><a asp-page="/Teams/Index">Teams</a></li>
-                    <li class="breadcrumb-item"><a asp-page="/Teams/Details" asp-route-id="@Model.Document.TeamId">@Model.Document.TeamName</a></li>
-                    <li class="breadcrumb-item"><a asp-page="./Index" asp-route-filter-teamid="@Model.Document.TeamId">Team Documents</a></li>
+                    <li class="breadcrumb-sep">/</li>
+                    <li><a asp-page="/Teams/Index">Teams</a></li>
+                    <li class="breadcrumb-sep">/</li>
+                    <li><a asp-page="/Teams/Details" asp-route-id="@Model.Document.TeamId">@Model.Document.TeamName</a></li>
+                    <li class="breadcrumb-sep">/</li>
+                    <li><a asp-page="./Index" asp-route-filter-teamid="@Model.Document.TeamId">Team Documents</a></li>
                 }
                 else
                 {
-                    <li class="breadcrumb-item"><a asp-page="./Index">Documents</a></li>
+                    <li class="breadcrumb-sep">/</li>
+                    <li><a asp-page="./Index">Documents</a></li>
                 }
-                <li class="breadcrumb-item active" aria-current="page">@Model.Document.Title</li>
+                <li class="breadcrumb-sep">/</li>
+                <li class="active" aria-current="page">@Model.Document.Title</li>
             </ol>
         </nav>
+
+        <!-- Page Header with actions -->
+        <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="page-title"><div class="page-icon">📄</div> @Model.Document.Title</h1>
+            </div>
+            <div class="d-flex gap-2">
+                <form method="post" asp-page-handler="Download" asp-route-versionId="@Model.Document.CurrentVersionId" class="d-inline">
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="bi bi-download me-1"></i>Download
+                    </button>
+                </form>
+                @if (Model.Document.OwnerId == User.GetUserId())
+                {
+                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
+                    <button type="button" class="btn btn-outline-danger btn-sm"
+                            onclick="confirmDeleteDocument(@Model.Document.Id, @Html.Raw(Json.Serialize(Model.Document.Title)), '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                }
+            </div>
+        </div>
 
         <div class="row">
             <!-- Main Document Details -->
             <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h1 class="card-title mb-0 h4">
-                                <i class="bi bi-file-earmark-text me-2"></i>
-                                @Model.Document.Title
-                            </h1>
-                            <div class="d-flex gap-2">
-                                <form method="post" asp-page-handler="Download" asp-route-versionId="@Model.Document.CurrentVersionId" class="d-inline">
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="bi bi-download me-1"></i>Download
-                                    </button>
-                                </form>
-                                @if (Model.Document.OwnerId == User.GetUserId())
-                                {
-                                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-light btn-sm">
-                                        <i class="bi bi-pencil me-1"></i>Edit
-                                    </a>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" 
-                                            onclick="confirmDeleteDocument(@Model.Document.Id, @Html.Raw(Json.Serialize(Model.Document.Title)), '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
-                                        <i class="bi bi-trash me-1"></i>Delete
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
+                <div class="content-card">
                         @if (!string.IsNullOrEmpty(Model.Document.Description))
                         {
                             <div class="mb-4">
@@ -108,7 +111,7 @@
                                                 <h6 class="text-primary">
                                                     <i class="bi bi-key"></i> Key Points
                                                 </h6>
-                                                <div class="bg-light rounded p-3">
+                                                <div class="token-panel rounded p-3">
                                                     @{
                                                         var keyPoints = Model.Document.AISummary!.KeyPoints.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                                                     }
@@ -279,25 +282,21 @@
                             </div>
                         }
                     </div>
-                </div>
 
                 @if (Model.ComparisonResult != null)
                 {
                     <!-- AI Version Comparison Results -->
-                    <div class="card shadow-sm mt-4">
-                        <div class="card-header bg-success text-white">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="card-title mb-0">
-                                    <i class="bi bi-magic"></i>
-                                    AI Version Comparison
-                                </h5>
-                                <div class="text-end">
-                                    <small>Generated by @Model.ComparisonResult.AIModel</small><br>
-                                    <small>Confidence: @(Math.Round((Model.ComparisonResult.ConfidenceScore ?? 0.8) * 100))%</small>
-                                </div>
+                    <div class="content-card mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="section-heading section-heading-success mb-0">
+                                <i class="bi bi-magic"></i> AI Version Comparison
+                            </h5>
+                            <div class="text-end text-muted small">
+                                <div>Generated by @Model.ComparisonResult.AIModel</div>
+                                <div>Confidence: @(Math.Round((Model.ComparisonResult.ConfidenceScore ?? 0.8) * 100))%</div>
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div>
                             <div class="row">
                                 <div class="col-md-8">
                                     <!-- Change Summary -->
@@ -317,7 +316,7 @@
                                                 <i class="bi bi-list-ul"></i>
                                                 Detailed Changes
                                             </h6>
-                                            <div class="border rounded p-3 bg-light">
+                                            <div class="token-panel rounded p-3">
                                                 @{
                                                     var changes = Model.ComparisonResult.DetailedChanges.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                                                 }
@@ -334,7 +333,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <!-- Analysis Metadata -->
-                                    <div class="bg-light rounded p-3">
+                                    <div class="token-panel rounded p-3">
                                         <h6 class="text-muted mb-3">Analysis Details</h6>
                                         
                                         <div class="mb-3">
@@ -398,24 +397,21 @@
             
             <!-- Version History Sidebar -->
             <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-clock-history"></i>
-                            Version History
-                        </h5>
+                <div class="content-card">
+                    <div class="d-flex flex-column mb-3">
+                        <h5 class="section-heading mb-1"><i class="bi bi-clock-history"></i> Version History</h5>
                         @if (Model.Versions.Items.Count() >= 2)
                         {
                             <small class="text-muted">Select versions to compare with AI analysis</small>
                         }
                     </div>
-                    <div class="card-body p-0">
+                    <div class="p-0">
                         @if (Model.Versions.Items.Any())
                         {
                             @if (Model.Versions.Items.Count() >= 2)
                             {
                                 <!-- Version Comparison Form -->
-                                <div class="p-3 border-bottom bg-light">
+                                <div class="p-3 border-bottom" style="background: var(--surface-secondary); border-radius: 10px;">
                                     <form method="post" asp-page-handler="CompareVersions">
                                         <div class="row g-2">
                                             <div class="col-6">
@@ -593,7 +589,7 @@
     }
     else
     {
-        <div class="text-center">
+        <div class="content-card text-center py-5">
             <h3>Document not found</h3>
             <p class="text-muted">The requested document could not be found or you don't have permission to view it.</p>
             <a asp-page="./Index" class="btn btn-primary">
@@ -732,6 +728,19 @@
         }
         return $"{number:n1} {suffixes[counter]}";
     }
+}
+
+@section Styles {
+<style>
+    .section-heading { display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); font-weight: 600; margin-bottom: 1.25rem; }
+    .section-heading i { color: var(--accent-color); }
+    .section-heading-success i { color: var(--success-color); }
+    .token-panel {
+        background: var(--surface-secondary) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+</style>
 }
 
 @section Scripts {
@@ -893,8 +902,8 @@
         }
         
         .list-group-item-primary {
-            background-color: rgba(13, 110, 253, 0.1);
-            border-color: rgba(13, 110, 253, 0.2);
+            background-color: var(--surface-secondary);
+            border-color: var(--accent-color);
         }
     </style>
 } 

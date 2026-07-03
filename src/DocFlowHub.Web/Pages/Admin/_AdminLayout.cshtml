@@ -313,6 +313,88 @@
         font-weight: 600;
     }
 
+    /* ── Theme-aware overrides for legacy Bootstrap components on deep admin pages ──
+       These deep pages (Analytics, UserLimits, Roles/*, Users/*) still use raw Bootstrap
+       .card / .table / .form-control, which default to white and break in dark mode.
+       Swapping white → design tokens fixes dark mode; light mode is unchanged because the
+       tokens resolve to the same near-white/standard values Bootstrap would use. */
+    .card {
+        background: var(--container-bg);
+        border-color: var(--border-light);
+        color: var(--text-primary);
+    }
+
+    .card-header {
+        border-color: var(--border-light);
+        color: var(--text-primary);
+    }
+
+    .card-header.bg-transparent {
+        background-color: transparent !important;
+    }
+
+    .table {
+        --bs-table-color: var(--text-primary);
+        --bs-table-bg: transparent;
+        --bs-table-border-color: var(--border-light);
+        color: var(--text-primary);
+    }
+
+    .table > thead {
+        color: var(--text-secondary);
+    }
+
+    .list-group-item {
+        background: var(--container-bg);
+        border-color: var(--border-light);
+        color: var(--text-primary);
+    }
+
+    .form-control,
+    .form-select {
+        background-color: var(--surface-secondary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background-color: var(--surface-secondary);
+        color: var(--text-primary);
+        border-color: var(--accent-color);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-muted);
+    }
+
+    /* Legacy bg-light PANELS (cards / plaintext fields) → token surface.
+       Note: bg-light badges keep their own light styling and are intentionally excluded. */
+    .card.bg-light,
+    .card-header.bg-light,
+    .form-control-plaintext.bg-light {
+        background-color: var(--surface-secondary) !important;
+        color: var(--text-primary);
+    }
+
+    /* Modern page header for deep admin pages (matches dashboard headings) */
+    .admin-deep-header {
+        margin-bottom: 24px;
+    }
+
+    .admin-deep-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    .admin-deep-header .subtitle {
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin-bottom: 0;
+    }
+
     /* Responsive */
     @@media (max-width: 1024px) {
         .admin-bottom-grid {

@@ -4,19 +4,28 @@
     ViewData["Title"] = $"Edit - {Model.Document?.Title ?? "Document"}";
 }
 
-<div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-item"><a asp-page="./Index">Documents</a></li>
+<div class="page-container page-transition">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb-modern">
+            <li><a asp-page="/Index">Home</a></li>
+            <li class="breadcrumb-sep">/</li>
+            <li><a asp-page="./Index">Documents</a></li>
             @if (Model.Document != null)
             {
-                <li class="breadcrumb-item"><a asp-page="./Details" asp-route-id="@Model.Document.Id">@Model.Document.Title</a></li>
+                <li class="breadcrumb-sep">/</li>
+                <li><a asp-page="./Details" asp-route-id="@Model.Document.Id">@Model.Document.Title</a></li>
             }
-            <li class="breadcrumb-item active" aria-current="page">Edit</li>
+            <li class="breadcrumb-sep">/</li>
+            <li class="active" aria-current="page">Edit</li>
         </ol>
     </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title"><div class="page-icon">✏️</div> Edit Document</h1>
+        <p class="page-subtitle">Update document information or upload a new version</p>
+    </div>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
@@ -39,15 +48,9 @@
         <div class="row">
             <!-- Document Metadata Edit -->
             <div class="col-lg-8">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="card-title mb-0">
-                            <i class="bi bi-pencil-square"></i>
-                            Edit Document Information
-                        </h4>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" asp-page-handler="UpdateMetadata">
+                <div class="form-card mb-4">
+                    <h5 class="section-heading"><i class="bi bi-pencil-square"></i> Edit Document Information</h5>
+                    <form method="post" asp-page-handler="UpdateMetadata">
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="mb-3">
@@ -66,19 +69,17 @@
                                 <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label">Current File Info</label>
-                                        <div class="card">
-                                            <div class="card-body p-3">
-                                                <p class="mb-1">
-                                                    <strong>Type:</strong> 
-                                                    <span class="badge bg-info">@Model.Document.FileType.ToUpper()</span>
-                                                </p>
-                                                <p class="mb-1">
-                                                    <strong>Size:</strong> @FormatFileSize(Model.Document.FileSize)
-                                                </p>
-                                                <p class="mb-0">
-                                                    <strong>Modified:</strong> @((Model.Document.UpdatedAt ?? Model.Document.CreatedAt).ToString("MMM dd, yyyy"))
-                                                </p>
-                                            </div>
+                                        <div class="info-panel">
+                                            <p class="mb-1">
+                                                <strong>Type:</strong>
+                                                <span class="badge bg-info">@Model.Document.FileType.ToUpper()</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Size:</strong> @FormatFileSize(Model.Document.FileSize)
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Modified:</strong> @((Model.Document.UpdatedAt ?? Model.Document.CreatedAt).ToString("MMM dd, yyyy"))
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -127,18 +128,11 @@
                                 </div>
                             </div>
                         </form>
-                    </div>
                 </div>
 
                 <!-- Upload New Version -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h4 class="card-title mb-0">
-                            <i class="bi bi-cloud-upload"></i>
-                            Upload New Version
-                        </h4>
-                    </div>
-                    <div class="card-body">
+                <div class="form-card">
+                    <h5 class="section-heading section-heading-success"><i class="bi bi-cloud-upload"></i> Upload New Version</h5>
                         <form method="post" asp-page-handler="UploadNewVersion" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label asp-for="NewVersionFile" class="form-label">Select New File *</label>
@@ -166,20 +160,13 @@
                                 </small>
                             </div>
                         </form>
-                    </div>
                 </div>
             </div>
 
             <!-- Sidebar with Current Categories and Version Info -->
             <div class="col-lg-4">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-tags"></i>
-                            Current Categories
-                        </h5>
-                    </div>
-                    <div class="card-body">
+                <div class="content-card mb-4">
+                    <h5 class="section-heading"><i class="bi bi-tags"></i> Current Categories</h5>
                         @if (Model.CurrentCategories.Any())
                         {
                             <div class="d-flex flex-wrap gap-2">
@@ -196,17 +183,10 @@
                         {
                             <p class="text-muted mb-0">No categories assigned</p>
                         }
-                    </div>
                 </div>
 
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-info-circle"></i>
-                            Document Information
-                        </h5>
-                    </div>
-                    <div class="card-body">
+                <div class="content-card">
+                    <h5 class="section-heading"><i class="bi bi-info-circle"></i> Document Information</h5>
                         <dl class="row">
                             <dt class="col-sm-5">Created</dt>
                             <dd class="col-sm-7">@Model.Document.CreatedAt.ToString("MMM dd, yyyy")</dd>
@@ -232,14 +212,13 @@
                                 <i class="bi bi-eye"></i> View Details & History
                             </a>
                         </div>
-                    </div>
                 </div>
             </div>
         </div>
     }
     else
     {
-        <div class="text-center">
+        <div class="content-card text-center py-5">
             <h3>Document not found</h3>
             <p class="text-muted">The requested document could not be found or you don't have permission to edit it.</p>
             <a asp-page="./Index" class="btn btn-primary">
@@ -264,9 +243,22 @@
     }
 }
 
+@section Styles {
+<style>
+    .section-heading { display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); font-weight: 600; margin-bottom: 1.25rem; }
+    .section-heading i { color: var(--accent-color); }
+    .section-heading-success i { color: var(--success-color); }
+    .info-panel {
+        border: 1px solid var(--border-color); border-radius: 10px;
+        background: var(--surface-secondary); padding: 0.85rem 1rem; color: var(--text-primary);
+    }
+    .info-panel p { color: var(--text-primary); }
+</style>
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    
+
     <script>
         // File upload validation
         document.querySelector('input[type="file"]').addEventListener('change', function(e) {

@@ -5,26 +5,27 @@
     ViewData["Title"] = "Upload Document";
 }
 
-<div class="container page-transition">
-    <!-- Enhanced Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-item"><a asp-page="./Index">Documents</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Upload</li>
+<div class="page-container page-transition">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb-modern">
+            <li><a asp-page="/Index">Home</a></li>
+            <li class="breadcrumb-sep">/</li>
+            <li><a asp-page="./Index">Documents</a></li>
+            <li class="breadcrumb-sep">/</li>
+            <li class="active" aria-current="page">Upload</li>
         </ol>
     </nav>
 
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title"><div class="page-icon">☁️</div> Upload Document</h1>
+        <p class="page-subtitle">Add a new document and optionally generate an AI summary</p>
+    </div>
+
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h1 class="card-title mb-0 h4">
-                        <i class="bi bi-cloud-upload me-2"></i>
-                        Upload Document
-                    </h1>
-                </div>
-                <div class="card-body">
+            <div class="form-card">
                     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                     {
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -401,7 +402,6 @@
                             </button>
                         </div>
                     </form>
-                </div>
             </div>
         </div>
     </div>
@@ -1203,9 +1203,9 @@
         align-items: center;
         justify-content: center;
         margin: 0 auto;
-        border: 2px solid #dee2e6;
-        background: #f8f9fa;
-        color: #6c757d;
+        border: 2px solid var(--border-color);
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
         transition: all 0.3s ease;
     }
 
@@ -1216,14 +1216,14 @@
     .step-label {
         display: block;
         margin-top: 0.5rem;
-        color: #6c757d;
+        color: var(--text-secondary);
         font-weight: 500;
     }
 
     .step-line {
         flex: 1;
         height: 2px;
-        background: #dee2e6;
+        background: var(--border-color);
         margin: 0 1rem;
         align-self: center;
         margin-top: -20px;
@@ -1232,28 +1232,28 @@
 
     /* Step States */
     .step-item.active .step-icon {
-        border-color: #0d6efd;
-        background: #0d6efd;
+        border-color: var(--accent-color);
+        background: var(--accent-color);
         color: white;
     }
 
     .step-item.active .step-label {
-        color: #0d6efd;
+        color: var(--accent-color);
         font-weight: 600;
     }
 
     .step-item.completed .step-icon {
-        border-color: #198754;
-        background: #198754;
+        border-color: var(--success-color);
+        background: var(--success-color);
         color: white;
     }
 
     .step-item.completed .step-label {
-        color: #198754;
+        color: var(--success-color);
     }
 
     .step-line.completed {
-        background: #198754;
+        background: var(--success-color);
     }
 
     /* AI Processing Animations */
@@ -1274,10 +1274,10 @@
 
     /* Progress Enhancements */
     .upload-progress {
-        border: 1px solid #e3f2fd;
+        border: 1px solid var(--border-color);
         border-radius: 0.5rem;
         padding: 1rem;
-        background: #fafafa;
+        background: var(--surface-secondary);
         display: none;
     }
 
@@ -1290,7 +1290,7 @@
     }
 
     .progress-message i {
-        color: #0d6efd;
+        color: var(--accent-color);
     }
 
     /* AI Stage Specific Colors */
@@ -1316,39 +1316,37 @@
     .file-upload-container {
         cursor: pointer;
         transition: all 0.3s ease;
-        border: 2px dashed #dee2e6;
+        border: 2px dashed var(--border-color);
         border-radius: 8px;
         padding: 2rem;
         text-align: center;
-        background: #f8f9fa;
+        background: var(--surface-secondary);
     }
 
     .file-upload-container:hover {
-        border-color: #007bff;
-        background: #e3f2fd;
+        border-color: var(--accent-color);
+        background: var(--surface-hover, var(--surface-secondary));
     }
 
     .file-upload-container.dragover {
-        border-color: #28a745;
-        background: #d4edda;
+        border-color: var(--success-color);
+        background: rgba(16, 185, 129, 0.12);
         transform: scale(1.02);
     }
 
     /* File input success/error states */
     .field-success {
-        border-color: #28a745 !important;
-        background-color: #f8fff9;
+        border-color: var(--success-color) !important;
+        background-color: rgba(16, 185, 129, 0.08);
     }
 
     .field-error {
-        border-color: #dc3545 !important;
-        background-color: #fff5f5;
+        border-color: var(--error-color) !important;
+        background-color: rgba(239, 68, 68, 0.08);
     }
 
     /* Selected file display */
     .selected-file .alert {
         margin-bottom: 0;
-        border: 1px solid #b6d7ff;
-        background: #e3f2fd;
     }
 </style> 
