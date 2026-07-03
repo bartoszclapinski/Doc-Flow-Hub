@@ -124,6 +124,35 @@ flagged test items — **E1** (inject a chat-client seam into `OpenAIService`) a
 
 ---
 
+**2026-07-03 — PR #52 code-review fixes (all 8 findings + 2 polish items):**
+Review found the Claude enum was appended but several `AIModel`/model-string switches in
+files outside the original diff were never extended — making the *new default provider* the
+one those paths mishandled. Fixed:
+- **F1** `AIServiceRouter` health/connectivity now probes whichever provider(s) are actually
+  configured (key present), not just the default — an OpenAI-only deploy no longer reports a
+  valid key as invalid.
+- **F2** `AIUsageTrackingService`: Claude models added to `ModelCosts`; `ParseModelString`
+  now delegates to `AIModelHelper.FromApiString` (no more Claude-costed-as-gpt-4o-mini).
+- **F3** `FileSignatureValidator` accepts UTF-16/UTF-32/UTF-8 BOM text (was rejecting valid
+  Unicode `.txt`/`.md` on NUL bytes — regression that disagreed with the extractor).
+- **F4** `AISettingsService` cost-level/max-tokens gained Claude arms (recommended Haiku no
+  longer displays worse specs than GPT).
+- **F5** `Details.cshtml.cs` preferred-model + comparison switches → `ToApiString`/`ToDisplayName`
+  (UI no longer shows `gpt-4o-mini` for Claude users).
+- **F6** 🔴 `ProfileService.UpdateProfilePictureAsync` had **no validation at all** — added image
+  extension whitelist + 5 MB cap + magic-byte check (closes a stored-XSS vector: `.html`/`.svg`
+  renamed to `.png` served from the site origin).
+- **F7** Provider services registered as singletons (pool the `AnthropicClient`/`HttpClient`
+  instead of rebuilding per request).
+- **F8** Removed the hand-rolled OpenAI retry (SDK already retries; the manual loop compounded
+  to up to 9 calls and inflated the health probe).
+- Polish: hoisted duplicated `.section-heading`/`.parent-picker` CSS into `components.css`
+  (removed from 5 pages); added a "re-save .doc as .docx for AI summaries" hint on Upload.
+- Tests: +6 (Unicode-BOM cases + a switch-coverage guard so this bug class can't regress).
+  Full suite **75/75 passing**, build 0 errors.
+
+---
+
 ## Verified findings (2026-07-02)
 
 - **AI text extraction is stubbed** — `TextExtractionService.cs` still has `TODO: Implement`

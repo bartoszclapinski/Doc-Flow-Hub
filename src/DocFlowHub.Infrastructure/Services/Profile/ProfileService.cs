@@ -3,6 +3,7 @@ using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Models.Profile;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Infrastructure.Services.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +13,12 @@ namespace DocFlowHub.Infrastructure.Services.Profile;
 
 public class ProfileService : IProfileService
 {
+    // Profile pictures are served from wwwroot under the site origin, so an unvalidated
+    // upload (e.g. .html/.svg mislabeled as an image) is a stored-XSS vector. Restrict to
+    // real image types AND verify the bytes match the extension via FileSignatureValidator.
+    private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+    private const long MaxProfilePictureBytes = 5 * 1024 * 1024; // 5 MB
+
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
@@ -52,8 +59,31 @@ public class ProfileService : IProfileService
     {
         try
         {
-            var user = await _userManager.FindByIdAsync(userId) 
+            var user = await _userManager.FindByIdAsync(userId)
                 ?? throw new KeyNotFoundException($"User with ID {userId} not found.");
+
+            if (file == null || file.Length == 0)
+            {
+                return ServiceResult.Failure("No file was provided.");
+            }
+
+            if (file.Length > MaxProfilePictureBytes)
+            {
+                return ServiceResult.Failure("Profile picture must be 5 MB or smaller.");
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!AllowedImageExtensions.Contains(extension))
+            {
+                return ServiceResult.Failure("Profile picture must be a JPG, PNG, or GIF image.");
+            }
+
+            // Verify the bytes actually match the declared image extension (block e.g. an
+            // .html/.svg payload renamed to .png that would be served as active content).
+            if (!await FileSignatureValidator.IsContentValidAsync(file, extension))
+            {
+                return ServiceResult.Failure("File content does not match its image extension.");
+            }
 
             // Create uploads directory if it doesn't exist
             var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "profile-pictures");

@@ -101,4 +101,22 @@ public class AIModelHelperTests
             AIModelHelper.FromApiString(model.ToApiString()).Should().Be(model);
         }
     }
+
+    [Fact]
+    public void EveryModel_HasDisplayName_CostDescription_AndProvider()
+    {
+        // Guards the display/description/provider switches against a future enum value
+        // being added without extending them (the class of bug the PR review found).
+        foreach (var model in AIModelHelper.GetAllModels())
+        {
+            model.ToDisplayName().Should().NotBeNullOrWhiteSpace();
+            model.GetCostDescription().Should().NotBeNullOrWhiteSpace();
+            model.GetProvider().Should().BeOneOf(AIProvider.OpenAI, AIProvider.Anthropic);
+            // No display name should still say "GPT" for a Claude model, or vice versa.
+            if (model.GetProvider() == AIProvider.Anthropic)
+            {
+                model.ToDisplayName().Should().Contain("Claude");
+            }
+        }
+    }
 }

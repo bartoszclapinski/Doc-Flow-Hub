@@ -122,6 +122,20 @@ public class FileSignatureValidatorTests
         result.Should().BeTrue();
     }
 
+    [Theory]
+    // UTF-16/UTF-32 text legitimately contains NUL bytes; a recognized BOM must be accepted.
+    [InlineData(new byte[] { 0xFF, 0xFE, 0x48, 0x00, 0x69, 0x00 })]             // UTF-16 LE "Hi"
+    [InlineData(new byte[] { 0xFE, 0xFF, 0x00, 0x48, 0x00, 0x69 })]             // UTF-16 BE "Hi"
+    [InlineData(new byte[] { 0xFF, 0xFE, 0x00, 0x00, 0x48, 0x00, 0x00, 0x00 })] // UTF-32 LE "H"
+    [InlineData(new byte[] { 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x48 })] // UTF-32 BE "H"
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF, 0x48, 0x69 })]                   // UTF-8 BOM "Hi"
+    public async Task IsContentValidAsync_UnicodeBomText_ReturnsTrue(byte[] content)
+    {
+        var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(content, "notes.txt"), ".txt");
+
+        result.Should().BeTrue("a recognized Unicode BOM marks valid text even with NUL bytes");
+    }
+
     [Fact]
     public async Task IsContentValidAsync_BinaryContentWithTxtExtension_ReturnsFalse()
     {

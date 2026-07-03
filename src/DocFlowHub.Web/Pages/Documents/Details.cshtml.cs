@@ -425,14 +425,7 @@ namespace DocFlowHub.Web.Pages.Documents
                 if (comparisonResult.Succeeded && comparisonResult.Data != null)
                 {
                     ComparisonResult = comparisonResult.Data;
-                    var modelDisplayName = aiModel switch
-                    {
-                        AIModel.Gpt41 => "GPT-4.1",
-                        AIModel.Gpt41Mini => "GPT-4.1 Mini", 
-                        AIModel.Gpt4o => "GPT-4o",
-                        AIModel.Gpt4oMini => "GPT-4o Mini",
-                        _ => "GPT-4o Mini"
-                    };
+                    var modelDisplayName = aiModel.ToDisplayName();
                     SuccessMessage = $"Successfully compared version {fromVersion} to version {toVersion} using {modelDisplayName}";
                 }
                 else
@@ -531,14 +524,7 @@ namespace DocFlowHub.Web.Pages.Documents
         public string GetPreferredModelDisplay()
         {
             var preferredModel = UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
-            return preferredModel switch
-            {
-                AIModel.Gpt41 => "gpt-4.1",
-                AIModel.Gpt41Mini => "gpt-4.1-mini",
-                AIModel.Gpt4o => "gpt-4o",
-                AIModel.Gpt4oMini => "gpt-4o-mini",
-                _ => "gpt-4o-mini"
-            };
+            return preferredModel.ToApiString();
         }
     }
 } 
