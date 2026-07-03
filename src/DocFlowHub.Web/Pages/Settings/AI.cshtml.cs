@@ -31,7 +31,7 @@ public class AIModel : PageModel
     public class InputModel
     {
         [Display(Name = "Preferred AI Model")]
-        public Core.Models.AI.AIModel PreferredModel { get; set; } = Core.Models.AI.AIModel.Gpt4oMini;
+        public Core.Models.AI.AIModel PreferredModel { get; set; } = Core.Models.AI.AIModelHelper.GetDefaultModel();
 
         [Display(Name = "Custom OpenAI API Key")]
         [StringLength(500, ErrorMessage = "API key cannot exceed 500 characters")]
@@ -201,7 +201,7 @@ public class AIModel : PageModel
                         name = m.Model.ToApiString(), 
                         displayName = m.Name, 
                         description = m.Description,
-                        isRecommended = m.Model == Core.Models.AI.AIModel.Gpt4oMini || m.Model == Core.Models.AI.AIModel.Gpt4o
+                        isRecommended = m.Model == Core.Models.AI.AIModel.ClaudeHaiku45 || m.Model == Core.Models.AI.AIModel.ClaudeSonnet5
                     })
                     .ToList();
 

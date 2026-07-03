@@ -4,6 +4,10 @@ using DocFlowHub.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocFlowHub.Infrastructure.Services.AI;
 
@@ -211,117 +215,80 @@ public class TextExtractionService : ITextExtractionService
     }
 
     /// <summary>
-    /// Extract text from PDF file
+    /// Extract text from a PDF file using PdfPig (content-ordered, page by page).
+    /// Returns an empty string on failure so the caller reports "no text extracted"
+    /// rather than feeding a placeholder to the AI summarizer.
     /// </summary>
-    private async Task<string> ExtractFromPdfFileAsync(byte[] fileContent, string fileName)
+    private Task<string> ExtractFromPdfFileAsync(byte[] fileContent, string fileName)
     {
         try
         {
-            // TODO: Implement PDF text extraction using a library like iTextSharp or PdfPig
-            // For now, return a placeholder indicating PDF processing is needed
-            _logger.LogInformation("PDF text extraction not yet implemented for file: {FileName}", fileName);
-            
-            // Basic fallback - try to extract any readable text
-            var fallbackText = await ExtractFallbackTextAsync(fileContent);
-            return !string.IsNullOrWhiteSpace(fallbackText) 
-                ? $"[PDF Content - Basic Extraction]\n{fallbackText}" 
-                : "[PDF Document - Text extraction requires specialized library]";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PDF file: {FileName}", fileName);
-            return "[PDF Document - Text extraction failed]";
-        }
-    }
-
-    /// <summary>
-    /// Extract text from DOC file
-    /// </summary>
-    private async Task<string> ExtractFromDocFileAsync(byte[] fileContent, string fileName)
-    {
-        try
-        {
-            // TODO: Implement DOC text extraction using a library like Aspose.Words or similar
-            _logger.LogInformation("DOC text extraction not yet implemented for file: {FileName}", fileName);
-            
-            var fallbackText = await ExtractFallbackTextAsync(fileContent);
-            return !string.IsNullOrWhiteSpace(fallbackText) 
-                ? $"[DOC Content - Basic Extraction]\n{fallbackText}" 
-                : "[DOC Document - Text extraction requires specialized library]";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing DOC file: {FileName}", fileName);
-            return "[DOC Document - Text extraction failed]";
-        }
-    }
-
-    /// <summary>
-    /// Extract text from DOCX file
-    /// </summary>
-    private async Task<string> ExtractFromDocxFileAsync(byte[] fileContent, string fileName)
-    {
-        try
-        {
-            // TODO: Implement DOCX text extraction using DocumentFormat.OpenXml
-            _logger.LogInformation("DOCX text extraction not yet implemented for file: {FileName}", fileName);
-            
-            var fallbackText = await ExtractFallbackTextAsync(fileContent);
-            return !string.IsNullOrWhiteSpace(fallbackText) 
-                ? $"[DOCX Content - Basic Extraction]\n{fallbackText}" 
-                : "[DOCX Document - Text extraction requires specialized library]";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing DOCX file: {FileName}", fileName);
-            return "[DOCX Document - Text extraction failed]";
-        }
-    }
-
-    /// <summary>
-    /// Fallback text extraction for binary files - attempts to find readable text
-    /// </summary>
-    private async Task<string> ExtractFallbackTextAsync(byte[] fileContent)
-    {
-        try
-        {
-            var text = Encoding.UTF8.GetString(fileContent);
+            using var pdf = PdfDocument.Open(fileContent);
             var builder = new StringBuilder();
-            
-            // Extract sequences of printable characters
-            var currentWord = new StringBuilder();
-            foreach (char c in text)
+            foreach (var page in pdf.GetPages())
             {
-                if (char.IsLetterOrDigit(c) || char.IsPunctuation(c) || char.IsWhiteSpace(c))
+                var pageText = ContentOrderTextExtractor.GetText(page);
+                if (!string.IsNullOrWhiteSpace(pageText))
                 {
-                    currentWord.Append(c);
-                }
-                else
-                {
-                    if (currentWord.Length > 3) // Only keep words with 4+ characters
-                    {
-                        builder.Append(currentWord.ToString().Trim()).Append(' ');
-                    }
-                    currentWord.Clear();
+                    builder.AppendLine(pageText);
                 }
             }
-            
-            // Add the last word if it's long enough
-            if (currentWord.Length > 3)
+            return Task.FromResult(builder.ToString().Trim());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error extracting text from PDF file: {FileName}", fileName);
+            return Task.FromResult(string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Legacy binary .doc (OLE2/Word 97-2003). No maintained free/OSS .NET extractor is
+    /// available (NPOI ships no HWPF; the alternatives are commercial/limited), so this
+    /// degrades gracefully: it logs and returns an empty string, which makes the caller
+    /// report "no text could be extracted" instead of feeding garbage to the summarizer.
+    /// Modern .docx is fully supported via <see cref="ExtractFromDocxFileAsync"/>.
+    /// </summary>
+    private Task<string> ExtractFromDocFileAsync(byte[] fileContent, string fileName)
+    {
+        _logger.LogWarning(
+            "Legacy binary .doc text extraction is not supported (no OSS extractor). " +
+            "Skipping AI text extraction for file: {FileName}. Re-save as .docx or .pdf for AI summaries.",
+            fileName);
+        return Task.FromResult(string.Empty);
+    }
+
+    /// <summary>
+    /// Extract text from a .docx file using the OpenXML SDK, one paragraph per line.
+    /// Returns an empty string on failure.
+    /// </summary>
+    private Task<string> ExtractFromDocxFileAsync(byte[] fileContent, string fileName)
+    {
+        try
+        {
+            using var stream = new MemoryStream(fileContent);
+            using var wordDoc = WordprocessingDocument.Open(stream, false);
+            var body = wordDoc.MainDocumentPart?.Document?.Body;
+            if (body == null)
             {
-                builder.Append(currentWord.ToString().Trim());
+                return Task.FromResult(string.Empty);
             }
 
-            var extractedText = builder.ToString().Trim();
-            
-            // Clean up multiple spaces and limit length
-            var cleanedText = System.Text.RegularExpressions.Regex.Replace(extractedText, @"\s+", " ");
-            
-            return await Task.FromResult(cleanedText.Length > 500 ? cleanedText.Substring(0, 500) + "..." : cleanedText);
+            var builder = new StringBuilder();
+            foreach (var paragraph in body.Descendants<Paragraph>())
+            {
+                var paragraphText = paragraph.InnerText;
+                if (!string.IsNullOrWhiteSpace(paragraphText))
+                {
+                    builder.AppendLine(paragraphText);
+                }
+            }
+            return Task.FromResult(builder.ToString().Trim());
         }
-        catch
+        catch (Exception ex)
         {
-            return await Task.FromResult(string.Empty);
+            _logger.LogError(ex, "Error extracting text from DOCX file: {FileName}", fileName);
+            return Task.FromResult(string.Empty);
         }
     }
 } 

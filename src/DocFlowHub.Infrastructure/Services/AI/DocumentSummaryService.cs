@@ -83,7 +83,7 @@ public class DocumentSummaryService : IDocumentSummaryService
     /// </summary>
     public async Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId)
     {
-        return await GenerateSummaryAsync(documentId, AIModel.Gpt4oMini);
+        return await GenerateSummaryAsync(documentId, AIModelHelper.GetDefaultModel());
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ Summary:";
     /// </summary>
     public async Task<ServiceResult> RegenerateSummaryAsync(int documentId)
     {
-        return await RegenerateSummaryAsync(documentId, AIModel.Gpt4oMini);
+        return await RegenerateSummaryAsync(documentId, AIModelHelper.GetDefaultModel());
     }
 
     /// <summary>

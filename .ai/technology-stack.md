@@ -14,8 +14,8 @@
 
 ## 2. Backend
 
-### ASP.NET Core 8 MVC + Entity Framework Core 8
-- **ASP.NET Core 8** z prostą architekturą:
+### ASP.NET Core 9 + Entity Framework Core 9
+- **ASP.NET Core 9** z prostą architekturą:
   - Kontrolery i widoki (MVC)
   - Podstawowe serwisy dla logiki biznesowej
   - Repozytoria dla dostępu do danych (opcjonalnie)
@@ -24,7 +24,7 @@
   - Bezpośrednie używanie ViewModeli
   - Podstawowe metody konwersji między modelami
 
-- **Entity Framework Core 8** z code-first approach
+- **Entity Framework Core 9** z code-first approach
 - **SQL Server Express LocalDB** (dla developmentu)
 - **ASP.NET Core Identity** do zarządzania użytkownikami i uprawnieniami
 

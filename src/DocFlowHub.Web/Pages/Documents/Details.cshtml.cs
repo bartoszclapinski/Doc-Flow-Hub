@@ -425,14 +425,7 @@ namespace DocFlowHub.Web.Pages.Documents
                 if (comparisonResult.Succeeded && comparisonResult.Data != null)
                 {
                     ComparisonResult = comparisonResult.Data;
-                    var modelDisplayName = aiModel switch
-                    {
-                        AIModel.Gpt41 => "GPT-4.1",
-                        AIModel.Gpt41Mini => "GPT-4.1 Mini", 
-                        AIModel.Gpt4o => "GPT-4o",
-                        AIModel.Gpt4oMini => "GPT-4o Mini",
-                        _ => "GPT-4o Mini"
-                    };
+                    var modelDisplayName = aiModel.ToDisplayName();
                     SuccessMessage = $"Successfully compared version {fromVersion} to version {toVersion} using {modelDisplayName}";
                 }
                 else
@@ -507,18 +500,10 @@ namespace DocFlowHub.Web.Pages.Documents
         /// </summary>
         private AIModel GetSelectedAIModel()
         {
-            // If user explicitly selected a model, use that
+            // If user explicitly selected a model, use that (Claude + GPT both supported)
             if (!string.IsNullOrEmpty(ComparisonAIModel))
             {
-                return ComparisonAIModel.ToLower() switch
-                {
-                    "gpt-4o" => AIModel.Gpt4o,
-                    "gpt-4o-mini" => AIModel.Gpt4oMini,
-                    "gpt-4-turbo" => AIModel.Gpt4o, // Map turbo to 4o for now
-                    "gpt-4.1" => AIModel.Gpt41,
-                    "gpt-4.1-mini" => AIModel.Gpt41Mini,
-                    _ => GetUserPreferredModel()
-                };
+                return AIModelHelper.FromApiString(ComparisonAIModel);
             }
 
             return GetUserPreferredModel();
@@ -530,7 +515,7 @@ namespace DocFlowHub.Web.Pages.Documents
         private AIModel GetUserPreferredModel()
         {
             // PreferredModel is already an AIModel enum, so just return it directly
-            return UserAISettings?.PreferredModel ?? AIModel.Gpt4oMini;
+            return UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
         }
 
         /// <summary>
@@ -538,15 +523,8 @@ namespace DocFlowHub.Web.Pages.Documents
         /// </summary>
         public string GetPreferredModelDisplay()
         {
-            var preferredModel = UserAISettings?.PreferredModel ?? AIModel.Gpt4oMini;
-            return preferredModel switch
-            {
-                AIModel.Gpt41 => "gpt-4.1",
-                AIModel.Gpt41Mini => "gpt-4.1-mini",
-                AIModel.Gpt4o => "gpt-4o",
-                AIModel.Gpt4oMini => "gpt-4o-mini",
-                _ => "gpt-4o-mini"
-            };
+            var preferredModel = UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
+            return preferredModel.ToApiString();
         }
     }
 } 

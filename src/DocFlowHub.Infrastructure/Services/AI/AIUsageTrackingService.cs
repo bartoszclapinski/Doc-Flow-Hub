@@ -29,7 +29,11 @@ public class AIUsageTrackingService : IAIUsageTrackingService
         ["gpt-4o-mini"] = 0.000150m,
         ["gpt-4.1"] = 0.003m,
         ["gpt-4.1-mini"] = 0.000200m,
-        ["gpt-3.5-turbo"] = 0.001m
+        ["gpt-3.5-turbo"] = 0.001m,
+        // Anthropic Claude — input price per 1K tokens
+        ["claude-haiku-4-5"] = 0.001m,
+        ["claude-sonnet-5"] = 0.003m,
+        ["claude-opus-4-8"] = 0.005m
     };
 
     public AIUsageTrackingService(
@@ -115,8 +119,9 @@ public class AIUsageTrackingService : IAIUsageTrackingService
             return (estimatedTokens / 1000m) * costPer1K;
         }
 
-        // Default to GPT-4o-mini cost if model not found
-        return (estimatedTokens / 1000m) * ModelCosts["gpt-4o-mini"];
+        // Unknown model: fall back to the application's default model cost
+        var fallback = AIModelHelper.GetDefaultModel().ToApiString();
+        return (estimatedTokens / 1000m) * ModelCosts[fallback];
     }
 
     /// <summary>
@@ -621,16 +626,7 @@ public class AIUsageTrackingService : IAIUsageTrackingService
     #region Helper Methods
 
     private static AIModel ParseModelString(string modelString)
-    {
-        return modelString.ToLower() switch
-        {
-            "gpt-4o" => AIModel.Gpt4o,
-            "gpt-4o-mini" => AIModel.Gpt4oMini,
-            "gpt-4.1" => AIModel.Gpt41,
-            "gpt-4.1-mini" => AIModel.Gpt41Mini,
-            _ => AIModel.Gpt4oMini
-        };
-    }
+        => AIModelHelper.FromApiString(modelString);
 
     private string GetUserEmail(string userId)
     {

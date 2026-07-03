@@ -4,7 +4,15 @@
 **Current Sprint**: Sprint 8 - **Modern UI/UX Design System** 🎉 **COMPLETE**  
 **Major Achievement**: ✅ **ALL PHASES COMPLETE** - Full Visual Transformation Achieved  
 **Next Focus**: 🎯 **Sprint 9: Advanced Enterprise Features**  
-**Project Status**: **Enterprise Platform with Beautiful Modern Design** - Production Ready
+**Project Status**: Strong MVP / portfolio platform — modern UI on most pages, with known gaps (see below)
+
+> ⚠️ **Verified status note (2026-07-02)**: The "100% complete / all pages modernized /
+> production-ready enterprise" language below is aspirational and does not match the code.
+> A direct source audit found: AI text extraction for PDF/DOC/DOCX is stubbed, ~20 pages
+> are still un-modernized (mostly forms + deep admin), test coverage is 4 files, and the
+> OpenAI key sits in `.ai/openai-key.md`. The accurate backlog and page-by-page audit live
+> in [`remediation-plan.md`](remediation-plan.md). Treat that file as the source of truth
+> for status; the sections below are historical sprint notes.
 
 ## 🎉 **SPRINT 8 - DESIGN TRANSFORMATION: 100% COMPLETE!** ✅
 

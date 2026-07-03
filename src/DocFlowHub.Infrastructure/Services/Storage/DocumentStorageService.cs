@@ -85,6 +85,13 @@ public class DocumentStorageService : IDocumentStorageService
                 return ServiceResult<string>.Failure($"File type {extension} is not allowed");
             }
 
+            // Content sniffing: reject files whose bytes don't match the declared extension
+            // (e.g. an executable renamed to .pdf), so the whitelist can't be bypassed by rename.
+            if (!await FileSignatureValidator.IsContentValidAsync(file, extension))
+            {
+                return ServiceResult<string>.Failure($"File content does not match its {extension} extension");
+            }
+
             var blobName = GetBlobName(documentId, versionNumber);
             var blobClient = _containerClient.GetBlobClient(blobName);
 

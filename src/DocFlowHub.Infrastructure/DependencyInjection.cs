@@ -43,8 +43,14 @@ public static class DependencyInjection
         // Role Services
         services.AddScoped<IRoleService, RoleService>();
         
-        // AI Services
-        services.AddScoped<IAIService, OpenAIService>();
+        // AI Services — IAIService routes per requested model ("claude-*" → Anthropic,
+        // otherwise OpenAI). Provider services are stateless config holders wrapping a
+        // provider client (AnthropicClient / OpenAIClient), so they are SINGLETONS — this
+        // pools the underlying HttpClient/connections instead of rebuilding one per request.
+        // The router resolves them lazily, so only the provider actually used needs a key.
+        services.AddSingleton<OpenAIService>();
+        services.AddSingleton<ClaudeAIService>();
+        services.AddScoped<IAIService, AIServiceRouter>();
         services.AddScoped<IDocumentSummaryService, DocumentSummaryService>();
         services.AddScoped<IVersionComparisonService, VersionComparisonService>();
         services.AddScoped<ITextExtractionService, TextExtractionService>();

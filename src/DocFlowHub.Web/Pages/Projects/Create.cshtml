@@ -4,247 +4,207 @@
     ViewData["Title"] = "Create Project";
 }
 
-<div class="container page-transition">
+<div class="page-container page-transition">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-item"><a asp-page="./Index">Projects</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Create</li>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb-modern">
+            <li><a asp-page="/Index">Home</a></li>
+            <li class="breadcrumb-sep">/</li>
+            <li><a asp-page="./Index">Projects</a></li>
+            <li class="breadcrumb-sep">/</li>
+            <li class="active" aria-current="page">Create</li>
         </ol>
     </nav>
 
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <div class="page-icon">📁</div>
+            Create New Project
+        </h1>
+        <p class="page-subtitle">Organize your documents into a new project workspace</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="validation-summary" style="display:block;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
+        </div>
+    }
+
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h1 class="card-title mb-0 h4">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Create New Project
-                    </h1>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            @Model.ErrorMessage
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    }
+        <div class="col-lg-9">
+            <div class="form-card">
+                <form method="post" id="create-project-form">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
 
-                    <form method="post" id="create-project-form">
-                        <!-- Project Basic Information -->
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="mb-3">
-                                    <label asp-for="Name" class="form-label fw-bold">
-                                        <i class="bi bi-card-text me-1"></i> Project Name *
-                                    </label>
-                                    <input asp-for="Name" class="form-control" placeholder="Enter project name..." autofocus />
-                                    <span asp-validation-for="Name" class="text-danger"></span>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label asp-for="Color" class="form-label fw-bold">
-                                        <i class="bi bi-palette me-1"></i> Project Color
-                                    </label>
-                                    <div class="d-flex align-items-center">
-                                        <input asp-for="Color" type="color" class="form-control form-control-color me-2" style="width: 50px; height: 38px;" />
-                                        <input type="text" id="ColorText" name="ColorText" class="form-control flex-grow-1" placeholder="#0d6efd" />
-                                    </div>
-                                    <span asp-validation-for="Color" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label fw-bold">
-                                <i class="bi bi-card-list me-1"></i> Description
+                    <div class="form-row">
+                        <div class="form-group full-width" style="grid-column: span 1;">
+                            <label asp-for="Name" class="form-label">
+                                <i class="bi bi-card-text"></i> Project Name *
                             </label>
-                            <textarea asp-for="Description" class="form-control" rows="3" 
-                                      placeholder="Enter a brief description of your project..."></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
+                            <input asp-for="Name" class="form-input" placeholder="Enter project name..." autofocus />
+                            <span asp-validation-for="Name" class="validation-message"></span>
                         </div>
 
-                        <!-- Icon Selection -->
-                        <div class="mb-4">
-                            <label asp-for="Icon" class="form-label fw-bold">
-                                <i class="bi bi-emoji-smile me-1"></i> Project Icon
+                        <div class="form-group">
+                            <label asp-for="Color" class="form-label">
+                                <i class="bi bi-palette"></i> Project Color
                             </label>
-                            <div class="icon-selection">
-                                <div class="row g-2">
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="kanban" id="icon-kanban" checked />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-kanban">
-                                            <i class="bi bi-kanban"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="folder" id="icon-folder" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-folder">
-                                            <i class="bi bi-folder"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="briefcase" id="icon-briefcase" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-briefcase">
-                                            <i class="bi bi-briefcase"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="building" id="icon-building" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-building">
-                                            <i class="bi bi-building"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="diagram-3" id="icon-diagram" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-diagram">
-                                            <i class="bi bi-diagram-3"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="gear" id="icon-gear" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-gear">
-                                            <i class="bi bi-gear"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="lightbulb" id="icon-lightbulb" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-lightbulb">
-                                            <i class="bi bi-lightbulb"></i>
-                                        </label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <input type="radio" class="btn-check" name="Icon" value="star" id="icon-star" />
-                                        <label class="btn btn-outline-secondary icon-option" for="icon-star">
-                                            <i class="bi bi-star"></i>
-                                        </label>
-                                    </div>
-                                </div>
-                                <span asp-validation-for="Icon" class="text-danger"></span>
+                            <div class="d-flex align-items-center gap-2">
+                                <input asp-for="Color" type="color" class="color-swatch" />
+                                <input type="text" id="ColorText" name="ColorText" class="form-input flex-grow-1" placeholder="#0d6efd" />
+                            </div>
+                            <span asp-validation-for="Color" class="validation-message"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label asp-for="Description" class="form-label">
+                            <i class="bi bi-card-list"></i> Description
+                        </label>
+                        <textarea asp-for="Description" class="form-textarea" rows="3"
+                                  placeholder="Enter a brief description of your project..."></textarea>
+                        <span asp-validation-for="Description" class="validation-message"></span>
+                    </div>
+
+                    <!-- Icon Selection -->
+                    <div class="form-group full-width">
+                        <label asp-for="Icon" class="form-label">
+                            <i class="bi bi-emoji-smile"></i> Project Icon
+                        </label>
+                        <div class="icon-selection">
+                            @foreach (var (value, isChecked) in new[] {
+                                ("kanban", true), ("folder", false), ("briefcase", false), ("building", false),
+                                ("diagram-3", false), ("gear", false), ("lightbulb", false), ("star", false) })
+                            {
+                                <input type="radio" class="btn-check" name="Icon" value="@value" id="icon-@value" checked="@isChecked" />
+                                <label class="icon-option" for="icon-@value">
+                                    <i class="bi bi-@value"></i>
+                                </label>
+                            }
+                        </div>
+                        <span asp-validation-for="Icon" class="validation-message"></span>
+                    </div>
+
+                    <!-- Project Preview -->
+                    <div class="form-group full-width">
+                        <label class="form-label"><i class="bi bi-eye"></i> Preview</label>
+                        <div class="project-preview">
+                            <div class="project-icon">
+                                <i id="preview-icon" class="bi bi-kanban" style="color:#0d6efd;font-size:2rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1" id="preview-name">Project Name</h5>
+                                <p class="text-muted mb-0" id="preview-description">Project description will appear here...</p>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Project Preview -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-eye me-1"></i> Preview
-                            </label>
-                            <div class="project-preview card">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center">
-                                        <div class="project-icon me-3">
-                                            <i id="preview-icon" class="bi bi-kanban" style="color: #0d6efd; font-size: 2rem;"></i>
-                                        </div>
-                                        <div>
-                                            <h5 class="card-title mb-1" id="preview-name">Project Name</h5>
-                                            <p class="card-text text-muted mb-0" id="preview-description">Project description will appear here...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="d-flex justify-content-between">
-                            <a asp-page="./Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-1"></i> Create Project
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Action Buttons -->
+                    <div class="form-actions justify-content-between">
+                        <a asp-page="./Index" class="cancel-btn">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="submit-btn">
+                            <i class="bi bi-plus-circle"></i> Create Project
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+@section Styles {
 <style>
-.icon-option {
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-}
-
-.icon-option:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.project-preview {
-    background-color: #f8f9fa;
-    border: 2px dashed #dee2e6;
-}
-
-.form-control-color {
-    border-radius: 0.375rem;
-    border: 1px solid #ced4da;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.getElementById('Name');
-    const descriptionInput = document.getElementById('Description');
-    const colorInput = document.querySelector('input[name="Color"]');
-    const colorTextInput = document.getElementById('ColorText');
-    const iconInputs = document.querySelectorAll('input[name="Icon"]');
-    
-    const previewName = document.getElementById('preview-name');
-    const previewDescription = document.getElementById('preview-description');
-    const previewIcon = document.getElementById('preview-icon');
-    
-    // Update preview on input changes
-    function updatePreview() {
-        // Update name
-        previewName.textContent = nameInput.value || 'Project Name';
-        
-        // Update description
-        previewDescription.textContent = descriptionInput.value || 'Project description will appear here...';
-        
-        // Update color
-        const colorValue = colorInput.value;
-        previewIcon.style.color = colorValue;
-        
-        // Update icon
-        const selectedIcon = document.querySelector('input[name="Icon"]:checked');
-        if (selectedIcon) {
-            previewIcon.className = `bi bi-${selectedIcon.value}`;
-        }
+    /* Page-specific bits that build on components.css (theme-aware) */
+    .color-swatch {
+        width: 48px;
+        height: 46px;
+        padding: 4px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface-secondary);
+        cursor: pointer;
     }
-    
-    // Sync color inputs
-    colorInput.addEventListener('input', function() {
-        colorTextInput.value = this.value;
-        updatePreview();
-    });
-    
-    colorTextInput.addEventListener('input', function() {
-        colorInput.value = this.value;
-        updatePreview();
-    });
-    
-    // Listen for input changes
-    nameInput.addEventListener('input', updatePreview);
-    descriptionInput.addEventListener('input', updatePreview);
-    iconInputs.forEach(input => {
-        input.addEventListener('change', updatePreview);
-    });
-    
-    // Initial preview update
-    updatePreview();
-});
-</script>
+
+    .icon-selection { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .icon-option {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .icon-option:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .btn-check:checked + .icon-option {
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+        background: var(--accent-light);
+    }
+
+    .project-preview {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: var(--surface-secondary);
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+    }
+
+    .project-preview h5 { color: var(--text-primary); }
+</style>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-} 
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const nameInput = document.getElementById('Name');
+            const descriptionInput = document.getElementById('Description');
+            const colorInput = document.querySelector('input[name="Color"]');
+            const colorTextInput = document.getElementById('ColorText');
+            const iconInputs = document.querySelectorAll('input[name="Icon"]');
+
+            const previewName = document.getElementById('preview-name');
+            const previewDescription = document.getElementById('preview-description');
+            const previewIcon = document.getElementById('preview-icon');
+
+            function updatePreview() {
+                previewName.textContent = nameInput.value || 'Project Name';
+                previewDescription.textContent = descriptionInput.value || 'Project description will appear here...';
+                previewIcon.style.color = colorInput.value;
+                const selectedIcon = document.querySelector('input[name="Icon"]:checked');
+                if (selectedIcon) {
+                    previewIcon.className = `bi bi-${selectedIcon.value}`;
+                }
+            }
+
+            colorInput.addEventListener('input', function () {
+                colorTextInput.value = this.value;
+                updatePreview();
+            });
+            colorTextInput.addEventListener('input', function () {
+                colorInput.value = this.value;
+                updatePreview();
+            });
+            nameInput.addEventListener('input', updatePreview);
+            descriptionInput.addEventListener('input', updatePreview);
+            iconInputs.forEach(input => input.addEventListener('change', updatePreview));
+
+            updatePreview();
+        });
+    </script>
+}

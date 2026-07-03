@@ -123,6 +123,30 @@ public class DocumentStorageServiceTests
     }
 
     [Fact]
+    public async Task UploadDocument_WithExtensionSpoofedContent_ShouldFail()
+    {
+        // A .pdf by name but plain text by content: passes the extension whitelist but must be
+        // rejected by the magic-byte content check wired into UploadDocumentAsync.
+        var service = new DocumentStorageService(_optionsMock.Object, _loggerMock.Object);
+        const int documentId = 104;
+        const int versionNumber = 1;
+
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("I am plain text pretending to be a PDF."));
+        var file = new FormFile(stream, 0, stream.Length, "test", "spoofed.pdf")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/pdf"
+        };
+
+        // Act
+        var result = await service.UploadDocumentAsync(file, documentId, versionNumber);
+
+        // Assert
+        result.Succeeded.Should().BeFalse();
+        result.Error.Should().Contain("content does not match");
+    }
+
+    [Fact]
     public async Task UploadAndDownload_ShouldReturnSameContent()
     {
         // Arrange

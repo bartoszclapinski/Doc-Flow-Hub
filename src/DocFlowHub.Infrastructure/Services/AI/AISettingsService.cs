@@ -299,7 +299,7 @@ public class AISettingsService : IAISettingsService
                     DisplayName = model.ToDisplayName(),
                     Description = model.GetCostDescription(),
                     CostLevel = GetCostLevel(model),
-                    IsRecommended = model == AIModel.Gpt4oMini,
+                    IsRecommended = model == AIModel.ClaudeHaiku45,
                     MaxTokens = GetMaxTokens(model)
                 });
             }
@@ -481,6 +481,9 @@ public class AISettingsService : IAISettingsService
         AIModel.Gpt4o => "Medium",
         AIModel.Gpt41Mini => "Medium",
         AIModel.Gpt41 => "High",
+        AIModel.ClaudeHaiku45 => "Low",
+        AIModel.ClaudeSonnet5 => "Medium",
+        AIModel.ClaudeOpus48 => "High",
         _ => "Medium"
     };
 
@@ -490,6 +493,9 @@ public class AISettingsService : IAISettingsService
         AIModel.Gpt4o => 8000,
         AIModel.Gpt41Mini => 16000,
         AIModel.Gpt41 => 8000,
+        AIModel.ClaudeHaiku45 => 64000,
+        AIModel.ClaudeSonnet5 => 64000,
+        AIModel.ClaudeOpus48 => 32000,
         _ => 8000
     };
 } 

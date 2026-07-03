@@ -1,0 +1,238 @@
+/* DocFlowHub Shared UI Components — Sprint 8 / Workstream D
+ * Reusable, theme-aware building blocks so feature/form/admin pages stop
+ * duplicating the same inline <style> block. All values use the design tokens
+ * defined in themes.css, so light/dark theming is automatic.
+ * Loaded before the page "Styles" section, so any page may still override.
+ */
+
+/* ===== PAGE CONTAINER & HEADER ===== */
+.page-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header .page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.page-header .page-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.page-header .page-subtitle {
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0 0;
+    font-size: 1rem;
+}
+
+/* ===== MODERN BREADCRUMB ===== */
+.breadcrumb-modern {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-modern a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-modern a:hover { color: var(--accent-color); }
+
+.breadcrumb-modern .breadcrumb-sep { color: var(--text-muted); }
+
+.breadcrumb-modern .active { color: var(--text-primary); font-weight: 600; }
+
+/* ===== CARDS ===== */
+.content-card,
+.form-card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+[data-theme="dark"] .content-card,
+[data-theme="dark"] .form-card {
+    background: rgba(45, 45, 45, 0.8);
+}
+
+.content-card.glass,
+.form-card.glass {
+    background: var(--container-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-glass);
+}
+
+/* ===== FORMS ===== */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.form-group { margin-bottom: 1.5rem; }
+.form-group.full-width { grid-column: span 2; }
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.form-label i { color: var(--accent-color); }
+
+.form-input,
+.form-textarea,
+.form-select {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.validation-message {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--error-color);
+    margin-top: 0.35rem;
+}
+
+.validation-summary {
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    color: var(--error-color);
+    margin-bottom: 1.5rem;
+}
+
+.validation-summary:empty { display: none; }
+
+/* ===== ACTION BUTTONS ===== */
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.submit-btn,
+.btn-modern-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover,
+.btn-modern-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px var(--accent-light);
+    color: #ffffff;
+}
+
+.cancel-btn,
+.btn-modern-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn:hover,
+.btn-modern-secondary:hover { color: var(--text-primary); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .page-container { padding: 1rem; }
+    .content-card,
+    .form-card { padding: 1.5rem; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-group.full-width { grid-column: span 1; }
+    .form-actions { flex-direction: column; }
+    .submit-btn,
+    .cancel-btn,
+    .btn-modern-primary,
+    .btn-modern-secondary { justify-content: center; }
+}
+
+/* ── Shared card sub-components (hoisted from per-page @section Styles) ─────────── */
+
+/* Section heading used by form-card / content-card panels */
+.section-heading { display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary); font-weight: 600; margin-bottom: 1.25rem; }
+.section-heading i { color: var(--accent-color); }
+.section-heading-success i { color: var(--success-color); }
+.section-heading.text-danger,
+.section-heading.text-danger i { color: var(--error-color); }
+
+/* Parent-folder radio picker (Folders Create/Edit) */
+.parent-picker { border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-secondary); padding: 0.85rem 1rem; min-height: 120px; }
+.parent-picker .form-check { margin-bottom: 0.5rem; }
+.parent-picker .form-check-label { cursor: pointer; padding-left: 0.25rem; color: var(--text-primary); }
+.parent-picker .form-check-input:checked + .form-check-label { font-weight: 600; color: var(--accent-color); }
