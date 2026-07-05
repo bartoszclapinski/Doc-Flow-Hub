@@ -121,15 +121,20 @@ public class OpenAIService : IAIService
             stopwatch.Stop();
             
             var content = response.Value.Content[0].Text;
-            var tokensUsed = response.Value.Usage?.TotalTokenCount ?? 0;
+            var usage = response.Value.Usage;
+            var inputTokens = usage?.InputTokenCount ?? 0;
+            var outputTokens = usage?.OutputTokenCount ?? 0;
+            var tokensUsed = usage?.TotalTokenCount ?? (inputTokens + outputTokens);
 
-            _logger.LogInformation("Completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens}", content.Length, tokensUsed);
+            _logger.LogInformation("Completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens} (in: {In}, out: {Out})", content.Length, tokensUsed, inputTokens, outputTokens);
 
             return new AIResponse
             {
                 Content = content,
                 Model = selectedModel,
                 TokensUsed = tokensUsed,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
                 ResponseTime = stopwatch.Elapsed,
                 IsSuccess = true,
                 GeneratedAt = DateTime.UtcNow
@@ -175,15 +180,20 @@ public class OpenAIService : IAIService
             stopwatch.Stop();
             
             var content = response.Value.Content[0].Text;
-            var tokensUsed = response.Value.Usage?.TotalTokenCount ?? 0;
+            var usage = response.Value.Usage;
+            var inputTokens = usage?.InputTokenCount ?? 0;
+            var outputTokens = usage?.OutputTokenCount ?? 0;
+            var tokensUsed = usage?.TotalTokenCount ?? (inputTokens + outputTokens);
 
-            _logger.LogInformation("Completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens}", content.Length, tokensUsed);
+            _logger.LogInformation("Completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens} (in: {In}, out: {Out})", content.Length, tokensUsed, inputTokens, outputTokens);
 
             return new AIResponse
             {
                 Content = content,
                 Model = selectedModel,
                 TokensUsed = tokensUsed,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
                 ResponseTime = stopwatch.Elapsed,
                 IsSuccess = true,
                 GeneratedAt = DateTime.UtcNow

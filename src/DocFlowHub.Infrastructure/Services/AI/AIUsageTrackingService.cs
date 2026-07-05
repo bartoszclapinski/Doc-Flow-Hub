@@ -22,19 +22,30 @@ public class AIUsageTrackingService : IAIUsageTrackingService
     private static readonly TimeSpan StatisticsCacheExpiration = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan UserLimitsCacheExpiration = TimeSpan.FromMinutes(5);
 
-    // Cost per 1K tokens for different models (in USD)
-    private static readonly Dictionary<string, decimal> ModelCosts = new()
+    /// <summary>Per-1K-token USD price, split into input (prompt) and output (completion).</summary>
+    private readonly record struct TokenPrice(decimal InputPer1K, decimal OutputPer1K);
+
+    // Cost per 1K tokens for different models (USD), input and output priced separately —
+    // output is several times pricier, so charging a single rate against combined tokens
+    // materially under-reported spend (especially for Claude).
+    private static readonly Dictionary<string, TokenPrice> ModelCosts = new()
     {
-        ["gpt-4o"] = 0.005m,
-        ["gpt-4o-mini"] = 0.000150m,
-        ["gpt-4.1"] = 0.003m,
-        ["gpt-4.1-mini"] = 0.000200m,
-        ["gpt-3.5-turbo"] = 0.001m,
-        // Anthropic Claude — input price per 1K tokens
-        ["claude-haiku-4-5"] = 0.001m,
-        ["claude-sonnet-5"] = 0.003m,
-        ["claude-opus-4-8"] = 0.005m
+        ["gpt-4o"] = new(0.005m, 0.015m),
+        ["gpt-4o-mini"] = new(0.000150m, 0.000600m),
+        ["gpt-4.1"] = new(0.003m, 0.012m),
+        ["gpt-4.1-mini"] = new(0.000200m, 0.000800m),
+        ["gpt-3.5-turbo"] = new(0.0005m, 0.0015m),
+        // Anthropic Claude — $/1M: Haiku 4.5 $1/$5, Sonnet 5 $3/$15, Opus 4.8 $5/$25.
+        ["claude-haiku-4-5"] = new(0.001m, 0.005m),
+        ["claude-sonnet-5"] = new(0.003m, 0.015m),
+        ["claude-opus-4-8"] = new(0.005m, 0.025m)
     };
+
+    // Used when a model string isn't in the table — the app default's price (Haiku).
+    private static TokenPrice DefaultPrice =>
+        ModelCosts.TryGetValue(AIModelHelper.GetDefaultModel().ToApiString(), out var p)
+            ? p
+            : new TokenPrice(0.001m, 0.005m);
 
     public AIUsageTrackingService(
         ApplicationDbContext context,
@@ -65,9 +76,11 @@ public class AIUsageTrackingService : IAIUsageTrackingService
         {
             _logger.LogDebug("Logging AI usage for user {UserId}, operation {OperationType}", userId, operationType);
 
-            var estimatedCost = CalculateEstimatedCost(
-                ParseModelString(aiResponse.Model), 
-                aiResponse.TokensUsed);
+            // Price the actual input/output split when the provider reported it; fall back to
+            // the total-token estimate for older responses that only carry a combined count.
+            var estimatedCost = (aiResponse.InputTokens > 0 || aiResponse.OutputTokens > 0)
+                ? CalculateActualCost(aiResponse.Model, aiResponse.InputTokens, aiResponse.OutputTokens)
+                : CalculateEstimatedCost(ParseModelString(aiResponse.Model), aiResponse.TokensUsed);
 
             var usageLog = new AIUsageLog
             {
@@ -113,18 +126,24 @@ public class AIUsageTrackingService : IAIUsageTrackingService
     /// </summary>
     public decimal CalculateEstimatedCost(AIModel model, int estimatedTokens)
     {
-        var modelString = model.ToApiString();
-        if (ModelCosts.TryGetValue(modelString, out var costPer1K))
-        {
-            return (estimatedTokens / 1000m) * costPer1K;
-        }
+        // TryGetValue (not the indexer) so a future default-model change can't throw KeyNotFound.
+        var price = ModelCosts.TryGetValue(model.ToApiString(), out var p) ? p : DefaultPrice;
 
-        // Unknown model: fall back to the application's default model cost. Use TryGetValue
-        // (not the indexer) so a future default-model change or renamed cost entry can't turn
-        // a missing key into an unhandled KeyNotFoundException on the estimate path.
-        var fallback = AIModelHelper.GetDefaultModel().ToApiString();
-        var fallbackCost = ModelCosts.TryGetValue(fallback, out var defaultCost) ? defaultCost : 0.001m;
-        return (estimatedTokens / 1000m) * fallbackCost;
+        // Pre-execution we only have a single token estimate, no input/output split.
+        // Assume a summarization-style ~70/30 input/output mix so the shown estimate reflects
+        // the pricier output tokens rather than pricing everything at the cheap input rate.
+        var inputTokens = estimatedTokens * 0.7m;
+        var outputTokens = estimatedTokens * 0.3m;
+        return (inputTokens / 1000m) * price.InputPer1K + (outputTokens / 1000m) * price.OutputPer1K;
+    }
+
+    /// <summary>
+    /// Actual post-execution cost from the provider-reported input/output token split.
+    /// </summary>
+    private static decimal CalculateActualCost(string modelApiString, int inputTokens, int outputTokens)
+    {
+        var price = ModelCosts.TryGetValue(modelApiString, out var p) ? p : DefaultPrice;
+        return (inputTokens / 1000m) * price.InputPer1K + (outputTokens / 1000m) * price.OutputPer1K;
     }
 
     /// <summary>

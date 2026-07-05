@@ -47,10 +47,13 @@ public class ClaudeAIService : IAIService
         {
             _logger.LogInformation("Testing Anthropic Claude service connectivity...");
 
+            // Cap output at 1 token: this probe only needs to confirm the API answers, and
+            // GetHealthAsync can be polled by dashboards — no reason to pay for a full reply.
             var response = await CreateMessageAsync(
                 "Test connection",
                 "You are a helpful assistant. Respond with just 'OK' to test connectivity.",
-                _defaultModel);
+                _defaultModel,
+                maxTokens: 1);
 
             _logger.LogInformation("Anthropic connectivity test successful. Response: {Response}", GetText(response));
             return true;
@@ -122,17 +125,20 @@ public class ClaudeAIService : IAIService
             stopwatch.Stop();
 
             var content = GetText(response);
-            var tokensUsed = (int)(response.Usage.InputTokens + response.Usage.OutputTokens);
+            var inputTokens = (int)response.Usage.InputTokens;
+            var outputTokens = (int)response.Usage.OutputTokens;
 
             _logger.LogInformation(
-                "Claude completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens}",
-                content.Length, tokensUsed);
+                "Claude completion generated successfully. Response length: {Length} characters, Tokens used: {Tokens} (in: {In}, out: {Out})",
+                content.Length, inputTokens + outputTokens, inputTokens, outputTokens);
 
             return new AIResponse
             {
                 Content = content,
                 Model = selectedModel,
-                TokensUsed = tokensUsed,
+                TokensUsed = inputTokens + outputTokens,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens,
                 ResponseTime = stopwatch.Elapsed,
                 IsSuccess = true,
                 GeneratedAt = DateTime.UtcNow
@@ -154,8 +160,10 @@ public class ClaudeAIService : IAIService
         }
     }
 
-    private async Task<Message> CreateMessageAsync(string prompt, string? systemMessage, string model)
+    private async Task<Message> CreateMessageAsync(string prompt, string? systemMessage, string model, long? maxTokens = null)
     {
+        var outputCap = maxTokens ?? _maxTokens;
+
         // Role is fully qualified to avoid collision with DocFlowHub.Infrastructure.Services.Role
         var userMessage = new MessageParam
         {
@@ -167,13 +175,13 @@ public class ClaudeAIService : IAIService
             ? new MessageCreateParams
             {
                 Model = model,
-                MaxTokens = _maxTokens,
+                MaxTokens = outputCap,
                 Messages = [userMessage]
             }
             : new MessageCreateParams
             {
                 Model = model,
-                MaxTokens = _maxTokens,
+                MaxTokens = outputCap,
                 System = systemMessage,
                 Messages = [userMessage]
             };
