@@ -500,10 +500,14 @@ namespace DocFlowHub.Web.Pages.Documents
         /// </summary>
         private AIModel GetSelectedAIModel()
         {
-            // If user explicitly selected a model, use that (Claude + GPT both supported)
-            if (!string.IsNullOrEmpty(ComparisonAIModel))
+            // If user explicitly selected a recognized model, use that (Claude + GPT both
+            // supported). A non-empty but unrecognized value (e.g. a stale dropdown entry)
+            // falls back to the user's own preference — not the global default — so the
+            // comparison still honors what the user configured.
+            if (!string.IsNullOrEmpty(ComparisonAIModel)
+                && AIModelHelper.TryFromApiString(ComparisonAIModel, out var selected))
             {
-                return AIModelHelper.FromApiString(ComparisonAIModel);
+                return selected;
             }
 
             return GetUserPreferredModel();

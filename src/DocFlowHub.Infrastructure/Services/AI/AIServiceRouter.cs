@@ -86,18 +86,48 @@ public class AIServiceRouter : IAIService
 
     public async Task<AIResponse> GenerateCompletionAsync(string prompt, string? model = null)
     {
-        var (service, error) = Resolve(AIModelHelper.GetProviderForApiString(model));
+        var (service, error, effectiveModel) = ResolveForCompletion(model);
         return service is null
             ? Failure(model, error)
-            : await service.GenerateCompletionAsync(prompt, model);
+            : await service.GenerateCompletionAsync(prompt, effectiveModel);
     }
 
     public async Task<AIResponse> GenerateCompletionAsync(string prompt, string systemMessage, string? model = null)
     {
-        var (service, error) = Resolve(AIModelHelper.GetProviderForApiString(model));
+        var (service, error, effectiveModel) = ResolveForCompletion(model);
         return service is null
             ? Failure(model, error)
-            : await service.GenerateCompletionAsync(prompt, systemMessage, model);
+            : await service.GenerateCompletionAsync(prompt, systemMessage, effectiveModel);
+    }
+
+    /// <summary>
+    /// Resolve the provider for a completion request, with a single-provider fallback: if the
+    /// model's own provider has no key configured but the other provider does, serve the request
+    /// on that provider using its default model. This keeps default AI features working on a
+    /// deployment that only has one provider's key (e.g. OpenAI-only), instead of hard-failing
+    /// just because the global default model belongs to the unconfigured provider.
+    /// </summary>
+    private (IAIService? Service, string? Error, string? Model) ResolveForCompletion(string? model)
+    {
+        var preferred = AIModelHelper.GetProviderForApiString(model);
+        if (IsConfigured(preferred))
+        {
+            var (service, error) = Resolve(preferred);
+            return (service, error, model);
+        }
+
+        var fallback = Other(preferred);
+        if (IsConfigured(fallback))
+        {
+            _logger.LogWarning(
+                "Requested AI provider {Preferred} is not configured; falling back to {Fallback} with its default model.",
+                preferred, fallback);
+            var (service, error) = Resolve(fallback);
+            // Drop the cross-provider model string so the fallback provider uses its own default.
+            return (service, error, null);
+        }
+
+        return (null, "No AI provider is configured (set DocFlowHub:AnthropicApiKey or OpenAI:ApiKey)", model);
     }
 
     /// <summary>
