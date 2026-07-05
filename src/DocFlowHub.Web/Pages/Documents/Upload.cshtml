@@ -24,7 +24,7 @@
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-xl-11 col-xxl-10">
             <div class="form-card">
                     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                     {
@@ -36,6 +36,9 @@
                     }
 
                     <form method="post" enctype="multipart/form-data" id="upload-form">
+                        <div class="row g-4 upload-grid">
+                        <!-- LEFT COLUMN: the file -->
+                        <div class="col-lg-6">
                         <!-- File Upload Section -->
                         <div class="mb-4">
                             <label asp-for="File" class="form-label fw-bold">
@@ -152,7 +155,10 @@
                                 </div>
                             </div>
                         </div>
+                        </div><!-- /col-lg-6 LEFT -->
 
+                        <!-- RIGHT COLUMN: document details -->
+                        <div class="col-lg-6">
                         <!-- Project & Folder Selection -->
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -219,7 +225,7 @@
                             <label asp-for="Description" class="form-label fw-bold">
                                 <i class="bi bi-card-list me-1"></i> Description
                             </label>
-                            <textarea asp-for="Description" class="form-control" rows="4" 
+                            <textarea asp-for="Description" class="form-control" rows="3"
                                       placeholder="Enter a brief description of the document..."></textarea>
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
@@ -240,17 +246,19 @@
                                 </select>
                             </div>
                         }
+                        </div><!-- /col-lg-6 RIGHT -->
+                        </div><!-- /row upload-grid -->
 
-                        <!-- AI Settings -->
+                        <!-- AI Settings (full width) -->
                         @if (Model.AIFeaturesEnabled)
                         {
                             <div class="mb-4">
-                                <div class="card border-info">
-                                    <div class="card-header bg-info bg-opacity-10">
-                                        <h6 class="card-title mb-0 text-info">
+                                <div class="card ai-features-card">
+                                    <div class="card-header ai-features-header">
+                                        <h6 class="card-title mb-0">
                                             <i class="bi bi-robot me-2"></i>
                                             AI-Powered Features
-                                            <small class="badge bg-info ms-2">✨ Smart Analysis</small>
+                                            <small class="badge ai-smart-badge ms-2">✨ Smart Analysis</small>
                                         </h6>
                                     </div>
                                     <div class="card-body">
@@ -394,7 +402,7 @@
                         }
 
                         <!-- Action Buttons -->
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between upload-actions">
                             <a asp-page="./Index" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i> Cancel
                             </a>
@@ -1360,4 +1368,53 @@
     .selected-file .alert {
         margin-bottom: 0;
     }
-</style> 
+
+    /* AI-Powered Features panel — theme-aware so it isn't a white/blue slab in dark mode. */
+    .ai-features-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+    .ai-features-card .card-body {
+        background: var(--surface-primary);
+        color: var(--text-primary);
+    }
+    .ai-features-header {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border-bottom: none;
+        padding: 0.85rem 1.1rem;
+    }
+    .ai-features-header .card-title { color: #fff; }
+    .ai-smart-badge {
+        background: rgba(255, 255, 255, 0.22);
+        color: #fff;
+        font-weight: 600;
+    }
+    /* Neutral estimate/preferences alerts inside the panel follow the theme. */
+    .ai-features-card .alert-light,
+    .ai-features-card .alert-info {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+    .ai-features-card .form-check-label,
+    .ai-features-card .form-label { color: var(--text-primary); }
+
+    /* Compact two-column layout: file on the left, details on the right. */
+    @@media (min-width: 992px) {
+        .upload-grid > .col-lg-6:first-child {
+            border-right: 1px solid var(--border-color);
+            padding-right: 1.75rem;
+        }
+        .upload-grid > .col-lg-6:last-child {
+            padding-left: 1.75rem;
+        }
+    }
+    .upload-actions {
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border-color);
+    }
+</style>
