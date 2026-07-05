@@ -22,11 +22,12 @@ public class ClaudeAIService : IAIService
 
     public ClaudeAIService(IConfiguration configuration, ILogger<ClaudeAIService> logger)
     {
-        var apiKey = configuration["Anthropic:ApiKey"];
+        // Prefer the project-namespaced key; fall back to the conventional Anthropic:ApiKey.
+        var apiKey = configuration["DocFlowHub:AnthropicApiKey"] ?? configuration["Anthropic:ApiKey"];
         if (string.IsNullOrEmpty(apiKey))
         {
             throw new InvalidOperationException(
-                "Anthropic API key is not configured. Please set Anthropic:ApiKey via user-secrets or appsettings.");
+                "Anthropic API key is not configured. Please set DocFlowHub:AnthropicApiKey (or Anthropic:ApiKey) via user-secrets or appsettings.");
         }
 
         _client = new AnthropicClient { ApiKey = apiKey };
