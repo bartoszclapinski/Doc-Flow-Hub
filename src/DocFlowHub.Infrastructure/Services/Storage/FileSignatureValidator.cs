@@ -11,7 +11,7 @@ namespace DocFlowHub.Infrastructure.Services.Storage;
 /// </summary>
 public static class FileSignatureValidator
 {
-    private const int HeaderSampleSize = 16;
+    private const int HeaderSampleSize = 32;
 
     // Extensions with no reliable binary signature (plain text): accepted if the sampled
     // header contains no NUL bytes (a cheap "this is really text, not a binary" heuristic).
@@ -61,19 +61,23 @@ public static class FileSignatureValidator
 
         if (TextExtensions.Contains(extension))
         {
-            // A byte-order mark marks a valid Unicode text encoding. UTF-16/UTF-32 text
-            // legitimately contains NUL bytes, so a recognized BOM is accepted outright —
-            // this matches TextExtractionService, which reads those encodings back.
-            if (HasTextBom(header, read))
+            var bom = DetectBom(header, read);
+
+            // UTF-16/UTF-32 text legitimately contains NUL bytes, so a multi-byte BOM is a
+            // strong "this is Unicode text" signal and we accept it (TextExtractionService
+            // reads those encodings back). A UTF-8 BOM (or no BOM) does NOT license NUL bytes:
+            // plain UTF-8 text never contains 0x00, so we still scan the payload after the BOM
+            // — otherwise a binary blob prefixed with EF BB BF and named .txt would slip past.
+            if (bom == BomKind.Utf16Or32)
             {
                 return true;
             }
 
-            for (var i = 0; i < read; i++)
+            for (var i = bom == BomKind.Utf8 ? 3 : 0; i < read; i++)
             {
                 if (header[i] == 0x00)
                 {
-                    return false; // NUL byte with no BOM => not plain text
+                    return false; // NUL byte in (BOM-stripped) UTF-8/ASCII => not plain text
                 }
             }
             return true;
@@ -84,9 +88,16 @@ public static class FileSignatureValidator
             return true; // no signature on record for this whitelisted extension
         }
 
+        // PDFs may carry a leading UTF-8 BOM or whitespace before "%PDF"; readers scan the
+        // first bytes rather than requiring offset 0. For .pdf we also try a skipped offset.
+        var pdfStart = extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+            ? SkipLeadingBomAndWhitespace(header, read)
+            : 0;
+
         foreach (var signature in candidates)
         {
-            if (read >= signature.Length && header.AsSpan(0, signature.Length).SequenceEqual(signature))
+            if (MatchesAt(header, read, signature, 0) ||
+                (pdfStart > 0 && MatchesAt(header, read, signature, pdfStart)))
             {
                 return true;
             }
@@ -95,11 +106,35 @@ public static class FileSignatureValidator
         return false;
     }
 
+    private static bool MatchesAt(byte[] header, int read, byte[] signature, int offset) =>
+        read - offset >= signature.Length &&
+        header.AsSpan(offset, signature.Length).SequenceEqual(signature);
+
     /// <summary>
-    /// True if the header starts with a UTF-8, UTF-16, or UTF-32 byte-order mark.
-    /// (UTF-32 is checked before UTF-16 because the UTF-16 LE BOM is a prefix of it.)
+    /// Returns the index past a leading UTF-8 BOM and any ASCII whitespace, so a signature
+    /// that tolerates leading bytes (currently only PDF) can be matched from there.
     /// </summary>
-    private static bool HasTextBom(byte[] header, int read)
+    private static int SkipLeadingBomAndWhitespace(byte[] header, int read)
+    {
+        var i = 0;
+        if (read >= 3 && header[0] == 0xEF && header[1] == 0xBB && header[2] == 0xBF)
+        {
+            i = 3;
+        }
+        while (i < read && (header[i] == 0x20 || header[i] == 0x09 || header[i] == 0x0A || header[i] == 0x0D))
+        {
+            i++;
+        }
+        return i;
+    }
+
+    private enum BomKind { None, Utf8, Utf16Or32 }
+
+    /// <summary>
+    /// Classify a leading byte-order mark. UTF-32 is checked before UTF-16 because the
+    /// UTF-16 LE BOM (FF FE) is a prefix of the UTF-32 LE BOM (FF FE 00 00).
+    /// </summary>
+    private static BomKind DetectBom(byte[] header, int read)
     {
         bool StartsWith(params byte[] bom)
         {
@@ -111,11 +146,15 @@ public static class FileSignatureValidator
             return true;
         }
 
-        return StartsWith(0x00, 0x00, 0xFE, 0xFF) // UTF-32 BE
-            || StartsWith(0xFF, 0xFE, 0x00, 0x00) // UTF-32 LE
-            || StartsWith(0xEF, 0xBB, 0xBF)        // UTF-8
-            || StartsWith(0xFE, 0xFF)              // UTF-16 BE
-            || StartsWith(0xFF, 0xFE);             // UTF-16 LE
+        if (StartsWith(0x00, 0x00, 0xFE, 0xFF) || // UTF-32 BE
+            StartsWith(0xFF, 0xFE, 0x00, 0x00) || // UTF-32 LE
+            StartsWith(0xFE, 0xFF) ||             // UTF-16 BE
+            StartsWith(0xFF, 0xFE))               // UTF-16 LE
+        {
+            return BomKind.Utf16Or32;
+        }
+
+        return StartsWith(0xEF, 0xBB, 0xBF) ? BomKind.Utf8 : BomKind.None;
     }
 
     /// <summary>

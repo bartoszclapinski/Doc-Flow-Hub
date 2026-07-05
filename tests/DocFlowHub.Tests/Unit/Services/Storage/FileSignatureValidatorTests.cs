@@ -148,6 +148,51 @@ public class FileSignatureValidatorTests
     }
 
     [Fact]
+    public async Task IsContentValidAsync_Utf8BomPrefixedBinary_ReturnsFalse()
+    {
+        // Attack: prepend the UTF-8 BOM to a NUL-containing binary and name it .txt. UTF-8 text
+        // never contains NUL, so the BOM must not license the payload past the content check.
+        var payload = new byte[] { 0xEF, 0xBB, 0xBF, 0x4D, 0x5A, 0x00, 0x00, 0x90 }; // BOM + MZ-ish + NUL
+
+        var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(payload, "evil.txt"), ".txt");
+
+        result.Should().BeFalse("a UTF-8 BOM does not permit NUL bytes — the binary must still be rejected");
+    }
+
+    [Fact]
+    public async Task IsContentValidAsync_PdfWithLeadingUtf8Bom_ReturnsTrue()
+    {
+        // Some producers emit a leading UTF-8 BOM before "%PDF"; readers still accept it.
+        var bytes = new byte[] { 0xEF, 0xBB, 0xBF }.Concat(WithPadding(PdfMagic)).ToArray();
+
+        var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(bytes, "doc.pdf"), ".pdf");
+
+        result.Should().BeTrue("a PDF whose %PDF marker follows a BOM is still a valid PDF");
+    }
+
+    [Fact]
+    public async Task IsContentValidAsync_PdfWithLeadingWhitespace_ReturnsTrue()
+    {
+        // Leading whitespace/newlines before %PDF are tolerated by readers.
+        var bytes = new byte[] { 0x0D, 0x0A, 0x20 }.Concat(WithPadding(PdfMagic)).ToArray();
+
+        var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(bytes, "doc.pdf"), ".pdf");
+
+        result.Should().BeTrue("a PDF whose %PDF marker follows whitespace is still a valid PDF");
+    }
+
+    [Fact]
+    public async Task IsContentValidAsync_NonPdfLeadingWhitespaceTrick_StillRejected()
+    {
+        // The leading-offset tolerance is PDF-only: a PNG signature preceded by junk is NOT a PNG.
+        var bytes = new byte[] { 0x20, 0x20 }.Concat(WithPadding(GifMagic)).ToArray();
+
+        var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(bytes), ".png");
+
+        result.Should().BeFalse("only PDF tolerates a leading offset; other signatures stay strict at offset 0");
+    }
+
+    [Fact]
     public async Task IsContentValidAsync_EmptyFile_ReturnsFalse()
     {
         var result = await FileSignatureValidator.IsContentValidAsync(MakeFile(Array.Empty<byte>()), ".pdf");
