@@ -58,7 +58,7 @@ public class AIServiceRouter : IAIService
                 IsHealthy = false,
                 ResponseTime = TimeSpan.Zero,
                 CheckedAt = DateTime.UtcNow,
-                Status = "No AI provider is configured (set OpenAI:ApiKey or Anthropic:ApiKey)"
+                Status = "No AI provider is configured (set DocFlowHub:AnthropicApiKey or OpenAI:ApiKey)"
             };
         }
 
@@ -120,7 +120,7 @@ public class AIServiceRouter : IAIService
     private bool IsConfigured(AIProvider provider)
     {
         var key = provider == AIProvider.Anthropic
-            ? _configuration["Anthropic:ApiKey"]
+            ? _configuration["DocFlowHub:AnthropicApiKey"] ?? _configuration["Anthropic:ApiKey"]
             : _configuration["OpenAI:ApiKey"];
         return !string.IsNullOrWhiteSpace(key);
     }
