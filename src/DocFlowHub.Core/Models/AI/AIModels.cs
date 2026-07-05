@@ -76,18 +76,35 @@ public static class AIModelHelper
     /// Parse a provider API model string back to the AIModel enum.
     /// Returns the application default when the string is unknown.
     /// </summary>
-    public static AIModel FromApiString(string? apiString) => apiString?.ToLowerInvariant() switch
+    public static AIModel FromApiString(string? apiString)
     {
-        "gpt-4.1" => AIModel.Gpt41,
-        "gpt-4.1-mini" => AIModel.Gpt41Mini,
-        "gpt-4o" => AIModel.Gpt4o,
-        "gpt-4o-mini" => AIModel.Gpt4oMini,
-        "gpt-4-turbo" => AIModel.Gpt4o, // Legacy mapping
-        "claude-haiku-4-5" => AIModel.ClaudeHaiku45,
-        "claude-sonnet-5" => AIModel.ClaudeSonnet5,
-        "claude-opus-4-8" => AIModel.ClaudeOpus48,
-        _ => GetDefaultModel()
-    };
+        TryFromApiString(apiString, out var model);
+        return model;
+    }
+
+    /// <summary>
+    /// Parse a provider API model string, reporting whether it was recognized.
+    /// Unlike <see cref="FromApiString"/> (which silently falls back to the default), this
+    /// lets callers distinguish "user picked an unknown/stale value" from "user picked the
+    /// default model" — so e.g. a stale dropdown value can fall back to the user's own
+    /// preference instead of the global default. <paramref name="model"/> is set to the
+    /// application default when the string is unrecognized.
+    /// </summary>
+    public static bool TryFromApiString(string? apiString, out AIModel model)
+    {
+        switch (apiString?.ToLowerInvariant())
+        {
+            case "gpt-4.1": model = AIModel.Gpt41; return true;
+            case "gpt-4.1-mini": model = AIModel.Gpt41Mini; return true;
+            case "gpt-4o": model = AIModel.Gpt4o; return true;
+            case "gpt-4o-mini": model = AIModel.Gpt4oMini; return true;
+            case "gpt-4-turbo": model = AIModel.Gpt4o; return true; // Legacy mapping
+            case "claude-haiku-4-5": model = AIModel.ClaudeHaiku45; return true;
+            case "claude-sonnet-5": model = AIModel.ClaudeSonnet5; return true;
+            case "claude-opus-4-8": model = AIModel.ClaudeOpus48; return true;
+            default: model = GetDefaultModel(); return false;
+        }
+    }
 
     /// <summary>
     /// Convert AIModel enum to user-friendly display name
@@ -131,12 +148,20 @@ public static class AIModelHelper
     /// <summary>
     /// Which provider serves this API model string (used for request routing)
     /// </summary>
-    public static AIProvider GetProviderForApiString(string? apiString) =>
-        apiString != null && apiString.StartsWith("claude", StringComparison.OrdinalIgnoreCase)
+    public static AIProvider GetProviderForApiString(string? apiString)
+    {
+        // Null OR empty/whitespace both mean "no explicit model" -> the default model's
+        // provider. (Treating "" as OpenAI here while FromApiString("") returns the Claude
+        // default routed an empty model to the wrong provider.)
+        if (string.IsNullOrWhiteSpace(apiString))
+        {
+            return GetDefaultModel().GetProvider();
+        }
+
+        return apiString.StartsWith("claude", StringComparison.OrdinalIgnoreCase)
             ? AIProvider.Anthropic
-            : apiString == null
-                ? GetDefaultModel().GetProvider()
-                : AIProvider.OpenAI;
+            : AIProvider.OpenAI;
+    }
 
     /// <summary>
     /// Get all available models for dropdowns

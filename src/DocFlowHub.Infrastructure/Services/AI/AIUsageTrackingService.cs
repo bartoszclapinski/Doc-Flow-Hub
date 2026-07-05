@@ -119,9 +119,12 @@ public class AIUsageTrackingService : IAIUsageTrackingService
             return (estimatedTokens / 1000m) * costPer1K;
         }
 
-        // Unknown model: fall back to the application's default model cost
+        // Unknown model: fall back to the application's default model cost. Use TryGetValue
+        // (not the indexer) so a future default-model change or renamed cost entry can't turn
+        // a missing key into an unhandled KeyNotFoundException on the estimate path.
         var fallback = AIModelHelper.GetDefaultModel().ToApiString();
-        return (estimatedTokens / 1000m) * ModelCosts[fallback];
+        var fallbackCost = ModelCosts.TryGetValue(fallback, out var defaultCost) ? defaultCost : 0.001m;
+        return (estimatedTokens / 1000m) * fallbackCost;
     }
 
     /// <summary>

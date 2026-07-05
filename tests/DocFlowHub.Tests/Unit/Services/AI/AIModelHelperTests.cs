@@ -89,6 +89,40 @@ public class AIModelHelperTests
         AIModelHelper.GetProviderForApiString(null).Should().Be(AIProvider.Anthropic);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GetProviderForApiString_EmptyMatchesFromApiString_UsesDefaultProvider(string apiString)
+    {
+        // Empty/whitespace must route like null (default model's provider), consistent with
+        // FromApiString("") returning the default model — otherwise "" would route to OpenAI
+        // while the resolved model is Claude.
+        AIModelHelper.GetProviderForApiString(apiString).Should().Be(AIProvider.Anthropic);
+        AIModelHelper.GetProviderForApiString(apiString)
+            .Should().Be(AIModelHelper.FromApiString(apiString).GetProvider());
+    }
+
+    [Theory]
+    [InlineData("claude-haiku-4-5", AIModel.ClaudeHaiku45)]
+    [InlineData("GPT-4O-MINI", AIModel.Gpt4oMini)]
+    [InlineData("gpt-4-turbo", AIModel.Gpt4o)] // legacy alias still recognized
+    public void TryFromApiString_KnownModels_ReturnsTrue(string apiString, AIModel expected)
+    {
+        AIModelHelper.TryFromApiString(apiString, out var model).Should().BeTrue();
+        model.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("gpt-3.5-turbo")]   // stale/unsupported value
+    [InlineData("some-nonsense")]
+    public void TryFromApiString_UnknownModels_ReturnsFalseAndDefault(string? apiString)
+    {
+        AIModelHelper.TryFromApiString(apiString, out var model).Should().BeFalse();
+        model.Should().Be(AIModelHelper.GetDefaultModel());
+    }
+
     [Fact]
     public void EveryModel_HasDistinctApiString_AndRoundTrips()
     {
