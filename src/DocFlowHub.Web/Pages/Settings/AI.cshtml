@@ -515,7 +515,7 @@
     
     .form-hint {
         font-size: 0.8rem;
-        color: var(--text-tertiary);
+        color: var(--text-muted);
         margin: 0.35rem 0 0 0;
     }
     
@@ -608,7 +608,7 @@
         display: flex;
         justify-content: space-between;
         font-size: 0.75rem;
-        color: var(--text-tertiary);
+        color: var(--text-muted);
         margin-top: 0.35rem;
     }
     
@@ -657,7 +657,7 @@
     .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .status-label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
     .status-badge { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
-    .status-details { font-size: 0.8rem; color: var(--text-tertiary); }
+    .status-details { font-size: 0.8rem; color: var(--text-muted); }
     .models-label { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
     .models-list { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
     
@@ -775,7 +775,7 @@
     
     .analytics-stat .stat-label {
         font-size: 0.8rem;
-        color: var(--text-tertiary);
+        color: var(--text-muted);
     }
     
     /* Charts */
@@ -898,14 +898,9 @@
         .control-group { max-width: none; }
     }
     
-    /* ===== DARK THEME ADJUSTMENTS ===== */
-    [data-theme="dark"] .settings-card { background: rgba(45, 45, 45, 0.8); }
-    [data-theme="dark"] .settings-card .card-header { background: rgba(60, 60, 60, 0.5); }
-    [data-theme="dark"] .current-status-box,
-    [data-theme="dark"] .cost-estimation-box,
-    [data-theme="dark"] .stat-card { background: rgba(60, 60, 60, 0.5); }
-    [data-theme="dark"] .connection-status { background: rgba(60, 60, 60, 0.5); }
-    
+    /* Dark theme: surfaces come from the Slate + Sky --surface-* tokens on the
+       base rules above (no charcoal-gray overrides needed anymore). */
+
     /* Spin Animation */
     .spin { animation: spin 1s linear infinite; }
     @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
