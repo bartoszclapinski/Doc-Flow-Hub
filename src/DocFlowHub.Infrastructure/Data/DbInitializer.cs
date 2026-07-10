@@ -1,7 +1,9 @@
 using DocFlowHub.Core.Identity;
+using DocFlowHub.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DocFlowHub.Infrastructure.Data;
 
@@ -22,6 +24,14 @@ public static class DbInitializer
 
         // Seed admin user if none exists
         await SeedAdminUserAsync(userManager);
+
+        // In the public read-only demo, seed a large, time-distributed dataset.
+        var demoMode = scope.ServiceProvider.GetRequiredService<IDemoModeService>();
+        if (demoMode.IsEnabled)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
+            await DemoDataSeeder.SeedAsync(context, userManager, logger);
+        }
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
