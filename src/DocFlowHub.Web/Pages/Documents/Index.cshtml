@@ -262,25 +262,132 @@
         </div>
 
         <!-- Enhanced Documents Table -->
-        <div class="documents-table-card">
+        <div class="documents-table-card view-cards" id="documentsViewCard">
             <div class="table-card-header">
                 <div class="table-header-info">
                     <h3 class="table-title">
-                        <i class="bi bi-table"></i>
-                        Documents List
+                        <i class="bi bi-folder2-open"></i>
+                        Documents
                     </h3>
                     <p class="table-subtitle">Manage your document collection</p>
                 </div>
                 <div class="table-actions">
+                    <div class="view-toggle" role="group" aria-label="View mode">
+                        <button type="button" class="view-toggle-btn active" data-view="cards" title="Card view" aria-label="Card view">
+                            <i class="bi bi-grid-3x3-gap"></i>
+                        </button>
+                        <button type="button" class="view-toggle-btn" data-view="table" title="Table view" aria-label="Table view">
+                            <i class="bi bi-list-ul"></i>
+                        </button>
+                    </div>
                     <button class="table-action-btn" title="Refresh" onclick="window.location.reload()">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
-                    <button class="table-action-btn" title="View options">
-                        <i class="bi bi-three-dots"></i>
-                    </button>
                 </div>
             </div>
-            
+
+            <!-- Card grid view (default) -->
+            <div class="documents-grid">
+                @foreach (var document in Model.Documents.Items)
+                {
+                    <div class="document-card">
+                        <div class="doc-card-top">
+                            <div class="document-icon @GetFileIconClass(document.FileType)">
+                                <i class="bi @GetFileIcon(document.FileType)"></i>
+                            </div>
+                            <div class="dropdown">
+                                <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-label="Document actions">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
+                                            <i class="bi bi-eye"></i>
+                                            <span>View Details</span>
+                                        </a>
+                                    </li>
+                                    @if (document.OwnerId == User.GetUserId())
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
+                                                <i class="bi bi-pencil"></i>
+                                                <span>Edit</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item text-danger"
+                                                    onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
+                                                <i class="bi bi-trash"></i>
+                                                <span>Delete</span>
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
+                                                <i class="bi bi-arrows-angle-right"></i>
+                                                <span>Move</span>
+                                            </button>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
+                                            <button type="submit" class="dropdown-item text-success">
+                                                <i class="bi bi-download"></i>
+                                                <span>Download</span>
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <a asp-page="./Details" asp-route-id="@document.Id" class="doc-card-title">@document.Title</a>
+
+                        @if (!string.IsNullOrEmpty(document.Description))
+                        {
+                            <p class="doc-card-desc">@(document.Description.Length > 100 ? document.Description.Substring(0, 100) + "..." : document.Description)</p>
+                        }
+
+                        @if (document.Categories != null && document.Categories.Any())
+                        {
+                            <div class="document-categories">
+                                @foreach (var category in document.Categories.Take(2))
+                                {
+                                    <span class="category-tag">@category.Name</span>
+                                }
+                                @if (document.Categories.Count > 2)
+                                {
+                                    <span class="category-tag more">+@(document.Categories.Count - 2)</span>
+                                }
+                            </div>
+                        }
+
+                        <div class="doc-card-meta">
+                            @if (!string.IsNullOrEmpty(document.TeamName))
+                            {
+                                <span class="workspace-badge team" title="@document.TeamName">
+                                    <i class="bi bi-people"></i>
+                                    <span>@(document.TeamName.Length > 14 ? document.TeamName.Substring(0, 14) + "..." : document.TeamName)</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="workspace-badge private">
+                                    <i class="bi bi-lock"></i>
+                                    <span>Private</span>
+                                </span>
+                            }
+                            <span class="doc-card-size">@FormatFileSize(document.FileSize) · @document.FileType.ToUpper()</span>
+                        </div>
+
+                        <div class="doc-card-footer">
+                            <span><i class="bi bi-clock"></i> @((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</span>
+                            <span class="doc-card-owner">@document.OwnerName</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
             <div class="modern-table-container">
                 <table class="modern-table">
                     <thead>
@@ -709,6 +816,35 @@
 
 @section Scripts {
     <script>
+        // Documents view toggle (Cards / Table) — presentation only, persisted per browser
+        (function () {
+            var STORAGE_KEY = 'docflowhub-docs-view';
+            var card = document.getElementById('documentsViewCard');
+            if (!card) return;
+            var buttons = card.querySelectorAll('.view-toggle-btn');
+
+            function applyView(view) {
+                var mode = view === 'table' ? 'table' : 'cards';
+                card.classList.toggle('view-cards', mode === 'cards');
+                card.classList.toggle('view-table', mode === 'table');
+                buttons.forEach(function (b) {
+                    b.classList.toggle('active', b.getAttribute('data-view') === mode);
+                });
+            }
+
+            var stored = null;
+            try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { }
+            if (stored) applyView(stored);
+
+            buttons.forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var view = b.getAttribute('data-view');
+                    applyView(view);
+                    try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { }
+                });
+            });
+        })();
+
         // Confirm delete document function
         function confirmDeleteDocument(documentId, title, size, createdDate) {
             document.getElementById('deleteDocumentId').value = documentId;
@@ -1854,6 +1990,128 @@
         .table-action-btn:hover {
             background: var(--surface-hover);
             color: var(--text-primary);
+        }
+
+        /* ===== View toggle (Cards / Table) ===== */
+        .view-toggle {
+            display: inline-flex;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .view-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 30px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition-all);
+        }
+
+        .view-toggle-btn:hover { color: var(--accent-color); }
+
+        .view-toggle-btn.active {
+            background: var(--surface-primary);
+            color: var(--accent-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* View switching — one view visible at a time */
+        .documents-table-card.view-cards .modern-table-container { display: none; }
+        .documents-table-card.view-table .documents-grid { display: none; }
+
+        /* ===== Card grid ===== */
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+
+        .document-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            background: var(--surface-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.1rem;
+            transition: var(--transition-all);
+        }
+
+        .document-card:hover {
+            border-color: var(--accent-color);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .doc-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .doc-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-decoration: none;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .doc-card-title:hover { color: var(--accent-color); }
+
+        .doc-card-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .doc-card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .doc-card-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .doc-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding-top: 0.6rem;
+            border-top: 1px solid var(--border-light);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .doc-card-owner {
+            font-weight: 600;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @@media (max-width: 480px) {
+            .documents-grid { grid-template-columns: 1fr; padding: 1rem; }
         }
 
         .modern-table-container {
