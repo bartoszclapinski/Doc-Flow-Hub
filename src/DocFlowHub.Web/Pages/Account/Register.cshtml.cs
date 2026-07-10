@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using DocFlowHub.Core.Identity;
+using DocFlowHub.Core.Services.Interfaces;
 
 namespace DocFlowHub.Web.Pages.Account
 {
@@ -21,18 +22,21 @@ namespace DocFlowHub.Web.Pages.Account
         private readonly IUserStore<ApplicationUser> _userStore;
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
+        private readonly IDemoModeService _demoMode;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RegisterModel> logger)
+            ILogger<RegisterModel> logger,
+            IDemoModeService demoMode)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
+            _demoMode = demoMode;
         }
 
         [BindProperty]
@@ -71,14 +75,27 @@ namespace DocFlowHub.Web.Pages.Account
             public string ConfirmPassword { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public async Task<IActionResult> OnGetAsync(string returnUrl = null)
         {
+            // Registration is disabled in the read-only public demo.
+            if (_demoMode.IsEnabled)
+            {
+                return RedirectToPage("/Account/Login");
+            }
+
             ReturnUrl = returnUrl;
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
+            // Defense in depth — the DemoModePageFilter also blocks this POST.
+            if (_demoMode.IsEnabled)
+            {
+                return RedirectToPage("/Account/Login");
+            }
+
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
