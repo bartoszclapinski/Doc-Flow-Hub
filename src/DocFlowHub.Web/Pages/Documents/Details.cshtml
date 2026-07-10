@@ -756,8 +756,10 @@
         line-height: 1.6;
     }
     .ai-summary-header {
-        /* Indigo→violet reads as "AI" in both themes without the harsh pure-blue block. */
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        /* Violet "AI" banner (Slate + Sky --ai-color family). Kept a deep, saturated
+           gradient — theme-independent — so the white text stays readable in both
+           light and dark (the --ai-color token itself is a light violet in dark mode). */
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
         color: #fff;
         border-bottom: none;
         padding: 0.85rem 1.1rem;
