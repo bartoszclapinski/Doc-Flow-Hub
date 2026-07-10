@@ -70,10 +70,8 @@
     padding: 2rem;
 }
 
-[data-theme="dark"] .content-card,
-[data-theme="dark"] .form-card {
-    background: rgba(45, 45, 45, 0.8);
-}
+/* Dark surface comes from --surface-primary (slate) on the base rule above;
+   no charcoal-gray override needed. */
 
 .content-card.glass,
 .form-card.glass {
