@@ -8,12 +8,18 @@ using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Services.Profile;
 using DocFlowHub.Infrastructure.Services.Role;
 using DocFlowHub.Infrastructure;
+using DocFlowHub.Web.Filters;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Demo mode: enforce read-only via a global page filter (no-op unless DemoMode:Enabled).
+builder.Services.AddScoped<DemoModePageFilter>();
+builder.Services.Configure<MvcOptions>(options => options.Filters.AddService<DemoModePageFilter>());
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

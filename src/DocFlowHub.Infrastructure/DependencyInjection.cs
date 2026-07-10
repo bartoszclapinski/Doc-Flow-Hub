@@ -12,6 +12,7 @@ using DocFlowHub.Infrastructure.Services.AI;
 using DocFlowHub.Infrastructure.Services.Projects;
 using DocFlowHub.Infrastructure.Services.Admin;
 using DocFlowHub.Infrastructure.Services.Analytics;
+using DocFlowHub.Infrastructure.Services;
 
 namespace DocFlowHub.Infrastructure;
 
@@ -24,6 +25,9 @@ public static class DependencyInjection
 
         // Add Memory Caching for AI Services Performance
         services.AddMemoryCache();
+
+        // Demo mode (read-only public demo) — flag read once from config.
+        services.AddSingleton<IDemoModeService, DemoModeService>();
 
         // Document Services
         services.AddScoped<IDocumentService, DocumentService>();
