@@ -32,26 +32,90 @@
             color: var(--text-primary);
         }
 
-        .login-main-container {
+        /* Split layout: branded panel (left) + form (right) */
+        .auth-split {
             display: flex;
             min-height: 100vh;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-6);
         }
 
+        .auth-brand {
+            flex: 1 1 45%;
+            /* Deep sky -> violet ties the accent (actions) and AI identities;
+               theme-independent so white text stays readable in both themes. */
+            background: linear-gradient(160deg, #0284c7 0%, #0369a1 52%, #6d28d9 135%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-16) var(--spacing-12);
+            position: relative;
+            overflow: hidden;
+        }
 
+        .auth-brand-content { max-width: 460px; position: relative; z-index: 1; }
 
-        .login-container {
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-2xl);
-            padding: var(--spacing-12) var(--spacing-10);
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--spacing-10);
+        }
+
+        .auth-logo-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-lg);
+            background: rgba(255, 255, 255, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: var(--font-weight-extrabold);
+            font-size: 22px;
+        }
+
+        .auth-brand-title {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-extrabold);
+            line-height: 1.15;
+            margin: 0 0 var(--spacing-4) 0;
+        }
+
+        .auth-brand-sub {
+            font-size: var(--font-size-lg);
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0 0 var(--spacing-10) 0;
+        }
+
+        .auth-brand-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: var(--spacing-4);
+        }
+
+        .auth-brand-features li {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            font-size: var(--font-size-base);
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .auth-brand-features i { font-size: 1.2rem; opacity: 0.9; }
+
+        .auth-form-side {
+            flex: 1 1 55%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-12);
+        }
+
+        .auth-form-inner {
             width: 100%;
-            max-width: 420px;
-            box-shadow: var(--shadow-glass);
+            max-width: 400px;
         }
 
         .hero-title {
@@ -276,65 +340,51 @@
             transform: scale(1.1);
         }
 
-        /* Responsive Design */
-        @@media (max-width: 768px) {
-            .login-main-container {
-                flex-direction: column;
-                gap: var(--spacing-10);
-                text-align: center;
-                padding: var(--spacing-4);
-            }
-            
-            .info-section {
-                max-width: 100%;
-            }
-            
-            .hero-title {
-                font-size: var(--font-size-3xl);
-            }
-            
-            .hero-subtitle {
-                font-size: var(--font-size-lg);
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
+        /* Responsive Design — collapse to form-only on narrow screens */
+        @@media (max-width: 900px) {
+            .auth-brand { display: none; }
+            .auth-form-side {
+                flex-basis: 100%;
+                padding: var(--spacing-8);
             }
         }
 
         @@media (max-width: 480px) {
-            .login-container {
-                margin: var(--spacing-5);
-                padding: var(--spacing-8) var(--spacing-6);
-            }
-            
-            .welcome-text {
-                font-size: var(--font-size-2xl);
-            }
-            
-            .hero-title {
-                font-size: var(--font-size-2xl);
-            }
-            
-            .login-main-container {
-                gap: var(--spacing-8);
-            }
+            .auth-form-side { padding: var(--spacing-6); }
+            .hero-title { font-size: var(--font-size-3xl); }
         }
     </style>
 </head>
 <body>
     <!-- Theme Toggle -->
     <button id="themeToggle" class="login-theme-toggle" aria-label="Toggle theme">
-        <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;">☀️</span>
-        <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;">🌙</span>
+        <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;"><i class="bi bi-sun"></i></span>
+        <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;"><i class="bi bi-moon-stars"></i></span>
     </button>
 
-    <div class="login-main-container">
-        <div class="login-container">
-            <div class="hero-title">DocFlowHub</div>
-            <div class="hero-subtitle">Welcome back! Sign in to your account</div>
+    <div class="auth-split">
+        <aside class="auth-brand">
+            <div class="auth-brand-content">
+                <div class="auth-logo">
+                    <div class="auth-logo-mark">D</div>
+                    <span>DocFlowHub</span>
+                </div>
+                <h1 class="auth-brand-title">Manage documents with AI-powered clarity.</h1>
+                <p class="auth-brand-sub">Versioning, summaries, and team collaboration — all in one place.</p>
+                <ul class="auth-brand-features">
+                    <li><i class="bi bi-layers"></i> Version history &amp; change tracking</li>
+                    <li><i class="bi bi-robot"></i> AI summaries &amp; version comparison</li>
+                    <li><i class="bi bi-people"></i> Teams, projects &amp; shared folders</li>
+                </ul>
+            </div>
+        </aside>
 
-            <form id="account" method="post">
+        <main class="auth-form-side">
+            <div class="auth-form-inner">
+                <div class="hero-title">Welcome back</div>
+                <div class="hero-subtitle">Sign in to your account</div>
+
+                <form id="account" method="post">
                 @if (!ViewData.ModelState.IsValid)
                 {
                     <div class="validation-summary" asp-validation-summary="ModelOnly" role="alert"></div>
@@ -397,7 +447,8 @@
                     </form>
                 </div>
             }
-        </div>
+            </div>
+        </main>
     </div>
 
     <!-- Scripts -->

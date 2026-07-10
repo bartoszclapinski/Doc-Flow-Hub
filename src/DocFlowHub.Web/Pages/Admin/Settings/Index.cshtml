@@ -405,7 +405,7 @@
     .setting-textarea:focus {
         outline: none;
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
     }
     
     .setting-textarea { font-family: monospace; resize: vertical; }
@@ -438,7 +438,7 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.85rem 2rem;
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
         color: white;
         border: none;
         border-radius: 12px;
@@ -450,7 +450,7 @@
     
     .save-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
     }
     
     .cancel-btn {
@@ -485,10 +485,10 @@
     }
     
     /* ===== DARK THEME ADJUSTMENTS ===== */
-    [data-theme="dark"] .settings-category-card { background: rgba(45, 45, 45, 0.8); }
-    [data-theme="dark"] .category-header { background: rgba(60, 60, 60, 0.5); }
-    [data-theme="dark"] .setting-item:hover { background: rgba(60, 60, 60, 0.5); }
-    [data-theme="dark"] .settings-actions-card { background: rgba(45, 45, 45, 0.8); }
+    [data-theme="dark"] .settings-category-card { background: var(--container-bg); }
+    [data-theme="dark"] .category-header { background: var(--surface-secondary); }
+    [data-theme="dark"] .setting-item:hover { background: var(--surface-secondary); }
+    [data-theme="dark"] .settings-actions-card { background: var(--container-bg); }
 </style>
 }
 

@@ -322,14 +322,14 @@
     }
     
     .modern-btn-primary {
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
         color: white;
         border: none;
     }
     
     .modern-btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
         color: white;
     }
     
@@ -405,7 +405,7 @@
     .filter-select:focus {
         outline: none;
         border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
     }
     
     .filter-btn {
@@ -427,7 +427,7 @@
     }
     
     .filter-btn-primary:hover {
-        background: rgba(5, 150, 105, 0.9);
+        background: rgba(2, 132, 199, 0.9);
     }
     
     /* Folder Tree Card */
@@ -677,7 +677,7 @@
         font-size: 0.9rem;
         font-weight: 600;
         color: white;
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(5, 150, 105, 0.8) 100%);
+        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
         border-radius: 12px;
         text-decoration: none;
         transition: all 0.3s ease;
@@ -685,7 +685,7 @@
     
     .empty-action-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
         color: white;
     }
     
@@ -868,13 +868,13 @@
     }
     
     /* ===== DARK THEME ADJUSTMENTS ===== */
-    [data-theme="dark"] .modern-breadcrumb { background: rgba(45, 45, 45, 0.8); }
-    [data-theme="dark"] .folders-filter-panel { background: rgba(45, 45, 45, 0.8); }
-    [data-theme="dark"] .folders-tree-card { background: rgba(45, 45, 45, 0.8); }
-    [data-theme="dark"] .tree-search-bar { background: rgba(60, 60, 60, 0.6); }
-    [data-theme="dark"] .folder-item { background: rgba(60, 60, 60, 0.5); }
+    [data-theme="dark"] .modern-breadcrumb { background: var(--container-bg); }
+    [data-theme="dark"] .folders-filter-panel { background: var(--container-bg); }
+    [data-theme="dark"] .folders-tree-card { background: var(--container-bg); }
+    [data-theme="dark"] .tree-search-bar { background: var(--surface-secondary); }
+    [data-theme="dark"] .folder-item { background: var(--surface-secondary); }
     [data-theme="dark"] .folder-item:hover { background: rgba(70, 70, 70, 0.7); }
-    [data-theme="dark"] .modern-modal { background: rgba(45, 45, 45, 0.98); }
+    [data-theme="dark"] .modern-modal { background: var(--container-bg-solid); }
     [data-theme="dark"] .folders-empty-state { background: transparent; }
 </style>
 }
