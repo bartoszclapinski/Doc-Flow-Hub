@@ -124,6 +124,73 @@
             gap: 16px;
         }
 
+        /* Header search (center) */
+        .nav-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            max-width: 480px;
+            margin: 0 24px;
+        }
+
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: var(--surface-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            transition: var(--transition-all);
+        }
+
+        .header-search:focus-within {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .header-search i {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .header-search input {
+            border: none;
+            background: transparent;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .header-search input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Header Upload button (primary action) */
+        .header-upload-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent-color);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: var(--transition-all);
+        }
+
+        .header-upload-btn:hover {
+            background: var(--accent-hover);
+            color: var(--text-inverse);
+            transform: translateY(-1px);
+        }
+
                  .theme-toggle {
              background: var(--surface-secondary);
              border: 1px solid var(--border-color);
@@ -269,6 +336,13 @@
             max-height: calc(100vh - 72px);
         }
 
+        /* Constrain content width on large/4K screens so it doesn't stretch */
+        .content-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
         /* Responsive */
         @@media (max-width: 1024px) {
             .sidebar {
@@ -297,7 +371,11 @@
             .nav-links {
                 display: none;
             }
-            
+
+            .nav-center {
+                display: none;
+            }
+
             .mobile-menu-toggle {
                 display: block;
             }
@@ -315,8 +393,12 @@
             .nav-right {
                 gap: 8px;
             }
-            
+
             .user-menu span:not(.user-avatar) {
+                display: none;
+            }
+
+            .header-upload-btn span {
                 display: none;
             }
         }
@@ -407,32 +489,27 @@
                 <div class="logo-icon">D</div>
                 <span>DocFlowHub</span>
             </a>
-                         <nav class="nav-links">
-                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Index" ? "active" : "")" asp-area="" asp-page="/Index">
-                     <i class="bi bi-house"></i> Home
-                 </a>
-                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Documents") == true ? "active" : "")" asp-area="" asp-page="/Documents/Index">
-                     <i class="bi bi-folder"></i> Documents
-                 </a>
-                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Projects") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
-                     <i class="bi bi-kanban"></i> Projects
-                 </a>
-                 <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Teams") == true ? "active" : "")" asp-area="" asp-page="/Teams/Index">
-                     <i class="bi bi-people"></i> Teams
-                 </a>
-                 @if (SignInManager.IsSignedIn(User))
-                 {
-                     <a class="nav-link @(ViewContext.RouteData.Values["Page"]?.ToString()?.StartsWith("/Settings") == true ? "active" : "")" asp-area="" asp-page="/Settings/AI">
-                         <i class="bi bi-robot"></i> AI Settings
-                     </a>
-                 }
-             </nav>
         </div>
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <div class="nav-center">
+                <form class="header-search" method="get" asp-area="" asp-page="/Documents/Index" role="search">
+                    <i class="bi bi-search"></i>
+                    <input type="search" name="Filter.SearchTerm" placeholder="Search documents..." aria-label="Search documents" />
+                </form>
+            </div>
+        }
         <div class="nav-right">
-                         <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                 <span class="theme-icon theme-icon-light">☀️</span>
-                 <span class="theme-icon theme-icon-dark">🌙</span>
-             </button>
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <a class="header-upload-btn" asp-area="" asp-page="/Documents/Upload">
+                    <i class="bi bi-cloud-upload"></i> <span>Upload</span>
+                </a>
+            }
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <span class="theme-icon theme-icon-light"><i class="bi bi-sun"></i></span>
+                <span class="theme-icon theme-icon-dark"><i class="bi bi-moon-stars"></i></span>
+            </button>
             <partial name="_LoginPartial" />
         </div>
     </header>
@@ -519,7 +596,9 @@
 
          <!-- Content -->
          <main class="content">
-             @RenderBody()
+             <div class="content-container">
+                 @RenderBody()
+             </div>
          </main>
      </div>
 
