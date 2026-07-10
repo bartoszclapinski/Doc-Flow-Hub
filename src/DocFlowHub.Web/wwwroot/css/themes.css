@@ -26,6 +26,9 @@
   --text-primary: #0f172a;
   --text-secondary: #5c6b7f;
   --text-muted: #94a3b8;
+  /* Alias: several pages reference --text-tertiary (never defined); map it to
+     --text-muted so it resolves and auto-adapts per theme. */
+  --text-tertiary: var(--text-muted);
   --text-inverse: #ffffff;
 
   /* Border Colors */
