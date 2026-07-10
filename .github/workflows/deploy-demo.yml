@@ -1,0 +1,43 @@
+name: Deploy demo to Azure
+
+# Manual-trigger only — click "Run workflow" in the Actions tab when you want to
+# deploy the read-only demo. (No push trigger, so normal commits never deploy.)
+on:
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: docflowhub-demo        # <-- set to your Azure App Service name
+  DOTNET_VERSION: '9.0.x'
+  PUBLISH_DIR: ${{ github.workspace }}/publish
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore DocFlowHub.sln
+
+      - name: Build
+        run: dotnet build DocFlowHub.sln -c Release --no-restore
+
+      - name: Publish web app
+        run: dotnet publish src/DocFlowHub.Web/DocFlowHub.Web.csproj -c Release -o "${{ env.PUBLISH_DIR }}" --no-build
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.PUBLISH_DIR }}
+
+# On first request after deploy, the app runs EF migrations and (because
+# DemoMode:Enabled=true) seeds the demo dataset. No AI key is configured, so
+# AI generation is disabled by design.
