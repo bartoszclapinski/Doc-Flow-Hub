@@ -72,26 +72,90 @@
             opacity: 1;
         }
 
-        .register-main-container {
+        /* Split layout: branded panel (left) + form (right) */
+        .auth-split {
             display: flex;
             min-height: 100vh;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-6);
         }
 
+        .auth-brand {
+            flex: 1 1 45%;
+            /* Deep sky -> violet ties the accent (actions) and AI identities;
+               theme-independent so white text stays readable in both themes. */
+            background: linear-gradient(160deg, #0284c7 0%, #0369a1 52%, #6d28d9 135%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-16) var(--spacing-12);
+            position: relative;
+            overflow: hidden;
+        }
 
+        .auth-brand-content { max-width: 460px; position: relative; z-index: 1; }
 
-        .register-container {
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-2xl);
-            padding: var(--spacing-12) var(--spacing-10);
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            font-size: var(--font-size-2xl);
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--spacing-10);
+        }
+
+        .auth-logo-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-lg);
+            background: rgba(255, 255, 255, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: var(--font-weight-extrabold);
+            font-size: 22px;
+        }
+
+        .auth-brand-title {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-extrabold);
+            line-height: 1.15;
+            margin: 0 0 var(--spacing-4) 0;
+        }
+
+        .auth-brand-sub {
+            font-size: var(--font-size-lg);
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0 0 var(--spacing-10) 0;
+        }
+
+        .auth-brand-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: var(--spacing-4);
+        }
+
+        .auth-brand-features li {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-3);
+            font-size: var(--font-size-base);
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .auth-brand-features i { font-size: 1.2rem; opacity: 0.9; }
+
+        .auth-form-side {
+            flex: 1 1 55%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-12);
+        }
+
+        .auth-form-inner {
             width: 100%;
-            max-width: 420px;
-            box-shadow: var(--shadow-glass);
+            max-width: 440px;
         }
 
         .hero-title {
@@ -243,52 +307,20 @@
             box-shadow: var(--shadow-sm);
         }
 
-        @@media (max-width: 1024px) {
-            .register-main-container {
-                flex-direction: column;
-            }
-            
-            .info-section {
-                padding: 40px 20px;
-                min-height: 40vh;
-            }
-            
-            .info-title {
-                font-size: 2.5rem;
-            }
-            
-            .stats-section {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 1rem;
-            }
-            
-            .register-container {
-                padding: 40px 20px;
+        /* Responsive Design — collapse to form-only on narrow screens */
+        @@media (max-width: 900px) {
+            .auth-brand { display: none; }
+            .auth-form-side {
+                flex-basis: 100%;
+                padding: var(--spacing-8);
             }
         }
 
         @@media (max-width: 768px) {
-            .info-title {
-                font-size: 2rem;
-            }
-            
-            .info-subtitle {
-                font-size: 1.1rem;
-            }
-            
-            .register-form-container {
-                padding: 2rem;
-                border-radius: 16px;
-            }
-            
             .form-row {
                 grid-template-columns: 1fr;
             }
-            
-            .stats-section {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
+
             .register-theme-toggle {
                 top: 15px;
                 right: 15px;
@@ -298,22 +330,38 @@
         }
 
         @@media (max-width: 480px) {
-            .register-container {
-                padding: var(--spacing-6);
-            }
+            .auth-form-side { padding: var(--spacing-6); }
+            .hero-title { font-size: var(--font-size-3xl); }
         }
     </style>
 </head>
 <body>
     <button id="themeToggle" class="register-theme-toggle" aria-label="Toggle theme">
-        <span class="theme-icon theme-icon-light">☀️</span>
-        <span class="theme-icon theme-icon-dark" style="position: absolute;">🌙</span>
+        <span class="theme-icon theme-icon-light"><i class="bi bi-sun"></i></span>
+        <span class="theme-icon theme-icon-dark" style="position: absolute;"><i class="bi bi-moon-stars"></i></span>
     </button>
 
-    <div class="register-main-container">
-        <div class="register-container">
-            <div class="hero-title">DocFlowHub</div>
-            <div class="hero-subtitle">Create your account and get started today</div>
+    <div class="auth-split">
+        <aside class="auth-brand">
+            <div class="auth-brand-content">
+                <div class="auth-logo">
+                    <div class="auth-logo-mark">D</div>
+                    <span>DocFlowHub</span>
+                </div>
+                <h1 class="auth-brand-title">Join teams already working smarter.</h1>
+                <p class="auth-brand-sub">Create an account to organize, version, and understand your documents with AI.</p>
+                <ul class="auth-brand-features">
+                    <li><i class="bi bi-layers"></i> Version history &amp; change tracking</li>
+                    <li><i class="bi bi-robot"></i> AI summaries &amp; version comparison</li>
+                    <li><i class="bi bi-people"></i> Teams, projects &amp; shared folders</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="auth-form-side">
+            <div class="auth-form-inner">
+                <div class="hero-title">Create your account</div>
+                <div class="hero-subtitle">Get started with DocFlowHub today</div>
 
                 <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
                     <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
@@ -370,7 +418,7 @@
                     </div>
                 }
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
