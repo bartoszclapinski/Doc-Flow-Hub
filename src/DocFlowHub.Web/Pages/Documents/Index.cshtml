@@ -1215,40 +1215,17 @@
         }
 
         .modern-btn-primary {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: var(--text-inverse);
+            box-shadow: 0 6px 20px var(--accent-light);
             border: none;
         }
 
         .modern-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
-            color: white;
-            background: linear-gradient(135deg, #34d399, #10b981);
-        }
-
-        /* Theme-specific overrides for primary buttons */
-        [data-theme="light"] .modern-btn-primary {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        [data-theme="light"] .modern-btn-primary:hover {
-            background: linear-gradient(135deg, #34d399, #10b981);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-        }
-
-        [data-theme="dark"] .modern-btn-primary {
-            background: linear-gradient(135deg, #34d399, #10b981);
-            color: white;
-            box-shadow: 0 6px 20px rgba(52, 211, 153, 0.3);
-        }
-
-        [data-theme="dark"] .modern-btn-primary:hover {
-            background: linear-gradient(135deg, #6ee7b7, #34d399);
-            box-shadow: 0 8px 25px rgba(110, 231, 183, 0.4);
+            box-shadow: 0 8px 25px var(--accent-light);
+            color: var(--text-inverse);
+            background: linear-gradient(135deg, var(--accent-hover), var(--accent-color));
         }
 
         .modern-btn-outline {
@@ -1260,11 +1237,11 @@
         }
 
         .modern-btn-outline:hover {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            border-color: #10b981;
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.15);
         }
 
         /* Theme-specific overrides for outline buttons */
@@ -1276,9 +1253,9 @@
         }
 
         [data-theme="light"] .modern-btn-outline:hover {
-            background: rgba(16, 185, 129, 0.05);
-            color: #10b981;
-            border-color: #10b981;
+            background: rgba(2, 132, 199, 0.05);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
         }
 
         [data-theme="dark"] .modern-btn-outline {
@@ -1289,9 +1266,9 @@
         }
 
         [data-theme="dark"] .modern-btn-outline:hover {
-            background: rgba(52, 211, 153, 0.1);
-            color: #34d399;
-            border-color: #34d399;
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--accent-hover);
+            border-color: var(--accent-hover);
         }
 
         /* Filter Actions Specific Styling */
@@ -1725,12 +1702,12 @@
 
         /* Enhanced Bulk Action Bar */
         .bulk-action-card {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border: 1px solid #10b981;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border: 1px solid var(--accent-color);
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 16px;
-            box-shadow: 0 12px 40px color-mix(in srgb, #10b981 25%, transparent);
+            box-shadow: 0 12px 40px color-mix(in srgb, var(--accent-color) 25%, transparent);
             animation: slideInDown 0.3s ease;
         }
 
@@ -1976,8 +1953,8 @@
         }
 
         .modern-checkbox:checked {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border-color: #10b981;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border-color: var(--accent-color);
             transform: scale(1.05);
         }
 
@@ -1993,8 +1970,8 @@
         }
 
         .modern-checkbox:indeterminate {
-            background: linear-gradient(135deg, #10b981, #059669);
-            border-color: #10b981;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border-color: var(--accent-color);
         }
 
         .modern-checkbox:indeterminate::after {
@@ -2009,8 +1986,8 @@
         }
 
         .modern-checkbox:hover {
-            border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
 
         /* Dark mode checkbox styling */
@@ -2020,18 +1997,18 @@
         }
 
         [data-theme="dark"] .modern-checkbox:checked {
-            background: linear-gradient(135deg, #34d399, #10b981);
-            border-color: #34d399;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border-color: var(--accent-hover);
         }
 
         [data-theme="dark"] .modern-checkbox:indeterminate {
-            background: linear-gradient(135deg, #34d399, #10b981);
-            border-color: #34d399;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border-color: var(--accent-hover);
         }
 
         [data-theme="dark"] .modern-checkbox:hover {
-            border-color: #34d399;
-            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
+            border-color: var(--accent-hover);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
 
         /* Table cell styling for checkboxes */
