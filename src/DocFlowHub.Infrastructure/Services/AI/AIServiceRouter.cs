@@ -20,16 +20,26 @@ public class AIServiceRouter : IAIService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AIServiceRouter> _logger;
+    private readonly IDemoModeService _demoMode;
 
-    public AIServiceRouter(IServiceProvider services, IConfiguration configuration, ILogger<AIServiceRouter> logger)
+    private const string DemoDisabledMessage = "AI is disabled in the read-only demo.";
+
+    public AIServiceRouter(IServiceProvider services, IConfiguration configuration, ILogger<AIServiceRouter> logger, IDemoModeService demoMode)
     {
         _services = services;
         _configuration = configuration;
         _logger = logger;
+        _demoMode = demoMode;
     }
 
     public async Task<bool> TestConnectivityAsync()
     {
+        // No outbound AI calls in demo mode — no provider key required in the cloud.
+        if (_demoMode.IsEnabled)
+        {
+            return false;
+        }
+
         var providers = ConfiguredProviders().ToList();
         if (providers.Count == 0)
         {
@@ -50,6 +60,17 @@ public class AIServiceRouter : IAIService
 
     public async Task<AIServiceHealth> GetHealthAsync()
     {
+        if (_demoMode.IsEnabled)
+        {
+            return new AIServiceHealth
+            {
+                IsHealthy = false,
+                ResponseTime = TimeSpan.Zero,
+                CheckedAt = DateTime.UtcNow,
+                Status = DemoDisabledMessage
+            };
+        }
+
         var providers = ConfiguredProviders().ToList();
         if (providers.Count == 0)
         {
@@ -86,6 +107,11 @@ public class AIServiceRouter : IAIService
 
     public async Task<AIResponse> GenerateCompletionAsync(string prompt, string? model = null)
     {
+        if (_demoMode.IsEnabled)
+        {
+            return Failure(model, DemoDisabledMessage);
+        }
+
         var (service, error, effectiveModel) = ResolveForCompletion(model);
         return service is null
             ? Failure(model, error)
@@ -94,6 +120,11 @@ public class AIServiceRouter : IAIService
 
     public async Task<AIResponse> GenerateCompletionAsync(string prompt, string systemMessage, string? model = null)
     {
+        if (_demoMode.IsEnabled)
+        {
+            return Failure(model, DemoDisabledMessage);
+        }
+
         var (service, error, effectiveModel) = ResolveForCompletion(model);
         return service is null
             ? Failure(model, error)
