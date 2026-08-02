@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Core.Models.AI;
 
@@ -10,13 +13,16 @@ namespace DocFlowHub.Web.Pages.Admin;
 public class UserLimitsModel : PageModel
 {
     private readonly IAIUsageTrackingService _usageTrackingService;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<UserLimitsModel> _logger;
 
     public UserLimitsModel(
         IAIUsageTrackingService usageTrackingService,
+        UserManager<ApplicationUser> userManager,
         ILogger<UserLimitsModel> logger)
     {
         _usageTrackingService = usageTrackingService;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -31,6 +37,12 @@ public class UserLimitsModel : PageModel
 
     public List<UserRateLimits>? UserLimits { get; set; }
     public UserLimitsOverview? LimitsOverview { get; set; }
+
+    /// <summary>
+    /// UserId -> email, so the table can identify people by address instead of a
+    /// truncated GUID. Populated alongside <see cref="UserLimits"/>.
+    /// </summary>
+    public Dictionary<string, string> UserEmails { get; set; } = new();
 
     [TempData]
     public string? StatusMessage { get; set; }
@@ -157,20 +169,41 @@ public class UserLimitsModel : PageModel
     {
         try
         {
-            // For now, initialize with empty list since we don't have a method to get all users' rate limits
-            // In a real implementation, you would call a method that returns all users
-            UserLimits = new List<UserRateLimits>();
-            
-            // Create sample/empty data structure for demonstration
-            var sampleUsers = new List<UserRateLimits>();
-            
-            // Filter based on search criteria (no users to filter for now)
-            var filteredUsers = sampleUsers.AsEnumerable();
-                
+            // Load every user, then ask the tracking service for each one's real limits.
+            // GetUserRateLimitsAsync owns the usage queries (and caches per user), so the
+            // counting logic stays in one place rather than being duplicated here.
+            var users = await _userManager.Users
+                .Select(u => new { u.Id, u.Email })
+                .ToListAsync();
+
+            UserEmails = users
+                .Where(u => !string.IsNullOrEmpty(u.Email))
+                .ToDictionary(u => u.Id, u => u.Email!);
+
+            var loaded = new List<UserRateLimits>();
+            foreach (var user in users)
+            {
+                var result = await _usageTrackingService.GetUserRateLimitsAsync(user.Id);
+                if (result.Succeeded && result.Data != null)
+                {
+                    loaded.Add(result.Data);
+                }
+                else
+                {
+                    _logger.LogWarning("Could not load rate limits for user {UserId}: {Error}",
+                        user.Id, result.Error);
+                }
+            }
+
+            var filteredUsers = loaded.AsEnumerable();
+
             if (!string.IsNullOrEmpty(Search))
             {
-                filteredUsers = filteredUsers.Where(u => 
-                    u.UserId?.Contains(Search, StringComparison.OrdinalIgnoreCase) == true);
+                // Match on email as well as id — an admin searching this page types an address.
+                filteredUsers = filteredUsers.Where(u =>
+                    u.UserId?.Contains(Search, StringComparison.OrdinalIgnoreCase) == true
+                    || (UserEmails.TryGetValue(u.UserId ?? string.Empty, out var email)
+                        && email.Contains(Search, StringComparison.OrdinalIgnoreCase)));
             }
             
             if (!string.IsNullOrEmpty(Status))
