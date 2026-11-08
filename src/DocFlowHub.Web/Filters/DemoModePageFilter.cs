@@ -27,6 +27,7 @@ public class DemoModePageFilter : IAsyncPageFilter
     {
         "/Account/Login",
         "/Account/Logout",
+        "/Error", // the exception handler re-runs a failed POST as a POST to /Error
     };
 
     // POST handler names allowed on any page (safe, non-mutating actions).
