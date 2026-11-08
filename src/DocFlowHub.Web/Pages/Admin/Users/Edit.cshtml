@@ -170,13 +170,13 @@ else
                         <div class="row">
                             <div class="col-md-3 text-center">
                                 <div class="bg-primary bg-opacity-10 rounded p-3">
-                                    <div class="fw-bold text-primary fs-4">@Model.UserStats?.DocumentCount ?? 0</div>
+                                    <div class="fw-bold text-primary fs-4">@(Model.UserStats?.DocumentCount ?? 0)</div>
                                     <small class="text-muted">Documents</small>
                                 </div>
                             </div>
                             <div class="col-md-3 text-center">
                                 <div class="bg-success bg-opacity-10 rounded p-3">
-                                    <div class="fw-bold text-success fs-4">@Model.UserStats?.TeamCount ?? 0</div>
+                                    <div class="fw-bold text-success fs-4">@(Model.UserStats?.TeamCount ?? 0)</div>
                                     <small class="text-muted">Teams</small>
                                 </div>
                             </div>

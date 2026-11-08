@@ -85,3 +85,6 @@ github-*.*
 tests/DocFlowHub.Tests/appsettings.Test.json
 
 screenshots/
+# Local-only: Claude Code per-machine permissions, design handoff (already implemented in PR #56)
+.claude/settings.local.json
+.ai/design/
