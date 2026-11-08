@@ -282,7 +282,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 **Links**
 
-- **Live Demo**: [DocFlowHub Demo](https://demo.docflowhub.com) *(Coming Soon)*
+- **Live Demo**: [docflowhub-demo.onrender.com](https://docflowhub-demo.onrender.com) — read-only; log in as `demo@docflowhub.com` or `demo-admin@docflowhub.com` (password `Demo123!`). The free server sleeps when idle, so the first visit can take a minute.
 - **Documentation**: [Full Documentation](https://docs.docflowhub.com) *(Coming Soon)*
 - **API Reference**: [API Documentation](https://api.docflowhub.com) *(Coming Soon)*
 - **Support**: [GitHub Issues](https://github.com/bartoszclapinski/Doc-Flow-Hub/issues)
