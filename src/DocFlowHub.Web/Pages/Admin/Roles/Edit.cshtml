@@ -77,13 +77,13 @@ else
                         <div class="row">
                             <div class="col-md-3 text-center">
                                 <div class="bg-primary bg-opacity-10 rounded p-3">
-                                    <div class="fw-bold text-primary fs-4">@Model.RoleStats?.UsersCount ?? 0</div>
+                                    <div class="fw-bold text-primary fs-4">@(Model.RoleStats?.UsersCount ?? 0)</div>
                                     <small class="text-muted">Assigned Users</small>
                                 </div>
                             </div>
                             <div class="col-md-3 text-center">
                                 <div class="bg-success bg-opacity-10 rounded p-3">
-                                    <div class="fw-bold text-success fs-4">@Model.RoleStats?.ActiveUsers ?? 0</div>
+                                    <div class="fw-bold text-success fs-4">@(Model.RoleStats?.ActiveUsers ?? 0)</div>
                                     <small class="text-muted">Active Users</small>
                                 </div>
                             </div>

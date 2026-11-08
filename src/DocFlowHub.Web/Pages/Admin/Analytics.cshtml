@@ -37,10 +37,10 @@
                         <i class="bi bi-people text-primary fs-4"></i>
                     </div>
                 </div>
-                <h4 class="fw-bold mb-1" id="total-users">@Model.SystemStats?.TotalUsers ?? 0</h4>
+                <h4 class="fw-bold mb-1" id="total-users">@(Model.SystemStats?.TotalUsers ?? 0)</h4>
                 <p class="text-muted mb-0">Total Users</p>
                 <small class="text-success">
-                    <i class="bi bi-arrow-up"></i> @Model.SystemStats?.ActiveUsers ?? 0 active
+                    <i class="bi bi-arrow-up"></i> @(Model.SystemStats?.ActiveUsers ?? 0) active
                 </small>
             </div>
         </div>
@@ -53,7 +53,7 @@
                         <i class="bi bi-cpu text-success fs-4"></i>
                     </div>
                 </div>
-                <h4 class="fw-bold mb-1" id="total-operations">@Model.SystemStats?.TotalOperations.ToString("N0") ?? "0"</h4>
+                <h4 class="fw-bold mb-1" id="total-operations">@(Model.SystemStats?.TotalOperations.ToString("N0") ?? "0")</h4>
                 <p class="text-muted mb-0">Total Operations</p>
                 <small class="text-success">
                     <i class="bi bi-check-circle"></i> @((Model.SystemStats?.ErrorRate * 100)?.ToString("F1") ?? "0")% success rate
@@ -72,7 +72,7 @@
                 <h4 class="fw-bold mb-1" id="total-cost">$@((Model.SystemStats?.TotalCost)?.ToString("F2") ?? "0.00")</h4>
                 <p class="text-muted mb-0">Total Cost</p>
                 <small class="text-info">
-                    <i class="bi bi-speedometer2"></i> @Model.SystemStats?.AverageResponseTime.TotalSeconds.ToString("F1") ?? "0"s avg response
+                    <i class="bi bi-speedometer2"></i> @(Model.SystemStats?.AverageResponseTime.TotalSeconds.ToString("F1") ?? "0")s avg response
                 </small>
             </div>
         </div>
@@ -265,7 +265,10 @@
 </div>
 
 @section Scripts {
-    <script src="~/lib/chart.js/chart.min.js"></script>
+    @* UMD build: the ESM chart.min.js cannot be loaded by a classic <script> tag
+       (it starts with `import` and pulls a ./chunks/ file that was never vendored),
+       which left Chart undefined and every canvas on this page blank. *@
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
     <script>
         let trendsChart, modelChart, errorChart;
         let currentPeriod = 30;
