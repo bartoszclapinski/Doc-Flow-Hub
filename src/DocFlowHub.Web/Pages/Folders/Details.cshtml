@@ -1009,8 +1009,16 @@
         function downloadDocument(documentId) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '/Documents/Details/' + documentId + '?handler=Download';
-            
+            // Documents/Index's Download handler resolves the current version itself
+            // (Details' handler needs a versionId this view doesn't have).
+            form.action = '/Documents?handler=Download';
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'documentId';
+            idInput.value = documentId;
+            form.appendChild(idInput);
+
             const token = document.querySelector('input[name="__RequestVerificationToken"]');
             if (token) {
                 const tokenInput = document.createElement('input');
