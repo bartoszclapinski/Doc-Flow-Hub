@@ -13,6 +13,13 @@ using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Hosts such as Render tell the app which port to listen on through PORT.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -56,9 +63,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
-// Initialize database (migrations + seed). Transient errors are already retried for about
-// two minutes. If the database is still unreachable (e.g. the free Azure SQL monthly quota
-// is used up), keep the site running so visitors get the error page instead of a crash loop.
+// Initialize database (schema + seed). On SQL Server, transient errors are already retried
+// for about two minutes. If the database is still unreachable, keep the site running so
+// visitors get the error page instead of a crash loop.
 try
 {
     await DbInitializer.InitializeAsync(app.Services);
@@ -86,7 +93,10 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 
-// Keep crawlers out of the public demo: every visit can wake the free-tier database.
+// Liveness check for the host (Render's health check); doesn't touch the database.
+app.MapGet("/healthz", () => Results.Text("ok"));
+
+// Keep crawlers out of the public demo: every visit wakes the sleeping free instance.
 if (app.Services.GetRequiredService<IDemoModeService>().IsEnabled)
 {
     app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /\n"));

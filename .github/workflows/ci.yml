@@ -27,3 +27,12 @@ jobs:
     # LiveStorage tests need a real Azure Storage key (local-only appsettings.Test.json).
     - name: Test
       run: dotnet test --no-build --verbosity normal --filter "Category!=LiveStorage"
+
+  # Render deploys master only after these checks pass, so make sure the demo image builds.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build demo image
+      run: docker build -t docflowhub-demo .

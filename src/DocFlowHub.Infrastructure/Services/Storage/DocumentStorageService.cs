@@ -69,27 +69,10 @@ public class DocumentStorageService : IDocumentStorageService
         {
             await EnsureInitializedAsync();
 
-            if (file == null || file.Length == 0)
+            var error = await DocumentUploadRules.ValidateAsync(file, _options);
+            if (error != null)
             {
-                return ServiceResult<string>.Failure("No file was provided");
-            }
-
-            if (file.Length > _options.MaxFileSizeBytes)
-            {
-                return ServiceResult<string>.Failure($"File size exceeds maximum allowed size of {_options.MaxFileSizeBytes / 1024 / 1024}MB");
-            }
-
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!_options.AllowedFileTypes.Contains(extension))
-            {
-                return ServiceResult<string>.Failure($"File type {extension} is not allowed");
-            }
-
-            // Content sniffing: reject files whose bytes don't match the declared extension
-            // (e.g. an executable renamed to .pdf), so the whitelist can't be bypassed by rename.
-            if (!await FileSignatureValidator.IsContentValidAsync(file, extension))
-            {
-                return ServiceResult<string>.Failure($"File content does not match its {extension} extension");
+                return ServiceResult<string>.Failure(error);
             }
 
             var blobName = GetBlobName(documentId, versionNumber);

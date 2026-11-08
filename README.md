@@ -262,6 +262,9 @@ DocFlowHub/
 - **Database Migration**: Safe production database updates
 - **Monitoring**: Application insights and performance tracking
 
+### **Public Demo**
+- **Read-only demo on Render (free)**: one self-contained Docker container (SQLite + local files, seeded on start), deployed from `master` after CI passes. See [docs/demo-deployment.md](docs/demo-deployment.md).
+
 ### **CI/CD Pipeline**
 - **GitHub Actions**: Automated build and deployment
 - **Quality Gates**: Automated testing and quality checks

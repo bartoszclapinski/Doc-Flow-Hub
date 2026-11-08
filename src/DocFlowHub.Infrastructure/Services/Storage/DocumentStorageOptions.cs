@@ -12,6 +12,10 @@ public class DocumentStorageOptions
         ".pdf", ".doc", ".docx", ".txt", ".md",
         ".jpg", ".jpeg", ".png", ".gif"
     };
+    /// <summary>"Azure" (default) or "Local" — files on the server's disk, used by the self-contained demo.</summary>
+    public string Provider { get; set; } = "Azure";
+    /// <summary>Folder for the Local provider.</summary>
+    public string LocalPath { get; set; } = Path.Combine(Path.GetTempPath(), "docflowhub-files");
     public string AccountName { get; set; } = string.Empty;
     public string AccountKey { get; set; } = string.Empty;
 } 

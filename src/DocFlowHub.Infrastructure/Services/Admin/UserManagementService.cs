@@ -49,13 +49,15 @@ public class UserManagementService : IUserManagementService
             // Apply status filter
             if (filter.Status.HasValue && filter.Status != UserStatus.All)
             {
+                // Pass "now" as a parameter: SQLite (the demo database) can't translate DateTimeOffset.UtcNow.
+                var nowOffset = DateTimeOffset.UtcNow;
                 switch (filter.Status.Value)
                 {
                     case UserStatus.Active:
-                        query = query.Where(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= DateTimeOffset.UtcNow);
+                        query = query.Where(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= nowOffset);
                         break;
                     case UserStatus.Locked:
-                        query = query.Where(u => u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow);
+                        query = query.Where(u => u.LockoutEnd.HasValue && u.LockoutEnd > nowOffset);
                         break;
                     case UserStatus.EmailNotConfirmed:
                         query = query.Where(u => !u.EmailConfirmed);
@@ -127,10 +129,12 @@ public class UserManagementService : IUserManagementService
             var today = now.Date;
             var weekAgo = today.AddDays(-7);
             var monthAgo = today.AddMonths(-1);
+            // Pass "now" as a parameter: SQLite (the demo database) can't translate DateTimeOffset.UtcNow.
+            var nowOffset = DateTimeOffset.UtcNow;
 
             var totalUsers = await _context.Users.CountAsync();
-            var activeUsers = await _context.Users.CountAsync(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= DateTimeOffset.UtcNow);
-            var lockedUsers = await _context.Users.CountAsync(u => u.LockoutEnd.HasValue && u.LockoutEnd > DateTimeOffset.UtcNow);
+            var activeUsers = await _context.Users.CountAsync(u => !u.LockoutEnd.HasValue || u.LockoutEnd <= nowOffset);
+            var lockedUsers = await _context.Users.CountAsync(u => u.LockoutEnd.HasValue && u.LockoutEnd > nowOffset);
             var unconfirmedUsers = await _context.Users.CountAsync(u => !u.EmailConfirmed);
             var newUsersToday = await _context.Users.CountAsync(u => u.CreatedAt >= today);
             var newUsersThisWeek = await _context.Users.CountAsync(u => u.CreatedAt >= weekAgo);

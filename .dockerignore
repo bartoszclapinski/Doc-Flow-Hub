@@ -1,0 +1,25 @@
+# Build output
+**/bin/
+**/obj/
+**/wwwroot/lib/
+
+# Local-only config and secrets — never bake them into the image
+**/appsettings.json
+**/appsettings.*.json
+**/*.PublishSettings
+**/*.pubxml
+**/*.user
+
+# Not needed to build the web app
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.ai/
+.claude/
+doc/
+docs/
+screenshots/
+tests/
+*.md

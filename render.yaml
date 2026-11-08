@@ -1,0 +1,15 @@
+# Render Blueprint for the public, read-only demo (Render → New → Blueprint → pick this repo).
+# The whole demo runs in one free container built from ./Dockerfile; no database or
+# storage service is needed. Configuration lives in the Dockerfile.
+services:
+  - type: web
+    name: docflowhub-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: master
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Deploy every push to master, but only after the GitHub CI checks pass.
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
