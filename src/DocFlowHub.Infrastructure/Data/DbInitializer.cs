@@ -1,6 +1,7 @@
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,15 @@ public static class DbInitializer
         // the schema straight from the model instead.
         if (context.Database.IsSqlite())
         {
+            // SQLite creates the database file but not its folder; hosts may hand the container
+            // an empty /tmp, so create it here instead of relying on the image.
+            var sqlite = new SqliteConnectionStringBuilder(context.Database.GetConnectionString());
+            var inMemory = sqlite.Mode == SqliteOpenMode.Memory || sqlite.DataSource == ":memory:";
+            if (!inMemory && Path.GetDirectoryName(Path.GetFullPath(sqlite.DataSource)) is { Length: > 0 } folder)
+            {
+                Directory.CreateDirectory(folder);
+            }
+
             await context.Database.EnsureCreatedAsync();
         }
         else
