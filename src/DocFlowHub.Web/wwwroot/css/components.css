@@ -234,3 +234,65 @@
 .parent-picker .form-check { margin-bottom: 0.5rem; }
 .parent-picker .form-check-label { cursor: pointer; padding-left: 0.25rem; color: var(--text-primary); }
 .parent-picker .form-check-input:checked + .form-check-label { font-weight: 600; color: var(--accent-color); }
+
+/* ---------------------------------------------------------------------------
+   Tables — theme-aware
+   Bootstrap defaults --bs-table-color to the LIGHT-theme body colour, and the
+   app never overrode it, so in dark mode every table rendered dark text on a
+   dark surface (role names, user lists) and was effectively unreadable.
+   Driving Bootstrap's own table variables from our theme tokens fixes every
+   table at once, in both themes, without per-page !important overrides.
+   --------------------------------------------------------------------------- */
+.table {
+    --bs-table-color: var(--text-primary);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border-color);
+    --bs-table-striped-color: var(--text-primary);
+    --bs-table-striped-bg: var(--surface-secondary);
+    --bs-table-hover-color: var(--text-primary);
+    --bs-table-hover-bg: var(--accent-light);
+    --bs-table-active-color: var(--text-primary);
+    --bs-table-active-bg: var(--accent-light);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.table > thead th,
+.table > thead td {
+    color: var(--text-secondary);
+    border-bottom-color: var(--border-color);
+    font-weight: 600;
+}
+
+.table > tbody td,
+.table > tbody th {
+    border-top-color: var(--border-light);
+}
+
+/* ---------------------------------------------------------------------------
+   Scroll performance — drop backdrop blur from large content surfaces
+   backdrop-filter forces the compositor to re-blur everything behind an element
+   on every frame. Applied to big, always-visible surfaces (table cards, stat
+   cards, page headers, filter panels) that cost is paid continuously while
+   scrolling, which is what made the app stutter.
+
+   These surfaces already use --container-bg at ~80% opacity, so the blur adds
+   almost nothing visually. Blur is deliberately KEPT for modals, dropdowns and
+   the fixed navbar: they are small, transient, and genuinely overlap content.
+
+   !important is required because each page declares these rules in its own
+   inline <style> block, which would otherwise win over this shared sheet.
+   --------------------------------------------------------------------------- */
+.documents-table-card,
+.documents-stat-card,
+.documents-page-header,
+.documents-filter-card,
+.documents-empty-state,
+.pagination-nav,
+.modern-alert,
+.content-card,
+.form-card,
+.stat-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
