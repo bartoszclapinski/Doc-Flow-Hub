@@ -13,6 +13,9 @@ using Xunit;
 
 namespace DocFlowHub.Tests.Unit.Services.Storage;
 
+// Talks to a real Azure Storage account configured in the git-ignored appsettings.Test.json,
+// so CI excludes it (dotnet test --filter "Category!=LiveStorage").
+[Trait("Category", "LiveStorage")]
 public class DocumentStorageServiceTests
 {
     private readonly Mock<IOptions<DocumentStorageOptions>> _optionsMock;

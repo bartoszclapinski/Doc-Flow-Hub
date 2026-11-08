@@ -12,17 +12,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
-        
+        dotnet-version: '10.0.x'
+
     - name: Restore dependencies
       run: dotnet restore
-      
+
     - name: Build
       run: dotnet build --no-restore
-      
+
+    # LiveStorage tests need a real Azure Storage key (local-only appsettings.Test.json).
     - name: Test
-      run: dotnet test --no-build --verbosity normal 
+      run: dotnet test --no-build --verbosity normal --filter "Category!=LiveStorage"

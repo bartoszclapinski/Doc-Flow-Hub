@@ -22,17 +22,23 @@ public static class DbInitializer
         // Seed roles
         await SeedRolesAsync(roleManager);
 
-        // Seed admin user if none exists
-        await SeedAdminUserAsync(userManager);
+        var demoMode = scope.ServiceProvider.GetRequiredService<IDemoModeService>();
+
+        // Seed the default admin if none exists. Skipped in the public demo: its password is
+        // in this repository, and the demo seeds its own read-only admin account instead.
+        if (!demoMode.IsEnabled)
+        {
+            await SeedAdminUserAsync(userManager);
+        }
 
         // In the public read-only demo, seed a large, time-distributed dataset.
-        var demoMode = scope.ServiceProvider.GetRequiredService<IDemoModeService>();
         if (demoMode.IsEnabled)
         {
             var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
 
-            // The storage service throws on construction when storage isn't configured;
-            // the demo still works without it, only seeded downloads are unavailable.
+            // The storage service throws on construction when storage isn't configured. The demo
+            // needs storage (most pages fail without it), but seeding the database still works,
+            // so log the problem instead of stopping here.
             IDocumentStorageService? storage = null;
             try
             {
@@ -40,7 +46,7 @@ public static class DbInitializer
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Document storage is not configured — demo documents will have no downloadable files.");
+                logger.LogError(ex, "Document storage is not configured — set DocumentStorage:ConnectionString. Demo documents get no files and most pages will fail.");
             }
 
             await DemoDataSeeder.SeedAsync(context, userManager, logger, storage);

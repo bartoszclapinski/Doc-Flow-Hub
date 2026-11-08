@@ -20,8 +20,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Retry transient errors (e.g. Azure SQL waking from auto-pause); see the strategy for
+        // why explicit transactions are left un-retried.
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sql => sql.ExecutionStrategy(dependencies => new ResilientSqlServerExecutionStrategy(dependencies))));
 
         // Add Memory Caching for AI Services Performance
         services.AddMemoryCache();

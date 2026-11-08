@@ -56,10 +56,16 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
-// Initialize database
-using (var scope = app.Services.CreateScope())
+// Initialize database (migrations + seed). Transient errors are already retried for about
+// two minutes. If the database is still unreachable (e.g. the free Azure SQL monthly quota
+// is used up), keep the site running so visitors get the error page instead of a crash loop.
+try
 {
     await DbInitializer.InitializeAsync(app.Services);
+}
+catch (Exception ex)
+{
+    app.Logger.LogCritical(ex, "Database initialization failed; the app will start without it. Restart the app once the database is reachable.");
 }
 
 // Configure the HTTP request pipeline.
@@ -79,5 +85,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
+
+// Keep crawlers out of the public demo: every visit can wake the free-tier database.
+if (app.Services.GetRequiredService<IDemoModeService>().IsEnabled)
+{
+    app.MapGet("/robots.txt", () => Results.Text("User-agent: *\nDisallow: /\n"));
+}
 
 app.Run();
