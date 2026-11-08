@@ -72,10 +72,11 @@ admin dashboards/charts populated.
 
 ## Notes & limits
 
-- **Downloads of seeded documents** won't return a real file — the seed creates document
-  *metadata* (for lists, details, versions, and charts) with placeholder storage paths, not
-  actual blobs. Everything else (browsing, search, details, admin analytics) works. To make
-  downloads work, upload matching blobs to the `documents` container or extend the seeder.
+- **Downloads of seeded documents** work: the seed generates a small real file (PDF, DOCX,
+  TXT or MD) for every version and uploads it to the `documents` container. If storage was
+  unreachable on the first run, the missing files are uploaded on the next app start (check
+  the log for "Demo file upload failed" / "backfilling"). If `DocumentStorage__*` isn't set
+  at all, the demo still runs, but downloads of seeded documents fail.
 - **F1 Free** sleeps when idle and has limited CPU/RAM — fine for a demo, not for load.
 - To take the demo down, stop or delete the App Service; to reset data, drop the SQL
   database and let the next request re-migrate + re-seed.

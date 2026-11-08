@@ -30,7 +30,20 @@ public static class DbInitializer
         if (demoMode.IsEnabled)
         {
             var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DemoDataSeeder");
-            await DemoDataSeeder.SeedAsync(context, userManager, logger);
+
+            // The storage service throws on construction when storage isn't configured;
+            // the demo still works without it, only seeded downloads are unavailable.
+            IDocumentStorageService? storage = null;
+            try
+            {
+                storage = scope.ServiceProvider.GetRequiredService<IDocumentStorageService>();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Document storage is not configured — demo documents will have no downloadable files.");
+            }
+
+            await DemoDataSeeder.SeedAsync(context, userManager, logger, storage);
         }
     }
 
