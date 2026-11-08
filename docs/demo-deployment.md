@@ -1,20 +1,21 @@
-# Deploying the read-only demo to Azure (free tiers)
+# Deploying the read-only demo (Render, free)
 
-This is the step-by-step for putting DocFlowHub online as a **public, read-only demo**
-on free Azure tiers. The app code is demo-ready; it needs three Azure resources, a few
-app settings and one GitHub Actions run.
+The public demo is **one self-contained container** on Render's free plan. There is no
+database server and no cloud storage: on every start the app creates a fresh SQLite
+database inside the container, seeds the demo data and writes the demo files to the
+container's disk. Nothing needs to persist, because the demo is read-only.
 
-What "demo mode" does (all controlled by `DemoMode:Enabled=true`):
+What "demo mode" does (`DemoMode:Enabled=true`):
 - **Read-only**: every mutating action is blocked server-side (you can browse, search
   and download; you can't create, edit or delete).
 - **Registration disabled**: the sign-in page shows the two demo logins instead.
 - **AI disabled**: no provider key is needed; documents show pre-seeded summaries.
-- **Seeded data**: on start the DB is migrated and filled with demo content (documents
-  with real downloadable files, teams, projects, folders and ~90 days of usage data for
-  the admin charts).
+- **Seeded data**: documents with real downloadable files (PDF, DOCX, TXT, MD), teams,
+  projects, folders and ~90 days of usage data for the admin charts, dated relative to
+  the moment the container started.
 - **No default admin**: the `admin@docflowhub.com` account (its password is in this repo)
   is not created in demo mode.
-- **`/robots.txt` disallows crawling**: every visit can wake the free-tier database.
+- **`/robots.txt` disallows crawling.**
 
 Demo logins (shown on the sign-in page):
 - User: `demo@docflowhub.com` / `Demo123!`
@@ -22,84 +23,60 @@ Demo logins (shown on the sign-in page):
 
 ---
 
-## 1. Create the Azure resources (free tiers)
+## How it is wired
 
-Use one resource group and one region for everything (e.g. West Europe or North Europe).
+| File | Role |
+|------|------|
+| `Dockerfile` | Builds the image (.NET 10, `libman restore` for the client libraries) and sets the demo configuration as environment variables. |
+| `render.yaml` | Render Blueprint: one free Docker web service, deploys `master` after the CI checks pass, health check `/healthz`. |
+| `.github/workflows/ci.yml` | Builds, runs the tests and builds the Docker image on every push and PR. |
 
-1. **Azure SQL Database, free tier**: go to `aka.ms/azuresqlhub` → **Start free**, or use
-   the CLI. Free-tier databases auto-pause after 15 idle minutes and wake on the next
-   connection (up to ~1 minute). Keep the behaviour at the free limit on **Auto-pause
-   until next month**; the other option bills you and can't be undone.
-   ```
-   az sql db create -g <rg> -s <server> -n docflowhub --edition GeneralPurpose --family Gen5 \
-     --capacity 2 --compute-model Serverless --use-free-limit true \
-     --free-limit-exhaustion-behavior AutoPause --backup-storage-redundancy Local
-   ```
-   Under the server's **Networking**, allow Azure services and resources to access it.
-2. **Storage account**: Standard, LRS, Hot. Create a blob container named `documents`.
-   Copy the **connection string** (Security + networking → Access keys). Storage is
-   required: most pages fail without it.
-3. **App Service**: a **Linux** Web App on the **Free (F1)** plan, runtime **.NET 10 (LTS)**.
-   Turn on **SCM Basic Auth Publishing Credentials** (needed for the publish profile).
+Demo configuration (set in the `Dockerfile`):
 
-## 2. Configure the Web App (Settings → Environment variables → App settings)
-
-`__` (double underscore) maps to nested config keys.
-
-| Name | Value |
-|------|-------|
+| Setting | Value |
+|---------|-------|
 | `DemoMode__Enabled` | `true` |
-| `ConnectionStrings__DefaultConnection` | your Azure SQL connection string (see below) |
-| `DocumentStorage__ConnectionString` | your storage account connection string |
-| `DocumentStorage__ContainerName` | `documents` |
-| `Logging__LogLevel__Microsoft` | `Warning` (otherwise every SQL command of the seed is logged) |
-| `WEBSITES_CONTAINER_START_TIME_LIMIT` | `600` (the first start migrates and seeds) |
-| `WEBSITE_WEBDEPLOY_USE_SCM` | `true` (required by the publish-profile deploy on Linux) |
+| `Database__Provider` | `Sqlite` (default is SQL Server) |
+| `ConnectionStrings__DefaultConnection` | `Data Source=/tmp/docflowhub/demo.db` |
+| `DocumentStorage__Provider` | `Local` (default is Azure Blob Storage) |
+| `DocumentStorage__LocalPath` | `/tmp/docflowhub/files` |
+| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `true` (Render terminates HTTPS in front of the app) |
+| `PORT` | `10000` (Render's default; the app listens on `PORT`) |
 
-`ASPNETCORE_ENVIRONMENT` defaults to `Production` on App Service; leave it unset.
-**Do not set any AI key** (`DocFlowHub:AnthropicApiKey`, `OpenAI:ApiKey`).
+No secrets are needed. **Do not add any AI key.**
 
-SQL connection string (SQL authentication, the server admin login):
+## One-time setup on Render
+
+1. Sign up at render.com with your GitHub account and allow Render to access this repo.
+2. **New → Blueprint**, pick this repository and branch `master`. Render reads `render.yaml`
+   and proposes the `docflowhub-demo` web service on the **Free** plan. Click **Apply**.
+3. Wait for the first build and deploy (a few minutes), then open the `*.onrender.com` URL.
+
+From then on every merge to `master` deploys automatically once CI is green. A deploy
+whose health check fails is rolled back and the previous version stays live.
+
+## What to expect
+
+- **Sleep**: a free service sleeps after 15 minutes without traffic. The next visitor sees
+  Render's loading screen for about a minute while the container starts and seeds.
+- **Fresh data on every start**: anything a visitor could change (nothing, in read-only
+  mode) and the login sessions are reset when the container restarts.
+- **Limits**: 750 free instance hours per month per workspace (enough for one service
+  running all month). If the hours or the included bandwidth run out, Render suspends free
+  services until the next month.
+- **Logs**: Render dashboard → the service → **Logs**. A healthy start shows
+  `Demo seed complete: … documents` and `Uploaded … demo files to storage`.
+
+## Run the demo container locally
+
 ```
-Server=tcp:<server>.database.windows.net,1433;Initial Catalog=docflowhub;User ID=<login>;Password=<password>;Encrypt=True;TrustServerCertificate=False;MultipleActiveResultSets=True;Connection Timeout=60;
+docker build -t docflowhub-demo .
+docker run --rm -p 8080:10000 docflowhub-demo
 ```
 
-## 3. Wire up the GitHub Actions deploy
+Then open http://localhost:8080. Add `--cpus 0.1 --memory 512m` to get close to Render's
+free instance.
 
-1. Azure Web App → **Overview → Download publish profile**.
-2. GitHub → repo **Settings → Secrets and variables → Actions**:
-   - **Secrets** tab → `AZURE_WEBAPP_PUBLISH_PROFILE` = the whole publish-profile file.
-   - **Variables** tab → `AZURE_WEBAPP_NAME` = your App Service name.
-3. GitHub → **Actions → "Deploy demo to Azure" → Run workflow**.
+## Take the demo down
 
-The workflow restores the client libraries (`libman restore`; `wwwroot/lib` is not in git),
-builds, runs the tests, publishes and deploys. Never commit the publish profile or any
-connection string.
-
-## 4. First run
-
-On every start the app runs EF Core migrations and then the demo seed. The seed is
-idempotent: a restart doesn't duplicate data, it only uploads the demo files again if they
-are missing from storage. The first start takes a few minutes. Open the site, sign in with
-a demo login and browse; sign in as the **demo admin** to see the admin dashboards.
-
-Useful log lines (App Service → Log stream):
-- `Demo seed complete: … documents` and `Uploaded … demo files to storage`: first start OK.
-- `Demo data already present — skipping demo seed.`: a normal restart.
-- `Demo files missing from storage — uploading them.`: files are being re-uploaded.
-- `Demo file step failed` / `Document storage is not configured`: check `DocumentStorage__*`.
-- `Database initialization failed`: the database was unreachable; restart the app later.
-
-## Notes & limits
-
-- **Sleeping database**: transient SQL errors (e.g. 40613 while the database resumes) are
-  retried for about two minutes, for queries at startup and per request. If the database
-  is still unreachable at startup (e.g. the free monthly allowance is used up), the app
-  starts anyway and shows an error page that explains the demo is waking up or out of quota.
-  Restart the app once the database is back.
-- **F1 Free** unloads after ~20 idle minutes and has 60 CPU minutes per day; fine for a
-  demo, not for load.
-- **Take the demo down**: stop or delete the App Service.
-- **Reset the data**: stop the App Service, delete and recreate the database (free tier,
-  same name), optionally delete and recreate the `documents` container, then start the app
-  again so it re-migrates and re-seeds (files with the same IDs are overwritten).
+Render dashboard → the service → **Settings → Suspend** (or **Delete**).

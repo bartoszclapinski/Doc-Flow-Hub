@@ -94,5 +94,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.ApplyConfiguration(new UserCommunicationConfiguration());
         builder.ApplyConfiguration(new UserLoginAttemptConfiguration());
         builder.ApplyConfiguration(new UserDeviceConfiguration());
+
+        // The public demo runs on SQLite; adapt the SQL Server-oriented model for it.
+        if (Database.IsSqlite())
+        {
+            Sqlite.SqliteModelAdjustments.Apply(builder);
+        }
     }
 } 

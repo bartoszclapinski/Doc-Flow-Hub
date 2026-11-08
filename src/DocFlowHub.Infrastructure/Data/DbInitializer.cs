@@ -16,8 +16,16 @@ public static class DbInitializer
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        // Ensure database is created and migrated
-        await context.Database.MigrateAsync();
+        // Create the schema. The migrations are SQL Server-specific, so the SQLite demo builds
+        // the schema straight from the model instead.
+        if (context.Database.IsSqlite())
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // Seed roles
         await SeedRolesAsync(roleManager);
@@ -46,7 +54,7 @@ public static class DbInitializer
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Document storage is not configured — set DocumentStorage:ConnectionString. Demo documents get no files and most pages will fail.");
+                logger.LogError(ex, "Document storage is not configured — set DocumentStorage:Provider=Local or DocumentStorage:ConnectionString. Demo documents get no files and most pages will fail.");
             }
 
             await DemoDataSeeder.SeedAsync(context, userManager, logger, storage);

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Infrastructure.Data.Sqlite;
 using DocFlowHub.Infrastructure.Services.Documents;
 using DocFlowHub.Infrastructure.Services.Teams;
 using DocFlowHub.Infrastructure.Services.Storage;
@@ -20,12 +21,23 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Retry transient errors (e.g. Azure SQL waking from auto-pause); see the strategy for
-        // why explicit transactions are left un-retried.
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                sql => sql.ExecutionStrategy(dependencies => new ResilientSqlServerExecutionStrategy(dependencies))));
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (IsProvider(configuration["Database:Provider"], "Sqlite"))
+        {
+            // Self-contained public demo: SQLite file inside the container, rebuilt on start.
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite(connectionString)
+                    .AddInterceptors(new SqliteCaseInsensitiveSearchInterceptor()));
+        }
+        else
+        {
+            // Retry transient errors (e.g. Azure SQL waking from auto-pause); see the strategy
+            // for why explicit transactions are left un-retried.
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(
+                    connectionString,
+                    sql => sql.ExecutionStrategy(dependencies => new ResilientSqlServerExecutionStrategy(dependencies))));
+        }
 
         // Add Memory Caching for AI Services Performance
         services.AddMemoryCache();
@@ -36,7 +48,14 @@ public static class DependencyInjection
         // Document Services
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentCategoryService, DocumentCategoryService>();
-        services.AddScoped<IDocumentStorageService, DocumentStorageService>();
+        if (IsProvider(configuration["DocumentStorage:Provider"], "Local"))
+        {
+            services.AddScoped<IDocumentStorageService, LocalDocumentStorageService>();
+        }
+        else
+        {
+            services.AddScoped<IDocumentStorageService, DocumentStorageService>();
+        }
         
         // Team Services
         services.AddScoped<ITeamService, TeamService>();
@@ -109,4 +128,7 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static bool IsProvider(string? configured, string provider) =>
+        string.Equals(configured, provider, StringComparison.OrdinalIgnoreCase);
 } 
