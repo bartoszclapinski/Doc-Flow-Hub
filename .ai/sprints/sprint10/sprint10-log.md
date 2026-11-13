@@ -46,7 +46,8 @@ comparisons, team joins (+ new accounts on the admin page).
   Creation is now serialized in-process, and a lost race reads the existing row.
 
 **CI** — the `docker` job now starts the built demo image and runs the Playwright smoke suite against
-it (S10-8); traces are uploaded on failure.
+it (S10-8); traces are uploaded on failure. The job is pinned to `ubuntu-24.04`: `ubuntu-latest` is
+already 26.04, for which Playwright 1.60 has no Chromium build. First CI run: 11 passed, 1 skipped.
 
 ## Verification
 - `dotnet build -c Release`: 0 errors, no warnings in changed files. Unit tests **121/121**
