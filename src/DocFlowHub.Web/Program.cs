@@ -83,6 +83,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Error status codes without a body (404, 403 …) get a page in the app's style.
+app.UseStatusCodePagesWithReExecute("/StatusCode/{0}");
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

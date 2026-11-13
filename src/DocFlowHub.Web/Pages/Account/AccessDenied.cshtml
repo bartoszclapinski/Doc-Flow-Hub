@@ -1,0 +1,14 @@
+@page
+@model DocFlowHub.Web.Pages.Account.AccessDeniedModel
+@{
+    ViewData["Title"] = "Access denied";
+    Layout = User.Identity?.IsAuthenticated == true ? "_Layout" : "_AuthLayout";
+}
+<div class="dfh-error">
+    <span class="dfh-error-code">403 · forbidden</span>
+    <h1 class="dfh-heading">You don't have access to this page</h1>
+    <p>Your account doesn't have permission to open it. If you think it should, ask an administrator.</p>
+    <div class="dfh-error-actions">
+        <a class="btn btn-secondary" asp-page="/Documents/Index"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to Documents</a>
+    </div>
+</div>

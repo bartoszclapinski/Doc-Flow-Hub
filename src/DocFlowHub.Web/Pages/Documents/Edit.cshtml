@@ -50,7 +50,7 @@
             <div class="col-lg-8">
                 <div class="form-card mb-4">
                     <h5 class="section-heading"><i class="bi bi-pencil-square"></i> Edit Document Information</h5>
-                    <form method="post" asp-page-handler="UpdateMetadata">
+                    <form method="post" asp-page-handler="UpdateMetadata" data-dfh-busy="Saving…">
                             <div class="row">
                                 <div class="col-md-8">
                                     <div class="mb-3">
@@ -133,7 +133,7 @@
                 <!-- Upload New Version -->
                 <div class="form-card">
                     <h5 class="section-heading section-heading-success"><i class="bi bi-cloud-upload"></i> Upload New Version</h5>
-                        <form method="post" asp-page-handler="UploadNewVersion" enctype="multipart/form-data">
+                        <form method="post" asp-page-handler="UploadNewVersion" enctype="multipart/form-data" data-dfh-busy="Uploading…">
                             <div class="mb-3">
                                 <label asp-for="NewVersionFile" class="form-label">Select New File *</label>
                                 <input asp-for="NewVersionFile" class="form-control" type="file" 

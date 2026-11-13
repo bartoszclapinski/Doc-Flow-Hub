@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **approved 2026-11-13, not started** · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **in progress** — Sprint 9 done (2026-11-13) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -185,7 +185,7 @@ Tokens, Bootstrap mapping, fonts, logo/favicon, new `_Layout` shell with title b
 bar; `_AuthLayout`; admin nav tool window; toasts and modal base; AccessDenied + 404; remove
 theme toggle, ripple, submit hijack, counters, duplicate icons. **Result:** every page renders inside
 the new shell; page content is still old but readable (crawler 0 errors, spot screenshots).
-Details: [`sprints/sprint9/sprint9-plan.md`](sprints/sprint9/sprint9-plan.md).
+Details: [`sprints/sprint9/sprint9-plan.md`](sprints/sprint9/sprint9-plan.md). **Done** — [log](sprints/sprint9/sprint9-log.md).
 
 ### Sprint 10 — Sign in, Register, Dashboard (M)
 Sign in (3g) with the demo-credentials box, Register (8d) with live password rules, Logout view,

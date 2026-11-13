@@ -1,0 +1,91 @@
+@using Microsoft.AspNetCore.Identity
+@using DocFlowHub.Core.Identity
+@using DocFlowHub.Core.Services.Interfaces
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IDemoModeService DemoMode
+@{
+    var signedIn = SignInManager.IsSignedIn(User);
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    var isAdminArea = currentPage.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase);
+
+    string initials = "?";
+    string displayName = User.Identity?.Name ?? string.Empty;
+    if (signedIn)
+    {
+        // The error page renders this too, so a database failure must not break it.
+        ApplicationUser? user = null;
+        try { user = await UserManager.GetUserAsync(User); }
+        catch (Exception) { /* fall back to the name in the cookie */ }
+        if (user != null)
+        {
+            var first = user.FirstName?.Trim();
+            var last = user.LastName?.Trim();
+            displayName = string.IsNullOrEmpty(first) && string.IsNullOrEmpty(last)
+                ? user.Email ?? displayName
+                : $"{first} {last}".Trim();
+            initials = !string.IsNullOrEmpty(first) && !string.IsNullOrEmpty(last)
+                ? $"{first[0]}{last[0]}".ToUpperInvariant()
+                : (user.Email ?? "?")[..1].ToUpperInvariant();
+        }
+    }
+}
+<header class="dfh-titlebar">
+    <a class="dfh-brand" asp-area="" asp-page="/Index" aria-label="DocFlowHub home">
+        <partial name="_LogoMark" model="22" />
+        <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
+    </a>
+
+    @if (signedIn)
+    {
+        <span class="dfh-ws-pill" title="Workspace">
+            <span class="dfh-swatch" style="background: @(isAdminArea ? "var(--dfh-warning)" : "var(--dfh-text-muted)")"></span>
+            @(isAdminArea ? "Administration" : "All workspaces")
+        </span>
+
+        <div class="dfh-titlebar-center">
+            <form class="dfh-titlebar-search" method="get" asp-area="" asp-page="/Documents/Index" role="search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input id="dfh-global-search" type="search" name="Filter.SearchTerm"
+                       placeholder="Search documents" aria-label="Search documents" autocomplete="off" />
+                <kbd class="dfh-kbd">Ctrl K</kbd>
+            </form>
+        </div>
+
+        @if (DemoMode.IsEnabled)
+        {
+            <span class="d-inline-block" tabindex="0" title="Read-only demo — uploads are disabled">
+                <button type="button" class="btn btn-primary dfh-btn-26" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
+            </span>
+        }
+        else
+        {
+            <a class="btn btn-primary dfh-btn-26" asp-area="" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+        }
+
+        <div class="dropdown">
+            <button type="button" class="dfh-avatar dfh-avatar--me dfh-avatar--24" data-bs-toggle="dropdown"
+                    aria-expanded="false" aria-label="Account menu for @displayName" title="@displayName">@initials</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">@displayName</h6></li>
+                <li><a class="dropdown-item" asp-area="" asp-page="/Account/Manage/Index"><i class="bi bi-person" aria-hidden="true"></i>Profile</a></li>
+                <li><a class="dropdown-item" asp-area="" asp-page="/Settings/AI"><i class="bi bi-gear" aria-hidden="true"></i>Settings</a></li>
+                @if (User.IsInRole("Administrator"))
+                {
+                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/Index"><i class="bi bi-shield-lock" aria-hidden="true"></i>Admin</a></li>
+                }
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form asp-area="" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })" method="post">
+                        <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Sign out</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <div class="dfh-titlebar-center"></div>
+        <a class="btn btn-primary dfh-btn-26" asp-area="" asp-page="/Account/Login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>Sign in</a>
+    }
+</header>
