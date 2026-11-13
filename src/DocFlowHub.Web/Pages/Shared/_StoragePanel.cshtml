@@ -1,0 +1,32 @@
+@* Storage by file type (3a bottom strip): stacked bar + legend. No quota exists, so only the used total is shown. *@
+@model StoragePanel
+@{
+    var segments = Model.Segments();
+}
+<section aria-labelledby="storage-title">
+    <div class="dfh-strip-head">
+        <i class="bi bi-hdd" aria-hidden="true"></i>
+        <span class="dfh-strip-title" id="storage-title">Storage</span>
+        <span class="dfh-mono">@Dfh.FileSize(Model.TotalBytes)</span>
+    </div>
+    @if (Model.TotalBytes == 0)
+    {
+        <p class="dfh-strip-note">No files yet.</p>
+    }
+    else
+    {
+        <div class="dfh-stackbar" role="img" aria-label="Storage by file type">
+            @foreach (var s in segments.Where(s => s.Bytes > 0))
+            {
+                <span class="dfh-swatch--@s.Kind" style="flex-grow: @Math.Max(1, (int)Math.Round(s.Bytes * 1000.0 / Model.TotalBytes))"></span>
+            }
+        </div>
+        <dl class="dfh-legend">
+            @foreach (var s in segments)
+            {
+                <dt><span class="dfh-swatch dfh-swatch--@s.Kind" aria-hidden="true"></span>@s.Label <span class="dfh-muted">· @s.Count</span></dt>
+                <dd>@Dfh.FileSize(s.Bytes)</dd>
+            }
+        </dl>
+    }
+</section>

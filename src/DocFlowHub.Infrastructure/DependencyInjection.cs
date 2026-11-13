@@ -14,6 +14,7 @@ using DocFlowHub.Infrastructure.Services.Projects;
 using DocFlowHub.Infrastructure.Services.Admin;
 using DocFlowHub.Infrastructure.Services.Analytics;
 using DocFlowHub.Infrastructure.Services;
+using DocFlowHub.Infrastructure.Services.Dashboard;
 
 namespace DocFlowHub.Infrastructure;
 
@@ -48,6 +49,7 @@ public static class DependencyInjection
         // Document Services
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentCategoryService, DocumentCategoryService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         if (IsProvider(configuration["DocumentStorage:Provider"], "Local"))
         {
             services.AddScoped<IDocumentStorageService, LocalDocumentStorageService>();

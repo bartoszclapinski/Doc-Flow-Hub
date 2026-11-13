@@ -61,7 +61,10 @@
     --bs-form-invalid-color: var(--dfh-danger);
 }
 
+/* Links are coloured, not underlined, until hovered (design system). */
+a { text-decoration: none; }
 a:hover { text-decoration: underline; }
+.btn:hover, .dropdown-item:hover, .nav-link:hover { text-decoration: none; }
 
 /* ---------- Buttons: 28 default · 24 compact (btn-sm) · 32 large ---------- */
 .btn {
@@ -257,6 +260,7 @@ textarea.form-control { padding: 8px 10px; }
     padding-right: 28px;
 }
 .form-control.is-invalid,
+.form-control.input-validation-error,
 .was-validated .form-control:invalid,
 .form-select.is-invalid { border-color: var(--dfh-danger-border); background-image: none; padding-right: 10px; }
 .invalid-feedback,

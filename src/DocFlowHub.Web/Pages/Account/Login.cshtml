@@ -1,515 +1,62 @@
 @page
 @model DocFlowHub.Web.Pages.Account.LoginModel
 @inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
-
+@using DocFlowHub.Core.Constants
 @{
-    ViewData["Title"] = "Sign In - DocFlowHub";
-    Layout = null;
+    ViewData["Title"] = "Sign in";
+    Layout = "_AuthLayout";
 }
 
-<!DOCTYPE html>
-<html lang="en" data-theme="dark" data-bs-theme="dark">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="DocFlowHub - Enterprise Document Management System Login" />
-    <title>@ViewData["Title"]</title>
-    
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
-    <!-- Theme System CSS -->
-    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
-    <!-- Custom CSS for Login -->
-    <style>
-        /* Modern Login Page Styles */
-        body {
-            font-family: var(--font-primary);
-            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            color: var(--text-primary);
-        }
-
-        /* Split layout: branded panel (left) + form (right) */
-        .auth-split {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .auth-brand {
-            flex: 1 1 45%;
-            /* Deep sky -> violet ties the accent (actions) and AI identities;
-               theme-independent so white text stays readable in both themes. */
-            background: linear-gradient(160deg, #0284c7 0%, #0369a1 52%, #6d28d9 135%);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            padding: var(--spacing-16) var(--spacing-12);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .auth-brand-content { max-width: 460px; position: relative; z-index: 1; }
-
-        .auth-logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-3);
-            font-size: var(--font-size-2xl);
-            font-weight: var(--font-weight-bold);
-            margin-bottom: var(--spacing-10);
-        }
-
-        .auth-logo-mark {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-lg);
-            background: rgba(255, 255, 255, 0.18);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: var(--font-weight-extrabold);
-            font-size: 22px;
-        }
-
-        .auth-brand-title {
-            font-size: var(--font-size-4xl);
-            font-weight: var(--font-weight-extrabold);
-            line-height: 1.15;
-            margin: 0 0 var(--spacing-4) 0;
-        }
-
-        .auth-brand-sub {
-            font-size: var(--font-size-lg);
-            color: rgba(255, 255, 255, 0.85);
-            margin: 0 0 var(--spacing-10) 0;
-        }
-
-        .auth-brand-features {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: grid;
-            gap: var(--spacing-4);
-        }
-
-        .auth-brand-features li {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-3);
-            font-size: var(--font-size-base);
-            color: rgba(255, 255, 255, 0.92);
-        }
-
-        .auth-brand-features i { font-size: 1.2rem; opacity: 0.9; }
-
-        .auth-form-side {
-            flex: 1 1 55%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--spacing-12);
-        }
-
-        .auth-form-inner {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .hero-title {
-            font-size: var(--font-size-4xl);
-            font-weight: var(--font-weight-extrabold);
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-align: center;
-            margin-bottom: var(--spacing-2);
-            line-height: 1.1;
-        }
-
-        .hero-subtitle {
-            font-size: var(--font-size-base);
-            color: var(--text-secondary);
-            text-align: center;
-            margin-bottom: var(--spacing-8);
-            font-weight: var(--font-weight-medium);
-        }
-
-
-
-        .modern-form-group {
-            margin-bottom: var(--spacing-6);
-        }
-
-        .modern-form-label {
-            display: block;
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-medium);
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-2);
-        }
-
-        .modern-form-input {
-            width: 100%;
-            padding: var(--spacing-4);
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            color: var(--text-primary);
-            font-size: var(--font-size-base);
-            transition: var(--transition-all);
-        }
-
-        .modern-form-input:focus {
-            outline: none;
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px var(--accent-light);
-            background: var(--surface-primary);
-        }
-
-        .modern-form-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .modern-checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-2);
-            margin-bottom: var(--spacing-8);
-            cursor: pointer;
-        }
-
-        .modern-checkbox {
-            width: 18px;
-            height: 18px;
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-base);
-            position: relative;
-            cursor: pointer;
-        }
-
-        .modern-checkbox input {
-            opacity: 0;
-            position: absolute;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
-
-        .modern-checkbox input:checked + .checkmark {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        .modern-checkbox input:checked + .checkmark:after {
-            content: '✓';
-            position: absolute;
-            color: var(--text-inverse);
-            font-size: 12px;
-            font-weight: var(--font-weight-bold);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .checkmark {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 100%;
-            border-radius: var(--radius-base);
-            transition: var(--transition-all);
-        }
-
-        .modern-checkbox-label {
-            font-size: var(--font-size-sm);
-            color: var(--text-primary);
-            user-select: none;
-        }
-
-        .modern-login-button {
-            width: 100%;
-            padding: var(--spacing-4);
-            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
-            border: none;
-            border-radius: var(--radius-lg);
-            color: var(--text-inverse);
-            font-size: var(--font-size-base);
-            font-weight: var(--font-weight-semibold);
-            cursor: pointer;
-            transition: var(--transition-all);
-            margin-bottom: var(--spacing-6);
-        }
-
-        .modern-login-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 30px rgba(var(--accent-color), 0.3);
-        }
-
-        .modern-login-button:active {
-            transform: translateY(0);
-        }
-
-        .modern-links-section {
-            text-align: center;
-        }
-
-        .modern-link {
-            color: var(--accent-color);
-            text-decoration: none;
-            font-size: var(--font-size-sm);
-            transition: var(--transition-colors);
-            margin: 0 var(--spacing-2);
-        }
-
-        .modern-link:hover {
-            color: var(--accent-hover);
-        }
-
-        .modern-divider {
-            margin: var(--spacing-4) 0;
-            color: var(--text-muted);
-        }
-
-        .validation-summary {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #f87171;
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-4);
-            margin-bottom: var(--spacing-6);
-            color: #dc2626;
-        }
-
-        .field-validation-error {
-            color: #dc2626;
-            font-size: var(--font-size-sm);
-            margin-top: var(--spacing-1);
-            display: block;
-        }
-
-        .external-login-section {
-            margin-top: var(--spacing-6);
-            padding-top: var(--spacing-6);
-            border-top: 1px solid var(--border-light);
-        }
-
-        .external-login-button {
-            width: 100%;
-            padding: var(--spacing-3);
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            color: var(--text-primary);
-            font-size: var(--font-size-sm);
-            cursor: pointer;
-            transition: var(--transition-all);
-            margin-bottom: var(--spacing-2);
-        }
-
-        .external-login-button:hover {
-            background: var(--surface-tertiary);
-            border-color: var(--accent-color);
-        }
-
-        /* Theme Toggle for Login Page */
-        .login-theme-toggle {
-            position: fixed;
-            top: var(--spacing-6);
-            right: var(--spacing-6);
-            background: var(--container-bg);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-full);
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            transition: var(--transition-all);
-            z-index: 1000;
-        }
-
-        .login-theme-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        /* Demo login banner */
-        .demo-login-banner {
-            background: var(--ai-light);
-            border: 1px solid var(--ai-color);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-4);
-            margin-bottom: var(--spacing-6);
-            font-size: var(--font-size-sm);
-        }
-
-        .demo-login-banner-title {
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-2);
-        }
-
-        .demo-login-banner-title i { color: var(--ai-color); }
-
-        .demo-cred {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-2);
-            margin-top: var(--spacing-1);
-        }
-
-        .demo-cred span {
-            min-width: 48px;
-            color: var(--text-secondary);
-            font-weight: var(--font-weight-medium);
-        }
-
-        .demo-cred code {
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-base);
-            padding: 0 var(--spacing-2);
-            color: var(--text-primary);
-            font-size: var(--font-size-xs);
-        }
-
-        /* Responsive Design — collapse to form-only on narrow screens */
-        @@media (max-width: 900px) {
-            .auth-brand { display: none; }
-            .auth-form-side {
-                flex-basis: 100%;
-                padding: var(--spacing-8);
-            }
-        }
-
-        @@media (max-width: 480px) {
-            .auth-form-side { padding: var(--spacing-6); }
-            .hero-title { font-size: var(--font-size-3xl); }
-        }
-    </style>
-</head>
-<body>
-    <!-- Theme Toggle -->
-    <button id="themeToggle" class="login-theme-toggle" aria-label="Toggle theme">
-        <span class="theme-icon theme-icon-light" style="transition: opacity 0.3s ease;"><i class="bi bi-sun"></i></span>
-        <span class="theme-icon theme-icon-dark" style="transition: opacity 0.3s ease; position: absolute;"><i class="bi bi-moon-stars"></i></span>
-    </button>
-
-    <div class="auth-split">
-        <aside class="auth-brand">
-            <div class="auth-brand-content">
-                <div class="auth-logo">
-                    <div class="auth-logo-mark">D</div>
-                    <span>DocFlowHub</span>
-                </div>
-                <h1 class="auth-brand-title">Manage documents with AI-powered clarity.</h1>
-                <p class="auth-brand-sub">Versioning, summaries, and team collaboration — all in one place.</p>
-                <ul class="auth-brand-features">
-                    <li><i class="bi bi-layers"></i> Version history &amp; change tracking</li>
-                    <li><i class="bi bi-robot"></i> AI summaries &amp; version comparison</li>
-                    <li><i class="bi bi-people"></i> Teams, projects &amp; shared folders</li>
-                </ul>
-            </div>
-        </aside>
-
-        <main class="auth-form-side">
-            <div class="auth-form-inner">
-                <div class="hero-title">Welcome back</div>
-                <div class="hero-subtitle">Sign in to your account</div>
-
-                @if (DemoMode.IsEnabled)
-                {
-                    <div class="demo-login-banner">
-                        <div class="demo-login-banner-title"><i class="bi bi-eye"></i> Read-only demo — sign in with:</div>
-                        <div class="demo-cred"><span>User</span><code>@DocFlowHub.Core.Constants.DemoAccounts.UserEmail</code><code>@DocFlowHub.Core.Constants.DemoAccounts.Password</code></div>
-                        <div class="demo-cred"><span>Admin</span><code>@DocFlowHub.Core.Constants.DemoAccounts.AdminEmail</code><code>@DocFlowHub.Core.Constants.DemoAccounts.Password</code></div>
-                    </div>
-                }
-
-                <form id="account" method="post">
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div class="validation-summary" asp-validation-summary="ModelOnly" role="alert"></div>
-                }
-
-                <div class="modern-form-group">
-                    <label class="modern-form-label" asp-for="Input.Email">Email</label>
-                    <input asp-for="Input.Email" 
-                           class="modern-form-input" 
-                           autocomplete="username" 
-                           aria-required="true" 
-                           placeholder="name@example.com" />
-                    <span asp-validation-for="Input.Email" class="field-validation-error"></span>
-                </div>
-
-                <div class="modern-form-group">
-                    <label class="modern-form-label" asp-for="Input.Password">Password</label>
-                    <input asp-for="Input.Password" 
-                           class="modern-form-input" 
-                           autocomplete="current-password" 
-                           aria-required="true" 
-                           placeholder="Enter your password" />
-                    <span asp-validation-for="Input.Password" class="field-validation-error"></span>
-                </div>
-
-                <label class="modern-checkbox-container" asp-for="Input.RememberMe">
-                    <div class="modern-checkbox">
-                        <input asp-for="Input.RememberMe" />
-                        <span class="checkmark"></span>
-                    </div>
-                    <span class="modern-checkbox-label">@Html.DisplayNameFor(m => m.Input.RememberMe)</span>
-                </label>
-
-                <button id="login-submit" type="submit" class="modern-login-button">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
-                </button>
-            </form>
-
-            <div class="modern-links-section">
-                <a id="forgot-password" asp-page="./ForgotPassword" class="modern-link">Forgot your password?</a>
-                @if (!DemoMode.IsEnabled)
-                {
-                    <span class="modern-divider">•</span>
-                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="modern-link">Register as a new user</a>
-                }
-            </div>
-
-            @if ((Model.ExternalLogins?.Count ?? 0) > 0)
-            {
-                <div class="external-login-section">
-                    <h6 class="text-center mb-3 text-muted">Or continue with</h6>
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-                        @foreach (var provider in Model.ExternalLogins!)
-                        {
-                            <button type="submit" 
-                                    class="external-login-button" 
-                                    name="provider" 
-                                    value="@provider.Name" 
-                                    title="Log in using your @provider.DisplayName account">
-                                <i class="bi bi-@provider.Name.ToLower() me-2"></i>@provider.DisplayName
-                            </button>
-                        }
-                    </form>
-                </div>
-            }
-            </div>
-        </main>
+<main class="dfh-auth-card">
+    <div class="dfh-auth-head">
+        <h1>Sign in</h1>
+        <p>Documents, versions and AI summaries for your team.</p>
     </div>
 
-    <!-- Scripts -->
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    
-    @section Scripts {
-        <partial name="_ValidationScriptsPartial" />
+    <form id="account" method="post" data-dfh-busy="Signing in…">
+        <div asp-validation-summary="ModelOnly" class="dfh-form-error" role="alert"></div>
+
+        <div class="dfh-field">
+            <label asp-for="Input.Email">Email</label>
+            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus />
+            <span asp-validation-for="Input.Email" class="field-validation-error"></span>
+        </div>
+
+        <div class="dfh-field">
+            <label asp-for="Input.Password">Password</label>
+            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder=" " />
+            <span asp-validation-for="Input.Password" class="field-validation-error"></span>
+        </div>
+
+        <div class="form-check">
+            <input asp-for="Input.RememberMe" class="form-check-input" />
+            <label asp-for="Input.RememberMe" class="form-check-label">Keep me signed in</label>
+        </div>
+
+        <button id="login-submit" type="submit" class="btn btn-primary dfh-btn-34">Sign in</button>
+    </form>
+
+    @if (!DemoMode.IsEnabled)
+    {
+        <p class="dfh-auth-alt">No account? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create one</a></p>
     }
-</body>
-</html> 
+</main>
+
+@if (DemoMode.IsEnabled)
+{
+    <aside class="dfh-demo-box" aria-label="Demo accounts">
+        <div class="dfh-demo-box-title"><i class="bi bi-lock" aria-hidden="true"></i>Read-only demo</div>
+        <div class="dfh-mono">
+            <button type="button" class="dfh-demo-fill" data-email="@DemoAccounts.UserEmail" data-password="@DemoAccounts.Password"
+                    title="Fill in the user account">@DemoAccounts.UserEmail</button>
+            ·
+            <button type="button" class="dfh-demo-fill" data-email="@DemoAccounts.AdminEmail" data-password="@DemoAccounts.Password"
+                    title="Fill in the administrator account">@DemoAccounts.AdminEmail</button>
+        </div>
+        <div class="dfh-mono">password: @DemoAccounts.Password</div>
+    </aside>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

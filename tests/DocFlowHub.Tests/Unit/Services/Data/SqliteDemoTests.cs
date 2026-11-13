@@ -1,5 +1,6 @@
 using DocFlowHub.Core.Constants;
 using DocFlowHub.Core.Identity;
+using DocFlowHub.Core.Models.Dashboard;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure;
@@ -162,5 +163,46 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
         // The service swallows query errors and returns zeros, so check real numbers.
         statistics.TotalUsers.Should().BeGreaterThanOrEqualTo(2);
         statistics.ActiveUsers.Should().Be(statistics.TotalUsers);
+    }
+    [Theory]
+    [InlineData(DashboardPeriod.Week)]
+    [InlineData(DashboardPeriod.All)]
+    public async Task Dashboard_RunsOnSqliteAndMatchesTheDocumentList(DashboardPeriod period)
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        var result = await Get<IDashboardService>(scope).GetUserDashboardAsync(userId, period);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var dashboard = result.Data!;
+        var list = await Get<IDocumentService>(scope).GetDocumentsAsync(userId, new DocumentFilter { PageSize = 1 });
+        dashboard.Documents.Should().Be(list.Data!.TotalItems);
+        dashboard.Versions.Should().BeGreaterThanOrEqualTo(dashboard.Documents);
+        dashboard.RecentDocuments.Should().NotBeEmpty();
+        dashboard.RecentDocuments.Should().BeInDescendingOrder(d => d.ModifiedAt);
+        dashboard.Storage.Sum(s => s.Count).Should().Be(dashboard.Documents);
+        dashboard.TeamList.Should().NotBeEmpty();
+        dashboard.Activity.Should().BeInDescendingOrder(a => a.At);
+        (period == DashboardPeriod.All).Should().Be(dashboard.VersionsInPeriod == null);
+    }
+
+    [Fact]
+    public async Task AdminOverview_RunsOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+
+        var result = await Get<IDashboardService>(scope).GetAdminOverviewAsync(DashboardPeriod.Month);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var overview = result.Data!;
+        overview.Users.Should().BeGreaterThanOrEqualTo(2);
+        overview.Administrators.Should().BeGreaterThanOrEqualTo(1);
+        overview.RecentUsers.Should().Contain(u => u.Email == DemoAccounts.AdminEmail && u.IsAdministrator);
+        overview.RecentUsers.Should().Contain(u => u.Email == DemoAccounts.UserEmail && !u.IsAdministrator);
+        overview.Documents.Should().BeGreaterThan(0);
+        overview.StorageBytes.Should().BeGreaterThan(0);
+        overview.LargestTeams.Should().NotBeEmpty();
+        overview.Activity.Should().NotBeEmpty();
     }
 }

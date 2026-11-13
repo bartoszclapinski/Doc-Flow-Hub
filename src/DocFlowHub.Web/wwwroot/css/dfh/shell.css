@@ -294,7 +294,8 @@ body.dfh-auth {
     align-items: center;
     justify-content: center;
     gap: 20px;
-    padding: 24px 16px;
+    position: relative;
+    padding: 24px 16px 56px; /* room for the absolute footer */
     background: var(--dfh-bg);
 }
 .dfh-auth-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; color: var(--dfh-text); text-decoration: none; }

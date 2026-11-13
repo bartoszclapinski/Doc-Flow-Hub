@@ -1,195 +1,152 @@
 @page
 @model DocFlowHub.Web.Pages.Admin.IndexModel
 @{
-    ViewData["Title"] = "Admin Dashboard";
-    ViewData["ActivePage"] = "Dashboard";
+    ViewData["Title"] = "Admin overview";
+    ViewData["FullBleed"] = true;
     Layout = "_AdminLayout";
+    var o = Model.Overview;
+    var period = Model.SelectedPeriod;
+    var periodText = DashboardPeriods.Label(period).ToLowerInvariant();
 }
 
-<!-- Page Header -->
-<div class="admin-page-header">
-    <h1 class="admin-page-title">Admin Dashboard</h1>
-    <p class="admin-page-subtitle">System overview and management dashboard</p>
-</div>
+@section Inspector {
+    @if (o != null)
+    {
+        <aside class="dfh-inspector dfh-inspector--wide" aria-label="System activity">
+            <div class="dfh-panel-header is-inspector">
+                <span class="dfh-panel-title">System activity</span>
+                <span class="dfh-mono dfh-muted">@periodText</span>
+            </div>
+            <partial name="_ActivityFeed" model="new ActivityFeed(o.Activity, Links: false)" />
+        </aside>
+    }
+}
 
-<!-- Stats Grid -->
-<div class="admin-stats-grid">
-    <div class="admin-stat-card blue">
-        <div class="admin-stat-header">
-            <div class="admin-stat-info">
-                <h3>Total Users</h3>
-                <div class="admin-stat-number">@Model.TotalUsers</div>
-                <div class="admin-stat-change">@Model.TotalAdmins administrators</div>
-            </div>
-            <div class="admin-stat-icon">
-                <i class="bi bi-people"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="admin-stat-card green">
-        <div class="admin-stat-header">
-            <div class="admin-stat-info">
-                <h3>Total Documents</h3>
-                <div class="admin-stat-number">@Model.TotalDocuments</div>
-                <div class="admin-stat-change @(Model.DocumentsThisWeek > 0 ? "positive" : "")">+@Model.DocumentsThisWeek this week</div>
-            </div>
-            <div class="admin-stat-icon">
-                <i class="bi bi-file-earmark"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="admin-stat-card cyan">
-        <div class="admin-stat-header">
-            <div class="admin-stat-info">
-                <h3>Total Teams</h3>
-                <div class="admin-stat-number">@Model.TotalTeams</div>
-                <div class="admin-stat-change @(Model.TeamsThisWeek > 0 ? "positive" : "")">+@Model.TeamsThisWeek this week</div>
-            </div>
-            <div class="admin-stat-icon">
-                <i class="bi bi-people-fill"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="admin-stat-card yellow">
-        <div class="admin-stat-header">
-            <div class="admin-stat-info">
-                <h3>Storage Used</h3>
-                <div class="admin-stat-number">@Model.StorageUsed MB</div>
-                <div class="admin-stat-change">Across all users</div>
-            </div>
-            <div class="admin-stat-icon">
-                <i class="bi bi-hdd"></i>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Management Cards -->
-<div class="admin-management-grid">
-    <div class="admin-management-card users">
-        <div class="admin-management-header">
-            <div class="admin-management-icon">
-                <i class="bi bi-people"></i>
-            </div>
-            <div>
-                <h3 class="admin-management-title">Users</h3>
-            </div>
-        </div>
-        <p class="admin-management-description">Manage user accounts, roles, and permissions.</p>
-        <a href="@Url.Page("/Admin/Users/Index")" class="admin-management-button">Manage Users</a>
-    </div>
-
-    <div class="admin-management-card roles">
-        <div class="admin-management-header">
-            <div class="admin-management-icon">
-                <i class="bi bi-shield-check"></i>
-            </div>
-            <div>
-                <h3 class="admin-management-title">Roles</h3>
-            </div>
-        </div>
-        <p class="admin-management-description">Configure roles and their associated permissions.</p>
-        <a href="@Url.Page("/Admin/Roles/Index")" class="admin-management-button">Manage Roles</a>
-    </div>
-
-    <div class="admin-management-card settings">
-        <div class="admin-management-header">
-            <div class="admin-management-icon">
-                <i class="bi bi-gear"></i>
-            </div>
-            <div>
-                <h3 class="admin-management-title">Settings</h3>
-            </div>
-        </div>
-        <p class="admin-management-description">Configure application settings and preferences.</p>
-        <a href="@Url.Page("/Admin/Settings/Index")" class="admin-management-button">Manage Settings</a>
-    </div>
-
-    <div class="admin-management-card analytics">
-        <div class="admin-management-header">
-            <div class="admin-management-icon">
-                <i class="bi bi-graph-up"></i>
-            </div>
-            <div>
-                <h3 class="admin-management-title">Analytics</h3>
-            </div>
-        </div>
-        <p class="admin-management-description">View system analytics and AI usage statistics.</p>
-        <a href="@Url.Page("/Admin/Analytics")" class="admin-management-button">View Analytics</a>
-    </div>
-
-    <div class="admin-management-card purple">
-        <div class="admin-management-header">
-            <div class="admin-management-icon">
-                <i class="bi bi-lightning"></i>
-            </div>
-            <div>
-                <h3 class="admin-management-title">User Limits</h3>
-            </div>
-        </div>
-        <p class="admin-management-description">Configure user limits and resource quotas.</p>
-        <a href="@Url.Page("/Admin/UserLimits")" class="admin-management-button">Manage Limits</a>
-    </div>
-</div>
-
-<!-- Bottom Grid -->
-<div class="admin-bottom-grid">
-    <!-- Recent Activity -->
-    <div class="admin-activity-card">
-        <h3 class="admin-card-title">Recent System Activity</h3>
-        
-        @if (Model.RecentActivities?.Any() == true)
+<div class="dfh-column">
+    <header class="dfh-page-header">
+        <h1>Overview</h1>
+        @if (o != null)
         {
-            @foreach (var activity in Model.RecentActivities.Take(5))
-            {
-                <div class="admin-activity-item">
-                    <div class="admin-activity-avatar">@(activity.UserName?.FirstOrDefault().ToString().ToUpper() ?? "U")</div>
-                    <div class="admin-activity-info">
-                        <div class="admin-activity-user">@activity.UserName</div>
-                        <div class="admin-activity-action">@activity.Action</div>
-                    </div>
-                    <div class="admin-activity-time">@activity.Timestamp.ToString("MMM dd, HH:mm")</div>
-                </div>
-            }
-        }
-        else
-        {
-            <div class="admin-activity-item">
-                <div class="admin-activity-avatar">S</div>
-                <div class="admin-activity-info">
-                    <div class="admin-activity-user">System</div>
-                    <div class="admin-activity-action">No recent activity</div>
-                </div>
-                <div class="admin-activity-time">--</div>
+            <div class="dfh-statline" aria-label="Summary">
+                <span><b>@Dfh.Number(o.Users)</b> @Dfh.Noun(o.Users, "user")</span>
+                <span><b>@Dfh.Number(o.Administrators)</b> @Dfh.Noun(o.Administrators, "admin")</span>
+                <span><b>@Dfh.Number(o.Documents)</b> @Dfh.Noun(o.Documents, "document")</span>
+                <span><b>@Dfh.Number(o.Teams)</b> @Dfh.Noun(o.Teams, "team")</span>
+                @if (o.NewDocumentsInPeriod != null)
+                {
+                    <span title="Documents created"><b class="@(o.NewDocumentsInPeriod > 0 ? "is-positive" : "")">+@o.NewDocumentsInPeriod</b> @DashboardPeriods.DeltaLabel(period)</span>
+                }
+                <span><b>@Dfh.Number(o.Versions)</b> @Dfh.Noun(o.Versions, "version")</span>
+                <span><b>@Dfh.FileSize(o.StorageBytes)</b> stored</span>
             </div>
         }
-    </div>
+        <span class="dfh-spacer"></span>
+        <partial name="_PeriodPicker" model="period" />
+    </header>
 
-    <!-- System Status -->
-    <div class="admin-status-card">
-        <h3 class="admin-card-title">System Status</h3>
-        
-        <div class="admin-status-item">
-            <span class="admin-status-label">System Status:</span>
-            <span class="admin-status-badge">Operational</span>
+    @if (o == null)
+    {
+        <div class="dfh-empty dfh-fill">
+            <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+            <span class="dfh-empty-title">The overview could not be loaded</span>
+            <p>Try again in a moment. The details are in the application log.</p>
+        </div>
+    }
+    else
+    {
+        <div class="dfh-section-header">
+            <span class="dfh-section-title">Newest users</span>
+            <a asp-page="/Admin/Users/Index">Open Users</a>
         </div>
 
-        <div class="admin-status-item">
-            <span class="admin-status-label">Last Updated:</span>
-            <span class="admin-status-value">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</span>
+        <div class="dfh-fill">
+            <table class="dfh-table">
+                <colgroup>
+                    <col />
+                    <col style="width: 24%" />
+                    <col style="width: 76px" />
+                    <col style="width: 80px" />
+                    <col style="width: 96px" />
+                    <col style="width: 116px" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Joined</th>
+                        <th scope="col">Last sign-in</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in o.RecentUsers)
+                    {
+                        <tr data-dfh-href="/Admin/Users/Details/@user.Id">
+                            <td>
+                                <span class="dfh-person">
+                                    <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(user.Name)</span>
+                                    <a class="dfh-cell-link dfh-ellipsis" href="/Admin/Users/Details/@user.Id">@user.Name</a>
+                                </span>
+                            </td>
+                            <td class="is-mono is-muted" title="@user.Email">@user.Email</td>
+                            <td><span class="dfh-chip @(user.IsAdministrator ? "dfh-chip--warning" : "")">@(user.IsAdministrator ? "admin" : "user")</span></td>
+                            <td class="is-2">
+                                <span class="dfh-dot @(user.IsActive ? "dfh-dot--success" : "")" aria-hidden="true"></span>
+                                @(user.IsActive ? "Active" : "Inactive")
+                            </td>
+                            <td class="is-muted" title="@Dfh.Timestamp(user.CreatedAt)">@Dfh.Relative(user.CreatedAt)</td>
+                            <td class="is-muted" title="@(user.LastLoginAt is { } at ? Dfh.Timestamp(at) : null)">@(user.LastLoginAt is { } last ? Dfh.Relative(last) : "never")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
 
-        <div class="admin-status-item">
-            <span class="admin-status-label">Total Users:</span>
-            <span class="admin-status-value">@Model.TotalUsers</span>
-        </div>
+        <div class="dfh-strip">
+            <section aria-labelledby="ai-title">
+                <div class="dfh-strip-head">
+                    <i class="bi bi-stars is-ai" aria-hidden="true"></i>
+                    <span class="dfh-strip-title" id="ai-title">AI usage</span>
+                    <a asp-page="/Admin/Analytics">Analytics</a>
+                </div>
+                <dl class="dfh-kv">
+                    <dt>Requests today</dt>
+                    <dd>@Dfh.Number(o.AiRequestsToday)</dd>
+                    <dt>Requests, @periodText</dt>
+                    <dd>@Dfh.Number(o.AiRequestsInPeriod)</dd>
+                    <dt>Failed</dt>
+                    <dd>@Dfh.Number(o.AiFailedInPeriod)@(o.AiRequestsInPeriod > 0 ? " · " + Dfh.Percent(o.AiFailedInPeriod, o.AiRequestsInPeriod) : "")</dd>
+                    <dt>Tokens</dt>
+                    <dd>@Dfh.Number(o.AiTokensInPeriod)</dd>
+                </dl>
+            </section>
 
-        <div class="admin-status-item">
-            <span class="admin-status-label">Active Sessions:</span>
-            <span class="admin-status-value">@Model.ActiveSessions</span>
+            <partial name="_StoragePanel" model="new StoragePanel(o.Storage, o.StorageBytes)" />
+
+            <section class="is-flush" aria-labelledby="teams-title">
+                <div class="dfh-strip-head">
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                    <span class="dfh-strip-title" id="teams-title">Largest teams</span>
+                </div>
+                @if (o.LargestTeams.Count == 0)
+                {
+                    <p class="dfh-strip-note">No teams yet.</p>
+                }
+                else
+                {
+                    <ul class="dfh-team-list">
+                        @foreach (var team in o.LargestTeams)
+                        {
+                            <li>
+                                <span class="dfh-swatch" style="background: @Dfh.TeamColor(team.Id)" aria-hidden="true"></span>
+                                <span class="dfh-team-name dfh-ellipsis">@team.Name</span>
+                                <span class="dfh-team-count" title="Members">@team.MemberCount</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
         </div>
-    </div>
-</div> 
+    }
+</div>
