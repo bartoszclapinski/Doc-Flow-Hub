@@ -1,0 +1,12 @@
+{
+  "name": "docflowhub-e2e",
+  "private": true,
+  "description": "Playwright smoke tests and screenshots for the DocFlowHub UI (run against a running app).",
+  "scripts": {
+    "smoke": "playwright test smoke.spec.ts",
+    "screenshots": "playwright test screenshots.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  }
+}

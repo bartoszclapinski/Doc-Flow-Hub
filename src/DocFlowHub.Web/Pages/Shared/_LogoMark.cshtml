@@ -1,0 +1,11 @@
+@model int
+@* DocFlowHub mark "branch": a D drawn as a commit graph. Model = size in px (22 title bar, 32 auth).
+   Colours come from --dfh-logo-ink / --dfh-logo-accent so a light theme is a token swap. *@
+<svg class="dfh-logo-mark" viewBox="0 0 24 24" width="@Model" height="@Model" aria-hidden="true" focusable="false">
+    <path d="M7 4 H12 A8 8 0 0 1 12 20 H7" fill="none" stroke="var(--dfh-logo-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+    <line x1="7" y1="4" x2="7" y2="20" stroke="var(--dfh-logo-ink)" stroke-width="2.4" stroke-linecap="round" />
+    <circle cx="7" cy="4" r="2.5" fill="var(--dfh-logo-ink)" />
+    <circle cx="7" cy="12" r="2.5" fill="var(--dfh-logo-ink)" />
+    <circle cx="7" cy="20" r="2.5" fill="var(--dfh-logo-ink)" />
+    <circle cx="20" cy="12" r="2.5" fill="var(--dfh-logo-accent)" />
+</svg>
