@@ -31,7 +31,8 @@ jobs:
   # Render deploys master only after these checks pass, so make sure the demo image builds,
   # then run the Playwright smoke suite against that same image (the public demo setup).
   docker:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 has no Chromium build for ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
