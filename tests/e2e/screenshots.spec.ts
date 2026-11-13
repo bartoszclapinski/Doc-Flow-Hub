@@ -7,6 +7,7 @@ const dir = process.env.SHOTS_DIR ?? './screenshots';
 
 const USER_PAGES: Array<[string, string]> = [
   ['dashboard', '/'],
+  ['dashboard-30d', '/?period=30d'],
   ['documents', '/Documents'],
   ['upload', '/Documents/Upload'],
   ['projects', '/Projects'],
@@ -17,6 +18,7 @@ const USER_PAGES: Array<[string, string]> = [
 ];
 const ADMIN_PAGES: Array<[string, string]> = [
   ['admin-overview', '/Admin'],
+  ['admin-dashboard', '/'],
   ['admin-users', '/Admin/Users'],
   ['admin-analytics', '/Admin/Analytics'],
 ];
@@ -50,8 +52,30 @@ test('admin screens', async ({ page }) => {
 });
 
 test('signed-out screens', async ({ page }) => {
-  for (const [name, path] of [['sign-in', '/Account/Login'], ['error-404-anonymous', '/nope']] as const) {
+  for (const [name, path] of [['sign-in', '/Account/Login'], ['register', '/Account/Register'], ['signed-out', '/Account/Logout'], ['error-404-anonymous', '/nope']] as const) {
     await page.goto(path);
     await page.screenshot({ path: `${dir}/${name}.png` });
   }
+});
+
+test('form states', async ({ page }) => {
+  // Sign in: client-side errors, then the server's "invalid login attempt".
+  await page.goto('/Account/Login');
+  await page.locator('#login-submit').click();
+  await page.screenshot({ path: `${dir}/sign-in-required.png` });
+  await page.locator('#Input_Email').fill('nobody@example.com');
+  await page.locator('#Input_Password').fill('Wrong123!');
+  await page.locator('#login-submit').click();
+  await page.waitForLoadState('load');
+  await page.screenshot({ path: `${dir}/sign-in-invalid.png` });
+
+  // Register (not available in the demo): invalid email + a half-strong password.
+  await page.goto('/Account/Register');
+  if (page.url().includes('/Account/Login')) return;
+  await page.locator('#Input_FirstName').fill('Bartosz');
+  await page.locator('#Input_LastName').fill('Cłapiński');
+  await page.locator('#Input_Email').fill('bartosz@acme');
+  await page.locator('#Input_Password').focus();
+  await page.locator('#Input_Password').fill('secret12');
+  await page.screenshot({ path: `${dir}/register-filled.png` });
 });

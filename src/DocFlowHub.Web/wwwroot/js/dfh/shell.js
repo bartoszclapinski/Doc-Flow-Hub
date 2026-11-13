@@ -123,6 +123,17 @@
         }
     });
 
+    // Table rows with data-dfh-href open their page; links and buttons inside the row keep their own action.
+    document.addEventListener('click', function (e) {
+        const row = e.target.closest('tr[data-dfh-href]');
+        if (!row || e.target.closest('a, button, input, label, select')) return;
+        if (e.ctrlKey || e.metaKey) {
+            window.open(row.getAttribute('data-dfh-href'), '_blank');
+        } else {
+            window.location.href = row.getAttribute('data-dfh-href');
+        }
+    });
+
     // Ctrl K / Cmd K: jump to the global search (the command palette arrives in Sprint 15).
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {

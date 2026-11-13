@@ -208,7 +208,9 @@ public static class DemoDataSeeder
         const int documentCount = 52;
         for (var i = 0; i < documentCount; i++)
         {
-            var createdAt = now.AddDays(-rng.Next(1, 360)).AddHours(-rng.Next(0, 24));
+            // Skewed towards recent dates so the dashboard's "last 7 days" has activity.
+            var ageDays = 1 + Math.Pow(rng.NextDouble(), 2) * 359;
+            var createdAt = now.AddDays(-ageDays).AddHours(-rng.Next(0, 24));
             var ownerId = owners[rng.Next(owners.Length)];
             var fileType = fileTypes[rng.Next(fileTypes.Length)];
             var title = $"{titleNouns[rng.Next(titleNouns.Length)]} {2024 + rng.Next(0, 2)}-{rng.Next(1, 13):D2}";
@@ -240,11 +242,13 @@ public static class DemoDataSeeder
                 IsDeleted = false,
             };
 
-            // 1–3 versions, dates increasing from the document's creation.
+            // 1–3 versions, dates increasing from the document's creation; none in the future.
             var versionCount = rng.Next(1, 4);
             var versionDate = createdAt;
             for (var v = 1; v <= versionCount; v++)
             {
+                if (versionDate > now) break;
+                doc.UpdatedAt = versionDate;
                 doc.Versions.Add(new DocumentVersion
                 {
                     VersionNumber = v,
@@ -259,8 +263,7 @@ public static class DemoDataSeeder
                     CreatedBy = ownerId,
                     FileHash = Guid.NewGuid().ToString("N"),
                 });
-                versionDate = versionDate.AddDays(rng.Next(3, 40));
-                if (versionDate > now) versionDate = now;
+                versionDate = versionDate.AddDays(rng.Next(1, 40)).AddHours(rng.Next(0, 24));
             }
 
             // 2 distinct categories each (avoid a duplicate join row).
@@ -295,7 +298,7 @@ public static class DemoDataSeeder
                     KeyPoints = keyPointsTemplates[rng.Next(keyPointsTemplates.Length)],
                     AIModel = "claude-haiku-4-5",
                     ConfidenceScore = Math.Round(0.75 + rng.NextDouble() * 0.2, 2),
-                    GeneratedAt = doc.CreatedAt.AddHours(rng.Next(1, 48)),
+                    GeneratedAt = Min(doc.CreatedAt.AddHours(rng.Next(1, 48)), now),
                 });
             }
         }
@@ -519,4 +522,6 @@ public static class DemoDataSeeder
 
         return user;
     }
+
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
 }

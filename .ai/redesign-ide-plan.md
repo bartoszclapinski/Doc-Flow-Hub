@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **in progress** — Sprint 9 done (2026-11-13) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **in progress** — Sprints 9–10 done (2026-11-13) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -191,6 +191,7 @@ Details: [`sprints/sprint9/sprint9-plan.md`](sprints/sprint9/sprint9-plan.md). *
 Sign in (3g) with the demo-credentials box, Register (8d) with live password rules, Logout view,
 anonymous `/` → Sign in (landing page deleted), Dashboard (3a): stats line, recent documents table,
 AI / storage-by-type / teams strip, activity tool window. Admin overview by analogy.
+Details: [`sprints/sprint10/sprint10-plan.md`](sprints/sprint10/sprint10-plan.md). **Done** — [log](sprints/sprint10/sprint10-log.md).
 
 ### Sprint 11 — Documents list (L)
 Project/folder tree tool window (existing `IFolderService` / `IProjectService`), view tabs, toolbar
@@ -230,6 +231,10 @@ screenshots and `.ai` status docs.
 | `/Account/AccessDenied` configured but missing; no 404 handling | 9 |
 | Bootstrap Icons loaded twice; Register page missing icons | 9 |
 | Login links to a non-existent ForgotPassword page | 10 |
+| Register validated passwords of 6+ chars while Identity requires 8 | 10 |
+| Demo seed: versions clamped to "now", `Document.UpdatedAt` never moved to the last version | 10 |
+| Parallel first requests of a new user fail inserting default AI settings (unique index) | 10 |
+| Dashboard / admin overview loaded whole document lists (admin: per user) just to count them | 10 |
 | Documents pagination drops filters and sort | 11 |
 | Demo: mutating AJAX calls show "HTTP error 403" / `alert('Move failed')` instead of the read-only message | 11 |
 | Projects/Details TotalSize hard-coded to 0 | 13 |

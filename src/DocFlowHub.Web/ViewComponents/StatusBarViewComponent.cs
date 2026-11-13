@@ -1,6 +1,6 @@
-using System.Reflection;
 using System.Security.Claims;
 using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Ui;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -40,7 +40,7 @@ public class StatusBarViewComponent : ViewComponent
                 : "Azure Blob",
             Path = ViewData["StatusPath"] as string,
             IsDemo = _demoMode.IsEnabled,
-            Version = AppVersion.Value,
+            Version = Dfh.AppVersion,
         };
 
         var userId = UserClaimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -77,16 +77,6 @@ public class StatusBarViewComponent : ViewComponent
         _cache.Set(key, usage, AiUsageCacheTime);
         return usage;
     }
-
-    /// <summary>"v1.0.0" plus the short commit hash when the build stamped one.</summary>
-    private static readonly Lazy<string> AppVersion = new(() =>
-    {
-        var informational = typeof(StatusBarViewComponent).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "1.0.0";
-        var parts = informational.Split('+', 2);
-        var version = $"v{parts[0]}";
-        return parts.Length == 2 && parts[1].Length >= 7 ? $"{version} · {parts[1][..7]}" : version;
-    });
 }
 
 public class StatusBarModel

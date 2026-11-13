@@ -13,6 +13,8 @@ namespace DocFlowHub.Infrastructure.Services.AI;
 /// </summary>
 public class AISettingsService : IAISettingsService
 {
+    private static readonly SemaphoreSlim DefaultSettingsLock = new(1, 1);
+
     private readonly ApplicationDbContext _context;
     private readonly IAIService _aiService;
     private readonly ILogger<AISettingsService> _logger;
@@ -168,12 +170,16 @@ public class AISettingsService : IAISettingsService
     /// </summary>
     public async Task<ServiceResult<AISettings>> CreateDefaultSettingsAsync(string userId)
     {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return ServiceResult<AISettings>.Failure("User ID is required");
+        }
+
+        // Several first requests of a new user (e.g. parallel page loads) arrive here together;
+        // without this they all insert and all but one hit the unique index on UserId.
+        await DefaultSettingsLock.WaitAsync();
         try
         {
-            if (string.IsNullOrEmpty(userId))
-            {
-                return ServiceResult<AISettings>.Failure("User ID is required");
-            }
 
             _logger.LogInformation("Creating default AI settings for user: {UserId}", userId);
 
@@ -196,10 +202,26 @@ public class AISettingsService : IAISettingsService
             _logger.LogInformation("Successfully created default AI settings for user: {UserId}", userId);
             return ServiceResult<AISettings>.Success(defaultSettings);
         }
+        catch (DbUpdateException ex)
+        {
+            // Another instance inserted the row first: use it.
+            _context.ChangeTracker.Clear();
+            var existing = await _context.AISettings.FirstOrDefaultAsync(s => s.UserId == userId);
+            if (existing != null)
+            {
+                return ServiceResult<AISettings>.Success(existing);
+            }
+            _logger.LogError(ex, "Error creating default AI settings for user: {UserId}", userId);
+            return ServiceResult<AISettings>.Failure("Failed to create default AI settings");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating default AI settings for user: {UserId}", userId);
             return ServiceResult<AISettings>.Failure("Failed to create default AI settings");
+        }
+        finally
+        {
+            DefaultSettingsLock.Release();
         }
     }
 

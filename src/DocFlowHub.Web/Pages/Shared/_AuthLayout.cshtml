@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="~/css/dfh/bootstrap.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dfh/base.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dfh/shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/components.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="dfh-auth">
@@ -24,10 +25,12 @@
         <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
     </a>
     @RenderBody()
+    <partial name="_AuthFooter" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/dfh/shell.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/auth.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

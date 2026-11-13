@@ -28,11 +28,53 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal --filter "Category!=LiveStorage"
 
-  # Render deploys master only after these checks pass, so make sure the demo image builds.
+  # Render deploys master only after these checks pass, so make sure the demo image builds,
+  # then run the Playwright smoke suite against that same image (the public demo setup).
   docker:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 has no Chromium build for ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Build demo image
       run: docker build -t docflowhub-demo .
+
+    - name: Start the demo container
+      run: |
+        docker run -d --name demo -p 10000:10000 docflowhub-demo
+        for i in $(seq 1 60); do
+          if curl -fs http://localhost:10000/healthz > /dev/null; then echo "ready after ${i}s"; exit 0; fi
+          sleep 1
+        done
+        docker logs demo
+        exit 1
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: tests/e2e/package-lock.json
+
+    - name: Install Playwright
+      working-directory: tests/e2e
+      run: |
+        npm ci
+        npx playwright install --with-deps chromium
+
+    - name: Smoke tests
+      working-directory: tests/e2e
+      env:
+        BASE_URL: http://localhost:10000
+      run: npx playwright test smoke.spec.ts
+
+    - name: Container log
+      if: always()
+      run: docker logs demo 2>&1 | tail -200
+
+    - name: Upload Playwright traces
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-traces
+        path: tests/e2e/test-results
+        retention-days: 7
