@@ -37,6 +37,7 @@ idle, so the first visit can take a minute.
   storage per user, recorded actions).
 
 **Interface**
+- A public landing page at `/` for signed-out visitors (signed-in users get their dashboard).
 - A dense, IDE-like dark interface: title bar, icon rail, tool windows, editor tabs, inspector, status bar.
 - Command palette (`Ctrl K`) for documents, folders and actions; keyboard shortcuts (`?` lists them);
   a right-click menu on document rows.
@@ -136,4 +137,4 @@ from `master` after CI passes. See [docs/demo-deployment.md](docs/demo-deploymen
 
 ## License
 
-MIT.
+MIT, see [LICENSE](LICENSE).

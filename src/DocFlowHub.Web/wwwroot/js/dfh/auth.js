@@ -15,6 +15,12 @@
             });
         });
 
+        // "Try the demo" on the landing page links here with ?demo=1: fill in the demo user account.
+        const firstDemo = document.querySelector('.dfh-demo-fill');
+        if (firstDemo && new URLSearchParams(window.location.search).get('demo') === '1') {
+            firstDemo.click();
+        }
+
         // Register: rules, strength meter, and a submit that waits for a valid password.
         const password = document.querySelector('[data-dfh-password]');
         if (!password) return;

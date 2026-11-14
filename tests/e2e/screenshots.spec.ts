@@ -176,6 +176,36 @@ test('admin screens', async ({ page }) => {
   }
 });
 
+test('landing page', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.dfh-lp-shot img').evaluate((img: HTMLImageElement) => img.decode());
+  await page.screenshot({ path: `${dir}/landing.png` });
+  await page.screenshot({ path: `${dir}/landing-full.png`, fullPage: true });
+  for (const [name, width, height] of [['landing-1024', 1024, 768], ['landing-390', 390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    await page.locator('.dfh-lp-shot img').evaluate((img: HTMLImageElement) => img.decode());
+    await page.screenshot({ path: `${dir}/${name}-full.png`, fullPage: true });
+  }
+});
+
+// The landing hero image (wwwroot/img/landing/documents.jpg): the Documents view at 1200×740, 2× for sharp text.
+//   LANDING_SHOTS=src/DocFlowHub.Web/wwwroot/img/landing BASE_URL=<demo-seeded app> npx playwright test screenshots.spec.ts -g "landing hero"
+test('landing hero', async ({ browser }) => {
+  const out = process.env.LANDING_SHOTS;
+  test.skip(!out, 'LANDING_SHOTS not set');
+  const context = await browser.newContext({ viewport: { width: 1200, height: 740 }, deviceScaleFactor: 2, colorScheme: 'dark' });
+  const page = await context.newPage();
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  const close = page.locator('[data-dfh-dismiss-key] [data-dfh-dismiss]');
+  if (await close.isVisible()) await close.click();
+  await page.locator('tbody tr[data-id]').nth(2).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${out}/documents.jpg`, type: 'jpeg', quality: 82 });
+  await context.close();
+});
+
 test('signed-out screens', async ({ page }) => {
   for (const [name, path] of [['sign-in', '/Account/Login'], ['register', '/Account/Register'], ['signed-out', '/Account/Logout'], ['error-404-anonymous', '/nope']] as const) {
     await page.goto(path);

@@ -109,7 +109,7 @@ Recommended defaults; the ones marked **D** need your OK.
 | # | Topic | Decision |
 |---|---|---|
 | D1 | Where sprint PRs merge | **`redesign/ide` integration branch**, one merge to `master` at the end, so the public demo never shows a half-old, half-new UI. Alternative: merge each sprint to `master` and accept a mixed demo. |
-| D2 | Anonymous `/` | Redirect to Sign in; delete the marketing landing page with its invented stats (handoff says so). |
+| D2 | Anonymous `/` | Redirect to Sign in; delete the marketing landing page with its invented stats (handoff says so). **Superseded in Sprint 16**: the updated handoff adds a new landing page, now shown at `/` to signed-out visitors. |
 | D3 | Status bar content | Storage provider from config ("Local storage" on the demo, "Azure Blob" otherwise), current path (mono), signed-in user's AI requests today vs daily limit (existing data), `demo · read-only` in demo, app version from the assembly. No "connected" claim. |
 | D4 | Version compare in the demo | Compare is a POST and the demo blocks POSTs, so the demo can't show it. Option: allow the `CompareVersions` handler in demo **only when a cached comparison exists** (the seed can create a few). Otherwise the compare screen shows an explanatory empty state in the demo. |
 | D5 | Document preview (Details) | Visual pass: placeholder panel with file type, size, page info we have, and Download. Real PDF.js preview later (needs an inline GET endpoint). |
@@ -228,6 +228,11 @@ inspector overlay, ≤768 tree drawer, <600 bottom nav + two-line rows + details
 CSS/JS and dead files; final full screenshot pass; merge `redesign/ide` → `master`; update README
 screenshots and `.ai` status docs.
 Details: [`sprints/sprint15/sprint15-plan.md`](sprints/sprint15/sprint15-plan.md). **Done** — [log](sprints/sprint15/sprint15-log.md).
+
+### Sprint 16 — Public landing page (S)
+New `DocFlowHub Landing` mock from the updated handoff: landing at `/` for signed-out visitors, copy
+fact-checked against the app, real hero screenshot, MIT `LICENSE` file.
+Details: [`sprints/sprint16/sprint16-plan.md`](sprints/sprint16/sprint16-plan.md). **Done** — [log](sprints/sprint16/sprint16-log.md).
 
 ## 8. Bugs fixed along the way
 
