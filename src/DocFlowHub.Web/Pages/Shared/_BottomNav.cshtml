@@ -1,0 +1,42 @@
+@{
+    // Below 600px the rail becomes this bar (design Responsive, S15-6). Hidden by CSS on wider screens.
+    var page = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    bool Starts(params string[] prefixes) => prefixes.Any(p => page.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+    var moreActive = Starts("/Admin", "/Settings", "/Account/Manage");
+
+    var items = new[]
+    {
+        (Page: "/Index", Icon: "bi-grid-1x2", Label: "Home", Active: page == "/Index"),
+        (Page: "/Documents/Index", Icon: "bi-files", Label: "Documents", Active: Starts("/Documents")),
+        (Page: "/Projects/Index", Icon: "bi-kanban", Label: "Projects", Active: Starts("/Projects", "/Folders")),
+        (Page: "/Teams/Index", Icon: "bi-people", Label: "Teams", Active: Starts("/Teams")),
+    };
+}
+<nav class="dfh-bottomnav" aria-label="Main">
+    @foreach (var item in items)
+    {
+        <a class="dfh-bottomnav-item@(item.Active ? " is-active" : "")" asp-area="" asp-page="@item.Page" aria-current="@(item.Active ? "page" : null)">
+            <i class="bi @item.Icon" aria-hidden="true"></i><span>@item.Label</span>
+        </a>
+    }
+    <div class="dropup dfh-bottomnav-more">
+        <button type="button" class="dfh-bottomnav-item@(moreActive ? " is-active" : "")" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-three-dots" aria-hidden="true"></i><span>More</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" asp-area="" asp-page="/Account/Manage/Index"><i class="bi bi-person" aria-hidden="true"></i>Profile</a></li>
+            <li><a class="dropdown-item" asp-area="" asp-page="/Settings/AI"><i class="bi bi-gear" aria-hidden="true"></i>Settings</a></li>
+            @if (User.IsInRole("Administrator"))
+            {
+                <li><a class="dropdown-item" asp-area="" asp-page="/Admin/Index"><i class="bi bi-shield-lock" aria-hidden="true"></i>Admin</a></li>
+            }
+            <li><button type="button" class="dropdown-item" data-dfh-open-palette><i class="bi bi-search" aria-hidden="true"></i>Search</button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form asp-area="" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })" method="post">
+                    <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Sign out</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</nav>

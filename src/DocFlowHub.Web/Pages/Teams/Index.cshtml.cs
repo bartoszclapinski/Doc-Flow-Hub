@@ -1,29 +1,22 @@
+using DocFlowHub.Core.Models.Workspace;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Models.Common;
-using DocFlowHub.Core.Models.Teams;
-using DocFlowHub.Core.Models.Teams.Dto;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
 
 namespace DocFlowHub.Web.Pages.Teams;
 
+/// <summary>Teams (no mock, decision S13-6): the user's teams in a table; a row opens the team.</summary>
 [Authorize]
 public class IndexModel : PageModel
 {
-    private readonly ITeamService _teamService;
+    private readonly IWorkspaceBrowserService _workspace;
 
-    public IndexModel(ITeamService teamService)
-    {
-        _teamService = teamService;
-    }
+    public IndexModel(IWorkspaceBrowserService workspace) => _workspace = workspace;
 
-    public PagedResult<TeamDto> Teams { get; set; } = new();
-    public string? ErrorMessage { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public TeamFilter Filter { get; set; } = new();
+    public IReadOnlyList<TeamRow> Teams { get; private set; } = Array.Empty<TeamRow>();
+    public string? ErrorMessage { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -33,16 +26,9 @@ public class IndexModel : PageModel
             return RedirectToPage("/Account/Login");
         }
 
-        var result = await _teamService.GetUserTeamsAsync(userId, Filter);
-        if (result.Succeeded)
-        {
-            Teams = result.Data;
-        }
-        else
-        {
-            ErrorMessage = result.Error;
-        }
-
+        var result = await _workspace.GetTeamsAsync(userId);
+        if (result.Succeeded && result.Data != null) Teams = result.Data;
+        else ErrorMessage = result.Error ?? "The teams could not be loaded.";
         return Page();
     }
 }

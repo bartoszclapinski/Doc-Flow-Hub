@@ -1,37 +1,34 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.DataAnnotations;
 using DocFlowHub.Core.Models.Teams.Dto;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace DocFlowHub.Web.Pages.Teams;
 
+/// <summary>New team (decision S13-9). The creator becomes its owner and first admin.</summary>
 [Authorize]
 public class CreateModel : PageModel
 {
     private readonly ITeamService _teamService;
 
-    public CreateModel(ITeamService teamService)
-    {
-        _teamService = teamService;
-    }
+    public CreateModel(ITeamService teamService) => _teamService = teamService;
 
     [BindProperty]
-    [Required(ErrorMessage = "Team name is required")]
-    [StringLength(100, ErrorMessage = "Team name must be between 3 and 100 characters", MinimumLength = 3)]
+    [Required(ErrorMessage = "Enter a name")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "The name needs 3 to 100 characters")]
     public string Name { get; set; } = string.Empty;
 
     [BindProperty]
-    [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+    [StringLength(500, ErrorMessage = "The description can have at most 500 characters")]
     public string? Description { get; set; }
 
-    public string? ErrorMessage { get; set; }
+    public string? ErrorMessage { get; private set; }
 
     public void OnGet()
     {
-        // Initialize page
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -41,26 +38,18 @@ public class CreateModel : PageModel
             return Page();
         }
 
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
+        var result = await _teamService.CreateTeamAsync(new CreateTeamRequest
         {
-            return RedirectToPage("/Account/Login");
+            Name = Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
+        }, User.GetUserId()!);
+        if (!result.Succeeded || result.Data == null)
+        {
+            ErrorMessage = result.Error ?? "The team could not be created.";
+            return Page();
         }
 
-        var request = new CreateTeamRequest
-        {
-            Name = Name,
-            Description = Description
-        };
-
-        var result = await _teamService.CreateTeamAsync(request, userId);
-        if (result.Succeeded)
-        {
-            TempData["SuccessMessage"] = $"Team '{Name}' was created successfully!";
-            return RedirectToPage("./Details", new { id = result.Data.Id });
-        }
-
-        ErrorMessage = result.Error;
-        return Page();
+        TempData["ToastSuccess"] = $"Created team \"{result.Data.Name}\"";
+        return RedirectToPage("/Teams/Details", new { id = result.Data.Id });
     }
-} 
+}

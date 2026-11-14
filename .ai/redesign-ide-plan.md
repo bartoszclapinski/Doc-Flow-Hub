@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **approved 2026-11-13, not started** · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **Sprints 9–15 done** — 9–10 on 2026-11-13, 11–15 on 2026-11-14, all merged into `redesign/ide`; merging `redesign/ide` → `master` (redeploys the demo) awaits the user's approval · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -185,12 +185,13 @@ Tokens, Bootstrap mapping, fonts, logo/favicon, new `_Layout` shell with title b
 bar; `_AuthLayout`; admin nav tool window; toasts and modal base; AccessDenied + 404; remove
 theme toggle, ripple, submit hijack, counters, duplicate icons. **Result:** every page renders inside
 the new shell; page content is still old but readable (crawler 0 errors, spot screenshots).
-Details: [`sprints/sprint9/sprint9-plan.md`](sprints/sprint9/sprint9-plan.md).
+Details: [`sprints/sprint9/sprint9-plan.md`](sprints/sprint9/sprint9-plan.md). **Done** — [log](sprints/sprint9/sprint9-log.md).
 
 ### Sprint 10 — Sign in, Register, Dashboard (M)
 Sign in (3g) with the demo-credentials box, Register (8d) with live password rules, Logout view,
 anonymous `/` → Sign in (landing page deleted), Dashboard (3a): stats line, recent documents table,
 AI / storage-by-type / teams strip, activity tool window. Admin overview by analogy.
+Details: [`sprints/sprint10/sprint10-plan.md`](sprints/sprint10/sprint10-plan.md). **Done** — [log](sprints/sprint10/sprint10-log.md).
 
 ### Sprint 11 — Documents list (L)
 Project/folder tree tool window (existing `IFolderService` / `IProjectService`), view tabs, toolbar
@@ -198,23 +199,27 @@ with filters, `dfh-table` with check column and file-type labels, AI flag (list 
 that keeps filters (bug fix), inspector filled from the selected row (+ lazy JSON for AI summary and
 last 4 versions), bulk bar, delete / bulk delete with per-item results / move with searchable tree
 picker, empty and no-results states, skeleton rows. Cards/grid view dropped (not in the design).
+Details: [`sprints/sprint11/sprint11-plan.md`](sprints/sprint11/sprint11-plan.md). **Done** — [log](sprints/sprint11/sprint11-log.md).
 
 ### Sprint 12 — Details, Compare, Upload, Edit (L)
 Details (3b): editor tab, toolbar, preview placeholder (D5), inspector tabs Info / AI / Versions /
 Sharing. Compare (3i) as its own page and editor tab, AI comparison inspector (D4). Upload (3c):
 dropzone, file row, details grid, AI options, sticky footer, destination tree inspector. Edit by
 analogy.
+Details: [`sprints/sprint12/sprint12-plan.md`](sprints/sprint12/sprint12-plan.md). **Done** — [log](sprints/sprint12/sprint12-log.md).
 
 ### Sprint 13 — Projects, Folders, Teams (M)
 Projects table (8a) with colour squares and stats; Project details; Folder (8b) with subfolders above
 documents and folder settings in the inspector; Folders/Index tree (keeps drag-and-drop move); Teams
 list and Team (3d) with members table and role controls; all Create/Edit forms by analogy.
+Details: [`sprints/sprint13/sprint13-plan.md`](sprints/sprint13/sprint13-plan.md). **Done** — [log](sprints/sprint13/sprint13-log.md).
 
 ### Sprint 14 — Admin, Settings, Profile (L)
 Admin nav, Users (3e) with token search, bulk bar, numbered pager, details modal re-skinned in JS;
 Analytics (8c) with CSS bar charts and the never-populated `UsageTrends`/`ErrorStats` fixed; Roles,
 UserLimits, Admin Settings by analogy; settings shell with tree; Settings · AI (3f); Profile (8e) +
 Edit profile / Change password / Picture. Chart.js removed.
+Details: [`sprints/sprint14/sprint14-plan.md`](sprints/sprint14/sprint14-plan.md). **Done** — [log](sprints/sprint14/sprint14-log.md).
 
 ### Sprint 15 — Interactions, states, responsive, cleanup (L)
 AI states (7d), banners, context menu (7j), command palette (7k), keyboard shortcuts, all remaining
@@ -222,6 +227,7 @@ AI states (7d), banners, context menu (7j), command palette (7k), keyboard short
 inspector overlay, ≤768 tree drawer, <600 bottom nav + two-line rows + details as tabs); delete old
 CSS/JS and dead files; final full screenshot pass; merge `redesign/ide` → `master`; update README
 screenshots and `.ai` status docs.
+Details: [`sprints/sprint15/sprint15-plan.md`](sprints/sprint15/sprint15-plan.md). **Done** — [log](sprints/sprint15/sprint15-log.md).
 
 ## 8. Bugs fixed along the way
 
@@ -230,11 +236,32 @@ screenshots and `.ai` status docs.
 | `/Account/AccessDenied` configured but missing; no 404 handling | 9 |
 | Bootstrap Icons loaded twice; Register page missing icons | 9 |
 | Login links to a non-existent ForgotPassword page | 10 |
+| Register validated passwords of 6+ chars while Identity requires 8 | 10 |
+| Demo seed: versions clamped to "now", `Document.UpdatedAt` never moved to the last version | 10 |
+| Parallel first requests of a new user fail inserting default AI settings (unique index) | 10 |
+| Dashboard / admin overview loaded whole document lists (admin: per user) just to count them | 10 |
 | Documents pagination drops filters and sort | 11 |
 | Demo: mutating AJAX calls show "HTTP error 403" / `alert('Move failed')` instead of the read-only message | 11 |
+| Demo seed stored folder paths with the project name, unlike `FolderService` (locations repeated the project) | 11 |
+| Bulk move returned only a count, no per-document result | 11 |
+| Upload ignored "Generate AI summary" and started a second summary on a disposed request scope | 12 |
+| No way to generate a missing AI summary (the inspector pointed to one) | 12 |
 | Projects/Details TotalSize hard-coded to 0 | 13 |
 | Admin Analytics never fills `UsageTrends` / `ErrorStats` | 14 |
 | Settings AI loads Chart.js from a CDN instead of the local copy (removed anyway) | 14 |
+| Documents pager: `?page=2` bound to the Razor Pages route value, page 2 never opened (introduced in 11) | 14 |
+| Admin user Create / Edit and Change password accepted 6-char passwords (Identity requires 8) | 14 |
+| Admin could lock, delete or demote their own account; Administrator role could be renamed | 14 |
+| User limits "Reset usage" / "Update default limits" reported success without doing anything | 14 |
+| Role description silently dropped (Identity roles have no column); users role filter ignored | 14 |
+| User details showed `IsActive` hard-coded; Activate / Suspend duplicated Unlock / Lock | 14 |
+| Decimal form fields failed validation on a non-English server culture (no request culture set) | 14 |
+| AI daily / hourly limits counted but never enforced (manual summary now checks them) | 15 |
+| Admin "Send password reset" generated a token, sent nothing and reported success (removed) | 15 |
+| Admin messages reported "sent" although users have no inbox and no e-mail is sent (now worded honestly) | 15 |
+| Legacy CSS (1,110 lines) and a link to an empty scoped-CSS bundle still loaded on every page | 15 |
+| Privacy page was the template text; README promised features that don't exist | 15 |
+| `.dfh-kbd` inherited Bootstrap's light `kbd` background | 15 |
 | `theme-manager.js` posts to a non-existent `/api/profile/theme` | 9 (file removed) |
 
 ## 9. Risks

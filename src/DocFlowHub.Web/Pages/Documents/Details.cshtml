@@ -1,958 +1,397 @@
 @page "/Documents/Details/{id:int}"
-@using DocFlowHub.Web.Extensions
 @model DocFlowHub.Web.Pages.Documents.DetailsModel
+@using DocFlowHub.Core.Models.Documents.Browser
 @{
-    ViewData["Title"] = Model.Document?.Title ?? "Document Details";
+    var d = Model.Doc;
+    ViewData["Title"] = d.Title;
+    ViewData["FullBleed"] = true;
+    var (label, kind) = Dfh.FileType(d.FileType);
+    var current = d.Current;
+    var tab = Model.ActiveTab;
+    var location = d.Location ?? "No project";
+    var sizeInfo = $"{Dfh.FileSize(d.FileSize)} · {d.Versions.Count} {Dfh.Noun(d.Versions.Count, "version")}"
+                   + (d.Versions.Count > 1 ? $" · {Dfh.FileSize(d.Versions.Sum(v => v.FileSize))} total" : "");
+    var previous = d.Versions.Count > 1 ? d.Versions[1] : null;
+    string Iso(DateTime utc) => utc.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+    string Tab(string name) => tab == name ? "true" : "false";
 }
 
-<div class="page-container page-transition">
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            @Model.ErrorMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+@section Inspector {
+    <aside class="dfh-inspector dfh-inspector--340" aria-label="Document details">
+        <div class="dfh-panel-tabs" role="tablist" aria-label="Details" data-dfh-tabs>
+            <button type="button" class="dfh-panel-tab" role="tab" id="tab-info" aria-controls="panel-info" aria-selected="@Tab("info")" data-tab="info">Info</button>
+            <button type="button" class="dfh-panel-tab" role="tab" id="tab-ai" aria-controls="panel-ai" aria-selected="@Tab("ai")" data-tab="ai"><i class="bi bi-stars" aria-hidden="true"></i>AI</button>
+            <button type="button" class="dfh-panel-tab" role="tab" id="tab-versions" aria-controls="panel-versions" aria-selected="@Tab("versions")" data-tab="versions">Versions <span class="dfh-panel-tab-count">@d.Versions.Count</span></button>
+            <button type="button" class="dfh-panel-tab" role="tab" id="tab-sharing" aria-controls="panel-sharing" aria-selected="@Tab("sharing")" data-tab="sharing">Sharing</button>
         </div>
-    }
-    
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            @Model.SuccessMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    
-    @if (Model.Document != null)
-    {
-        <!-- Breadcrumb Navigation with Team Context -->
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb-modern">
-                <li><a asp-page="/Index">Home</a></li>
-                @if (Model.Document.TeamId.HasValue && !string.IsNullOrEmpty(Model.Document.TeamName))
+
+        @* ---------- Info (as designed) ---------- *@
+        <div class="dfh-tabpanel" role="tabpanel" id="panel-info" aria-labelledby="tab-info" hidden="@(tab != "info")">
+            <div class="dfh-insp-block">
+                <h2 class="dfh-insp-title">@d.Title</h2>
+                @if (!string.IsNullOrWhiteSpace(d.Description))
                 {
-                    <li class="breadcrumb-sep">/</li>
-                    <li><a asp-page="/Teams/Index">Teams</a></li>
-                    <li class="breadcrumb-sep">/</li>
-                    <li><a asp-page="/Teams/Details" asp-route-id="@Model.Document.TeamId">@Model.Document.TeamName</a></li>
-                    <li class="breadcrumb-sep">/</li>
-                    <li><a asp-page="./Index" asp-route-filter-teamid="@Model.Document.TeamId">Team Documents</a></li>
+                    <p class="dfh-insp-desc">@d.Description</p>
                 }
                 else
                 {
-                    <li class="breadcrumb-sep">/</li>
-                    <li><a asp-page="./Index">Documents</a></li>
+                    <p class="dfh-insp-note">No description.</p>
                 }
-                <li class="breadcrumb-sep">/</li>
-                <li class="active" aria-current="page">@Model.Document.Title</li>
+            </div>
+            <div class="dfh-insp-block">
+                <dl class="dfh-kv dfh-kv--side dfh-kv--92">
+                    <dt>Owner</dt>
+                    <dd>@d.OwnerName@(d.IsOwner ? " (you)" : "")</dd>
+                    <dt>Workspace</dt>
+                    <dd><span class="dfh-workspace"><i class="bi @(d.TeamName != null ? "bi-people" : "bi-lock") dfh-muted" aria-hidden="true"></i>@(d.TeamName ?? "Private")</span></dd>
+                    <dt>Type</dt>
+                    <dd class="dfh-mono">@DetailsModel.MimeType(d.FileType)</dd>
+                    <dt>Size</dt>
+                    <dd class="dfh-mono">@Dfh.FileSize(d.FileSize)</dd>
+                    <dt>Version</dt>
+                    <dd class="dfh-mono">@(current != null ? $"v{current.Number}" : "—")@(current?.Hash != null ? $" · {current.Hash}" : "")</dd>
+                    <dt>Created</dt>
+                    <dd class="dfh-mono" title="UTC">@Iso(d.CreatedAt)</dd>
+                    <dt>Modified</dt>
+                    <dd class="dfh-mono" title="UTC">@Iso(d.ModifiedAt)</dd>
+                    @if (d.Categories.Count > 0)
+                    {
+                        <dt>Categories</dt>
+                        <dd><span class="dfh-chips">@foreach (var c in d.Categories) {<span class="dfh-chip--outline">@c</span>}</span></dd>
+                    }
+                </dl>
+            </div>
+            <div class="dfh-insp-block">
+                <div class="dfh-ai-head">
+                    <span class="dfh-ai-label"><i class="bi bi-stars" aria-hidden="true"></i>AI summary</span>
+                    @if (d.Summary?.Confidence is double conf)
+                    {
+                        <span class="dfh-mono dfh-muted">conf. @conf.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span>
+                    }
+                </div>
+                @if (d.Summary != null)
+                {
+                    <p class="dfh-ai-text-block">@d.Summary.Text</p>
+                    @if (d.Summary.KeyPoints.Count > 0)
+                    {
+                        <ul class="dfh-keypoints">
+                            @foreach (var point in d.Summary.KeyPoints.Take(3))
+                            {
+                                <li>@point</li>
+                            }
+                        </ul>
+                    }
+                }
+                else
+                {
+                    <p class="dfh-ai-text-block is-muted">No summary yet. <a href="?tab=ai" data-dfh-tab-open="ai">Open the AI tab</a> to generate one.</p>
+                }
+            </div>
+            <div class="dfh-insp-block">
+                <div class="dfh-insp-block-head">
+                    <span>Recent versions</span>
+                    @if (previous != null && current != null)
+                    {
+                        <a asp-page="/Documents/Compare" asp-route-id="@d.Id" asp-route-from="@previous.Number" asp-route-to="@current.Number">
+                            <i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare v@(previous.Number) ↔ v@(current.Number)
+                        </a>
+                    }
+                </div>
+                <ol class="dfh-versions">
+                    @for (var i = 0; i < Math.Min(3, d.Versions.Count); i++)
+                    {
+                        var v = d.Versions[i];
+                        var message = v.Message ?? (v.Number == 1 ? "Initial upload" : "No description");
+                        <li class="@(i == 0 ? "is-current" : null)">
+                            <span class="dfh-dot @(i == 0 ? "dfh-dot--accent" : "dfh-dot--past")" aria-hidden="true"></span>
+                            <span class="dfh-mono">v@(v.Number)</span>
+                            <span class="dfh-ellipsis@(v.Message == null ? " dfh-muted" : "")" title="@message · @v.Author">@message</span>
+                            <span class="dfh-muted" title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span>
+                        </li>
+                    }
+                </ol>
+            </div>
+        </div>
+
+        @* ---------- AI: full summary, key points, saved comparisons ---------- *@
+        <div class="dfh-tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" hidden="@(tab != "ai")">
+            <div class="dfh-insp-block">
+                <div class="dfh-ai-head">
+                    <span class="dfh-ai-label"><i class="bi bi-stars" aria-hidden="true"></i>AI summary</span>
+                    @if (d.Summary?.Confidence is double conf2)
+                    {
+                        <span class="dfh-mono dfh-muted">conf. @conf2.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)</span>
+                    }
+                </div>
+                @if (d.Summary != null)
+                {
+                    <p class="dfh-ai-text-block is-full">@d.Summary.Text</p>
+                    @if (d.Summary.KeyPoints.Count > 0)
+                    {
+                        <span class="dfh-insp-block-head"><span>Key points</span></span>
+                        <ul class="dfh-keypoints">
+                            @foreach (var point in d.Summary.KeyPoints)
+                            {
+                                <li>@point</li>
+                            }
+                        </ul>
+                    }
+                    <span class="dfh-ai-meta">@d.Summary.Model · <span title="@Dfh.Timestamp(d.Summary.GeneratedAt)">@Dfh.Relative(d.Summary.GeneratedAt)</span></span>
+                }
+                else if (Model.LimitReached)
+                {
+                    @* 7d · failed (limit) *@
+                    <div class="dfh-ai-card is-failed" role="status">
+                        <span class="dfh-ai-card-head"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>AI limit reached</span>
+                        <p>You have used @Dfh.Number(Model.Limits!.CurrentDailyOperations) of @Dfh.Number(Model.Limits.DailyOperationLimit) AI requests today@(Model.Limits.CurrentHourlyOperations >= Model.Limits.HourlyOperationLimit ? $" ({Model.Limits.CurrentHourlyOperations} of {Model.Limits.HourlyOperationLimit} this hour)" : ""). The daily limit resets at midnight UTC.</p>
+                        <span class="dfh-ai-card-actions"><button type="button" class="dfh-link-btn" disabled>Retry</button></span>
+                    </div>
+                }
+                else
+                {
+                    @if (!Model.SummariesOn)
+                    {
+                        @* 7d · off *@
+                        <div class="dfh-ai-card is-off">
+                            <span class="dfh-ai-card-head"><i class="bi bi-stars" aria-hidden="true"></i>AI summary · off</span>
+                            <p>Summaries are turned off in your AI settings, so uploads don't offer them. You can still summarize this document.</p>
+                            <span class="dfh-ai-card-actions"><a asp-page="/Settings/AI">Settings</a></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="dfh-insp-note" data-dfh-ai-idle>This document has no AI summary yet. Generating one uses one AI request and your preferred model from Settings · AI.</p>
+                    }
+                    @* 7d · generating: shown by details.js while the form posts (generation is synchronous). *@
+                    <div class="dfh-ai-card is-generating" data-dfh-ai-generating hidden aria-live="polite">
+                        <span class="dfh-ai-card-head"><i class="bi bi-stars" aria-hidden="true"></i>AI summary<span class="dfh-spacer"></span><span class="dfh-muted">generating…</span></span>
+                        <span class="dfh-ai-skel" style="width: 100%"></span>
+                        <span class="dfh-ai-skel" style="width: 92%"></span>
+                        <span class="dfh-ai-skel" style="width: 64%"></span>
+                    </div>
+                    @if (Model.CanEdit)
+                    {
+                        <form method="post" asp-page-handler="GenerateSummary" asp-route-id="@d.Id" data-dfh-busy="Generating…" data-dfh-ai-generate>
+                            <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-stars" aria-hidden="true"></i>@(Model.SummariesOn ? "Generate summary" : "Summarize this document")</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@Model.DemoTip">
+                            <button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-stars" aria-hidden="true"></i>Generate summary</button>
+                        </span>
+                    }
+                }
+            </div>
+            <div class="dfh-insp-block">
+                <div class="dfh-insp-block-head">
+                    <span>Version comparisons</span>
+                    @if (d.Versions.Count > 1)
+                    {
+                        <a asp-page="/Documents/Compare" asp-route-id="@d.Id"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare</a>
+                    }
+                </div>
+                @if (d.Comparisons.Count == 0)
+                {
+                    <p class="dfh-insp-note">@(d.Versions.Count > 1 ? "No saved comparisons yet." : "Upload a second version to compare versions.")</p>
+                }
+                else
+                {
+                    <ul class="dfh-link-list dfh-mono">
+                        @foreach (var (from, to) in d.Comparisons)
+                        {
+                            <li><a asp-page="/Documents/Compare" asp-route-id="@d.Id" asp-route-from="@from" asp-route-to="@to">v@(from) ↔ v@(to)</a></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @* ---------- Versions: all of them ---------- *@
+        <div class="dfh-tabpanel" role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden="@(tab != "versions")">
+            <ol class="dfh-version-rows">
+                @foreach (var v in d.Versions)
+                {
+                    var isCurrent = v == current;
+                    var message = v.Message ?? (v.Number == 1 ? "Initial upload" : "No description");
+                    <li class="dfh-version-row@(isCurrent ? " is-current" : "")">
+                        <span class="dfh-dot @(isCurrent ? "dfh-dot--accent" : "dfh-dot--past")" aria-hidden="true"></span>
+                        <span class="dfh-mono">v@(v.Number)</span>
+                        <span class="dfh-version-main">
+                            <span>@message</span>
+                            <span class="dfh-version-meta">@v.Author · <span title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span> · @Dfh.FileSize(v.FileSize)@(v.Hash != null ? $" · {v.Hash}" : "")@(isCurrent ? " · current" : "")</span>
+                        </span>
+                        <span class="dfh-version-actions">
+                            <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
+                                <input type="hidden" name="versionId" value="@v.Id" />
+                                <button type="submit" class="dfh-icon-action" title="Download v@(v.Number)" aria-label="Download v@(v.Number)"><i class="bi bi-download" aria-hidden="true"></i></button>
+                            </form>
+                            @if (!isCurrent && current != null)
+                            {
+                                <a class="dfh-icon-action" asp-page="/Documents/Compare" asp-route-id="@d.Id" asp-route-from="@v.Number" asp-route-to="@current.Number"
+                                   title="Compare with v@(current.Number)" aria-label="Compare v@(v.Number) with v@(current.Number)"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></a>
+                                <span class="dfh-btn-disabled-wrap" title="@(Model.CanManage ? $"Delete v{v.Number}" : Model.OwnerTip)">
+                                    <button type="button" class="dfh-icon-action is-danger" aria-label="Delete v@(v.Number)" disabled="@(!Model.CanManage)"
+                                            data-dfh-version-delete="@v.Id" data-number="@v.Number"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                </span>
+                            }
+                        </span>
+                    </li>
+                }
             </ol>
+        </div>
+
+        @* ---------- Sharing: team assignment ---------- *@
+        <div class="dfh-tabpanel" role="tabpanel" id="panel-sharing" aria-labelledby="tab-sharing" hidden="@(tab != "sharing")">
+            <div class="dfh-insp-block">
+                <span class="dfh-insp-block-head"><span>Who can see this document</span></span>
+                @if (d.TeamName != null)
+                {
+                    <p class="dfh-insp-desc"><i class="bi bi-people dfh-muted" aria-hidden="true"></i> Shared with <b>@d.TeamName</b>. Every member can open it, edit its details and upload new versions.</p>
+                }
+                else
+                {
+                    <p class="dfh-insp-desc"><i class="bi bi-lock dfh-muted" aria-hidden="true"></i> Private. Only @(d.IsOwner ? "you" : d.OwnerName) can see it.</p>
+                }
+            </div>
+            <div class="dfh-insp-block">
+                @if (Model.CanManage)
+                {
+                    <form method="post" asp-page-handler="Share" asp-route-id="@d.Id" class="dfh-modal-stack" data-dfh-busy="Saving…">
+                        <label class="dfh-field">
+                            <span class="dfh-field-label">Workspace</span>
+                            <select name="teamId" class="form-select form-select-sm">
+                                <option value="" selected="@(d.TeamId == null)">Private</option>
+                                @foreach (var t in Model.Teams)
+                                {
+                                    <option value="@t.Id" selected="@(d.TeamId == t.Id)">@t.Name</option>
+                                }
+                            </select>
+                        </label>
+                        <div><button type="submit" class="btn btn-primary btn-sm">Save</button></div>
+                    </form>
+                    @if (Model.Teams.Count == 0)
+                    {
+                        <p class="dfh-insp-note">You are not in a team yet, so the document can only be private.</p>
+                    }
+                }
+                else
+                {
+                    <p class="dfh-insp-note">@(Model.IsDemo ? Model.DemoTip + "." : $"Only the owner, {d.OwnerName}, can change this.")</p>
+                }
+            </div>
+        </div>
+    </aside>
+}
+
+<div class="dfh-column">
+    <partial name="_EditorTabs" model="new EditorTabsView(d.Title, d.FileType, d.Id)" />
+
+    <div class="dfh-toolbar dfh-toolbar--bordered">
+        <nav class="dfh-breadcrumb" aria-label="Location">
+            @if (d.Location != null)
+            {
+                foreach (var part in d.Location.Split(" / "))
+                {
+                    <span>@part</span><span class="dfh-breadcrumb-sep" aria-hidden="true">/</span>
+                }
+            }
+            <span class="dfh-breadcrumb-current" aria-current="page">@(d.Title + d.FileType.ToLowerInvariant())</span>
         </nav>
+        <span class="dfh-spacer"></span>
 
-        <!-- Page Header with actions -->
-        <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <h1 class="page-title"><div class="page-icon">📄</div> @Model.Document.Title</h1>
-            </div>
-            <div class="d-flex gap-2">
-                <form method="post" asp-page-handler="Download" asp-route-versionId="@Model.Document.CurrentVersionId" class="d-inline">
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bi bi-download me-1"></i>Download
-                    </button>
-                </form>
-                @if (Model.Document.OwnerId == User.GetUserId())
-                {
-                    <a asp-page="./Edit" asp-route-id="@Model.Document.Id" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-pencil me-1"></i>Edit
-                    </a>
-                    <button type="button" class="btn btn-outline-danger btn-sm"
-                            onclick="confirmDeleteDocument(@Model.Document.Id, @Html.Raw(Json.Serialize(Model.Document.Title)), '@FormatFileSize(Model.Document.FileSize)', '@Model.Document.CreatedAt.ToString("MMM dd, yyyy")')">
-                        <i class="bi bi-trash me-1"></i>Delete
-                    </button>
-                }
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Main Document Details -->
-            <div class="col-lg-8">
-                <div class="content-card">
-                        @if (!string.IsNullOrEmpty(Model.Document.Description))
-                        {
-                            <div class="mb-4">
-                                <h5>Description</h5>
-                                <p class="text-muted">@Model.Document.Description</p>
-                            </div>
-                        }
-                        
-                        <!-- AI Summary Section -->
-                        @if (Model.Document.HasAISummary)
-                        {
-                            <div class="mb-4">
-                                <div class="card ai-summary-card">
-                                    <div class="card-header ai-summary-header">
-                                        <h6 class="card-title mb-0">
-                                            <i class="bi bi-magic me-2"></i>
-                                            AI Summary
-                                            <small class="float-end">
-                                                Generated by @Model.Document.AISummary!.AIModel
-                                                <span class="badge ai-confidence-badge ms-2">
-                                                    @(Math.Round((Model.Document.AISummary!.ConfidenceScore ?? 0.85) * 100))% confidence
-                                                </span>
-                                            </small>
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="card-text">@Model.Document.AISummary!.Summary</p>
-                                        
-                                        @if (!string.IsNullOrEmpty(Model.Document.AISummary!.KeyPoints))
-                                        {
-                                            <div class="mt-3">
-                                                <h6 class="text-primary">
-                                                    <i class="bi bi-key"></i> Key Points
-                                                </h6>
-                                                <div class="token-panel rounded p-3">
-                                                    @{
-                                                        var keyPoints = Model.Document.AISummary!.KeyPoints.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                                                    }
-                                                    @foreach (var point in keyPoints)
-                                                    {
-                                                        <div class="d-flex align-items-start mb-2">
-                                                            <i class="bi bi-arrow-right text-primary me-2 mt-1"></i>
-                                                            <span>@point.Trim().TrimStart('•', '-', '*').Trim()</span>
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                        
-                                        <div class="mt-3">
-                                            <small class="text-muted">
-                                                <i class="bi bi-clock"></i>
-                                                Generated on @Model.Document.AISummary!.GeneratedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="mb-4">
-                                <div class="card ai-summary-card">
-                                    <div class="card-body text-center">
-                                        <div class="text-muted">
-                                            <i class="bi bi-robot fs-1 d-block mb-2"></i>
-                                            <h6 class="text-primary-token">AI Summary</h6>
-                                            <p class="small mb-0">
-                                                AI summary is being generated in the background. Please refresh the page in a few moments.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <dl class="row">
-                                    <dt class="col-sm-5">File Type</dt>
-                                    <dd class="col-sm-7">
-                                        <span class="badge bg-info">@Model.Document.FileType.ToUpper()</span>
-                                    </dd>
-                                    
-                                    <dt class="col-sm-5">File Size</dt>
-                                    <dd class="col-sm-7">@FormatFileSize(Model.Document.FileSize)</dd>
-                                    
-                                    <dt class="col-sm-5">Created</dt>
-                                    <dd class="col-sm-7">
-                                        <span data-bs-toggle="tooltip" title="@Model.Document.CreatedAt.ToString("F")">
-                                            @Model.Document.CreatedAt.ToString("MMM dd, yyyy")
-                                        </span>
-                                    </dd>
-                                </dl>
-                            </div>
-                            <div class="col-md-6">
-                                <dl class="row">
-                                    <dt class="col-sm-5">Last Modified</dt>
-                                    <dd class="col-sm-7">
-                                                                                @if (Model.Document.UpdatedAt.HasValue)
-                                        {
-                                            <span data-bs-toggle="tooltip" title="@Model.Document.UpdatedAt.Value.ToString("F")">
-                                                @Model.Document.UpdatedAt.Value.ToString("MMM dd, yyyy")
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Never</span>
-                                        }
-                                    </dd>
-                                    
-                                    <dt class="col-sm-5">Owner</dt>
-                                    <dd class="col-sm-7">
-                                        <i class="bi bi-person-circle"></i>
-                                        @Model.Document.OwnerName
-                                    </dd>
-                                    
-                                    @if (Model.Document.TeamId.HasValue)
-                                    {
-                                        <dt class="col-sm-5">Team</dt>
-                                        <dd class="col-sm-7">
-                                            <i class="bi bi-people-fill text-primary"></i>
-                                            @if (!string.IsNullOrEmpty(Model.Document.TeamName))
-                                            {
-                                                <span>@Model.Document.TeamName</span>
-                                            }
-                                            else
-                                            {
-                                                <span>Shared with team</span>
-                                            }
-                                        </dd>
-                                    }
-                                </dl>
-                            </div>
-                        </div>
-
-                        @if (Model.Categories.Any())
-                        {
-                            <div class="mt-3">
-                                <h6>Categories:</h6>
-                                <div class="d-flex flex-wrap gap-2">
-                                    @foreach (var category in Model.Categories)
-                                    {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-tag-fill"></i>
-                                            @category.Name
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-                        }
-
-                        <!-- Team Sharing Management (Only for document owners) -->
-                        @if (Model.Document.OwnerId == User.GetUserId())
-                        {
-                            <div class="mt-4 pt-3 border-top">
-                                <h6>Team Sharing</h6>
-                                @if (Model.Document.TeamId.HasValue)
-                                {
-                                    <div class="alert alert-info d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <i class="bi bi-people-fill me-2"></i>
-                                            This document is shared with team: <strong>@Model.Document.TeamName</strong>
-                                        </div>
-                                        <form method="post" asp-page-handler="UnshareFromTeam" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning" 
-                                                    onclick="return confirm('Are you sure you want to unshare this document from the team?');">
-                                                <i class="bi bi-x-circle me-1"></i>Unshare
-                                            </button>
-                                        </form>
-                                    </div>
-                                }
-                                else if (Model.UserTeams.Any())
-                                {
-                                    <div class="alert alert-secondary">
-                                        <i class="bi bi-lock me-2"></i>This document is private
-                                    </div>
-                                    <form method="post" asp-page-handler="ShareWithTeam" class="row g-3">
-                                        <div class="col-auto">
-                                            <select asp-for="ShareWithTeamId" class="form-select" required>
-                                                <option value="">Select team to share with...</option>
-                                                @foreach (var team in Model.UserTeams)
-                                                {
-                                                    <option value="@team.Id">@team.Name (@team.MemberCount members)</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <button type="submit" class="btn btn-primary">
-                                                <i class="bi bi-share me-1"></i>Share with Team
-                                            </button>
-                                        </div>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <div class="alert alert-light">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        You don't have any teams to share this document with. 
-                                        <a asp-page="/Teams/Create" class="alert-link">Create a team</a> to start collaborating!
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-
-                @if (Model.ComparisonResult != null)
-                {
-                    <!-- AI Version Comparison Results -->
-                    <div class="content-card mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="section-heading section-heading-success mb-0">
-                                <i class="bi bi-magic"></i> AI Version Comparison
-                            </h5>
-                            <div class="text-end text-muted small">
-                                <div>Generated by @Model.ComparisonResult.AIModel</div>
-                                <div>Confidence: @(Math.Round((Model.ComparisonResult.ConfidenceScore ?? 0.8) * 100))%</div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <!-- Change Summary -->
-                                    <div class="mb-4">
-                                        <h6 class="text-primary">
-                                            <i class="bi bi-lightbulb"></i>
-                                            Summary of Changes
-                                        </h6>
-                                        <p class="lead">@Model.ComparisonResult.ChangeSummary</p>
-                                    </div>
-
-                                    <!-- Detailed Changes -->
-                                    @if (!string.IsNullOrEmpty(Model.ComparisonResult.DetailedChanges))
-                                    {
-                                        <div class="mb-4">
-                                            <h6 class="text-primary">
-                                                <i class="bi bi-list-ul"></i>
-                                                Detailed Changes
-                                            </h6>
-                                            <div class="token-panel rounded p-3">
-                                                @{
-                                                    var changes = Model.ComparisonResult.DetailedChanges.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                                                }
-                                                @foreach (var change in changes)
-                                                {
-                                                    <div class="d-flex align-items-start mb-2">
-                                                        <i class="bi bi-arrow-right text-muted me-2 mt-1"></i>
-                                                        <span>@change.Trim().TrimStart('•', '-', '*').Trim()</span>
-                                                    </div>
-                                                }
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                                <div class="col-md-4">
-                                    <!-- Analysis Metadata -->
-                                    <div class="token-panel rounded p-3">
-                                        <h6 class="text-muted mb-3">Analysis Details</h6>
-                                        
-                                        <div class="mb-3">
-                                            <label class="small text-muted">Change Type:</label>
-                                            <div>
-                                                @{
-                                                    var changeTypeClass = Model.ComparisonResult.ChangeType switch
-                                                    {
-                                                        DocFlowHub.Core.Models.AI.ChangeType.ContentAddition => "bg-success",
-                                                        DocFlowHub.Core.Models.AI.ChangeType.ContentDeletion => "bg-danger",
-                                                        DocFlowHub.Core.Models.AI.ChangeType.ContentModification => "bg-warning",
-                                                        DocFlowHub.Core.Models.AI.ChangeType.StructuralChange => "bg-info",
-                                                        DocFlowHub.Core.Models.AI.ChangeType.SemanticChange => "bg-primary",
-                                                        _ => "bg-secondary"
-                                                    };
-                                                }
-                                                <span class="badge @changeTypeClass">@Model.ComparisonResult.ChangeType</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label class="small text-muted">Significance:</label>
-                                            <div>
-                                                @{
-                                                    var significanceClass = Model.ComparisonResult.Significance switch
-                                                    {
-                                                        DocFlowHub.Core.Models.AI.ChangeSignificance.Critical => "bg-danger",
-                                                        DocFlowHub.Core.Models.AI.ChangeSignificance.High => "bg-warning",
-                                                        DocFlowHub.Core.Models.AI.ChangeSignificance.Medium => "bg-info",
-                                                        _ => "bg-success"
-                                                    };
-                                                }
-                                                <span class="badge @significanceClass">@Model.ComparisonResult.Significance</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label class="small text-muted">Processing Time:</label>
-                                            <div class="small">@Model.ComparisonResult.ProcessingTimeMs ms</div>
-                                        </div>
-
-                                        @if (Model.ComparisonResult.TokensUsed > 0)
-                                        {
-                                            <div class="mb-3">
-                                                <label class="small text-muted">AI Tokens Used:</label>
-                                                <div class="small">@Model.ComparisonResult.TokensUsed tokens</div>
-                                            </div>
-                                        }
-
-                                        <div>
-                                            <label class="small text-muted">Generated:</label>
-                                            <div class="small">@Model.ComparisonResult.GeneratedAt.ToString("MMM dd, yyyy HH:mm")</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-            
-            <!-- Version History Sidebar -->
-            <div class="col-lg-4">
-                <div class="content-card">
-                    <div class="d-flex flex-column mb-3">
-                        <h5 class="section-heading mb-1"><i class="bi bi-clock-history"></i> Version History</h5>
-                        @if (Model.Versions.Items.Count() >= 2)
-                        {
-                            <small class="text-muted">Select versions to compare with AI analysis</small>
-                        }
-                    </div>
-                    <div class="p-0">
-                        @if (Model.Versions.Items.Any())
-                        {
-                            @if (Model.Versions.Items.Count() >= 2)
-                            {
-                                <!-- Version Comparison Form -->
-                                <div class="p-3 border-bottom" style="background: var(--surface-secondary); border-radius: 10px;">
-                                    <form method="post" asp-page-handler="CompareVersions">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="form-label small">From Version:</label>
-                                                <select asp-for="FromVersionNumber" class="form-select form-select-sm" required>
-                                                    <option value="">Select...</option>
-                                                    @foreach (var version in Model.Versions.Items)
-                                                    {
-                                                        <option value="@version.VersionNumber">v@(version.VersionNumber)</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div class="col-6">
-                                                <label class="form-label small">To Version:</label>
-                                                <select asp-for="ToVersionNumber" class="form-select form-select-sm" required>
-                                                    <option value="">Select...</option>
-                                                    @foreach (var version in Model.Versions.Items)
-                                                    {
-                                                        <option value="@version.VersionNumber">v@(version.VersionNumber)</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- AI Model & Settings Selection -->
-                                        <div class="mt-2">
-                                            <div class="row g-2">
-                                                <div class="col-8">
-                                                    <label class="form-label small">AI Model:</label>
-                                                    <select asp-for="ComparisonAIModel" class="form-select form-select-sm" id="comparisonModel">
-                                                        <option value="">Default (@(Model.GetPreferredModelDisplay()))</option>
-                                                        @foreach (var aiModel in Model.AvailableAIModels)
-                                                        {
-                                                            <option value="@aiModel.ApiString">@aiModel.DisplayName</option>
-                                                        }
-                                                    </select>
-                                                </div>
-                                                <div class="col-4">
-                                                    <label class="form-label small">Quality:</label>
-                                                    <select asp-for="ComparisonQuality" class="form-select form-select-sm" id="comparisonQuality">
-                                                        <option value="">Default</option>
-                                                        <option value="fast">Fast</option>
-                                                        <option value="balanced">Balanced</option>
-                                                        <option value="detailed">Detailed</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="mt-1">
-                                                <small class="text-muted d-flex justify-content-between">
-                                                    <span id="modelDescription">Choose AI model and analysis quality</span>
-                                                    <span id="estimatedCost" class="text-success">Cost: ~$0.01</span>
-                                                </small>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="mt-2">
-                                            <button type="submit" class="btn btn-primary btn-sm w-100" @(Model.IsComparing ? "disabled" : "")>
-                                                @if (Model.IsComparing)
-                                                {
-                                                    <i class="bi bi-hourglass-split spin"></i>
-                                                    <span>Analyzing...</span>
-                                                }
-                                                else
-                                                {
-                                                    <i class="bi bi-magic"></i>
-                                                    <span>Compare with AI</span>
-                                                }
-                                            </button>
-                                        </div>
-                                        
-                                        <!-- AI Settings Quick Link -->
-                                        <div class="mt-2 text-center">
-                                            <a asp-page="/Settings/AI" class="small text-decoration-none">
-                                                <i class="bi bi-gear-fill me-1"></i>Configure AI Settings
-                                            </a>
-                                        </div>
-                                    </form>
-                                </div>
-                            }
-                            <div class="list-group list-group-flush">
-                                @foreach (var version in Model.Versions.Items)
-                                {
-                                    <div class="list-group-item @(version.Id == Model.Document.CurrentVersionId ? "list-group-item-primary" : "")">
-                                        <div class="d-flex w-100 justify-content-between align-items-start">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-1">
-                                                    Version @version.VersionNumber
-                                                    @if (version.Id == Model.Document.CurrentVersionId)
-                                                    {
-                                                        <span class="badge bg-success ms-1">Current</span>
-                                                    }
-                                                </h6>
-                                                <p class="mb-1 small text-muted">
-                                                    <i class="bi bi-calendar3"></i>
-                                                    @version.CreatedAt.ToString("MMM dd, yyyy HH:mm")
-                                                </p>
-                                                @if (!string.IsNullOrEmpty(version.UserName))
-                                                {
-                                                    <p class="mb-1 small text-muted">
-                                                        <i class="bi bi-person"></i>
-                                                        @version.UserName
-                                                    </p>
-                                                }
-                                                @if (!string.IsNullOrEmpty(version.ChangeSummary))
-                                                {
-                                                    <p class="mb-1 small">@version.ChangeSummary</p>
-                                                }
-                                                <small class="text-muted">@FormatFileSize(version.FileSize)</small>
-                                            </div>
-                                            <div class="ms-2 d-flex gap-1">
-                                                <form method="post" asp-page-handler="Download" asp-route-versionId="@version.Id" class="d-inline download-form">
-                                                    <button type="submit" class="btn btn-outline-primary btn-sm" title="Download this version">
-                                                        <i class="bi bi-download"></i>
-                                                    </button>
-                                                </form>
-                                                @if (Model.Document.OwnerId == User.GetUserId() && version.Id != Model.Document.CurrentVersionId && Model.Versions.Items.Count() > 1)
-                                                {
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                            title="Delete this version"
-                                                            onclick="confirmDeleteVersion(@version.Id, '@version.VersionNumber', '@FormatFileSize(version.FileSize)', '@version.CreatedAt.ToString("MMM dd, yyyy")')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                            
-                            @if (Model.Versions.TotalPages > 1)
-                            {
-                                <div class="card-footer">
-                                    <nav aria-label="Version history pagination">
-                                        <ul class="pagination pagination-sm justify-content-center mb-0">
-                                            @if (Model.Versions.PageNumber > 1)
-                                            {
-                                                <li class="page-item">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Versions.PageNumber - 1)">
-                                                        <i class="bi bi-chevron-left"></i>
-                                                    </a>
-                                                </li>
-                                            }
-                                            
-                                            @for (int i = Math.Max(1, Model.Versions.PageNumber - 2); i <= Math.Min(Model.Versions.TotalPages, Model.Versions.PageNumber + 2); i++)
-                                            {
-                                                <li class="page-item @(i == Model.Versions.PageNumber ? "active" : "")">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@i">@i</a>
-                                                </li>
-                                            }
-                                            
-                                            @if (Model.Versions.PageNumber < Model.Versions.TotalPages)
-                                            {
-                                                <li class="page-item">
-                                                    <a class="page-link" asp-route-id="@Model.Id" asp-route-pageNumber="@(Model.Versions.PageNumber + 1)">
-                                                        <i class="bi bi-chevron-right"></i>
-                                                    </a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </nav>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="p-3 text-center text-muted">
-                                <i class="bi bi-info-circle"></i>
-                                No version history available
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="content-card text-center py-5">
-            <h3>Document not found</h3>
-            <p class="text-muted">The requested document could not be found or you don't have permission to view it.</p>
-            <a asp-page="./Index" class="btn btn-primary">
-                <i class="bi bi-arrow-left"></i> Back to Documents
-            </a>
-        </div>
-    }
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Confirm Document Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-warning me-2"></i>
-                    <strong>This action cannot be undone!</strong>
-                </div>
-                
-                <p>Are you sure you want to delete this document?</p>
-                
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title mb-2" id="deleteDocumentTitle"></h6>
-                        <div class="row text-muted small">
-                            <div class="col-6">
-                                <strong>Size:</strong> <span id="deleteDocumentSize"></span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Created:</strong> <span id="deleteDocumentDate"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <p class="text-muted small mt-3">This will:</p>
-                <ul class="text-muted small">
-                    <li>Move the document to deleted items (soft delete)</li>
-                    <li>Remove the document from team sharing</li>
-                    <li>Preserve all version history</li>
-                    <li>Allow restoration by admins if needed</li>
-                </ul>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cancel
-                </button>
-                <form method="post" asp-page-handler="Delete" class="d-inline" id="deleteForm">
-                    <input type="hidden" id="deleteDocumentId" name="documentId" value="@Model.Document.Id" />
-                    <button type="submit" class="btn btn-danger loading-btn">
-                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                        <i class="bi bi-trash me-1"></i>
-                        <span class="btn-text">Delete Document</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Version Delete Confirmation Modal -->
-<div class="modal fade" id="deleteVersionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Confirm Version Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="bi bi-warning me-2"></i>
-                    <strong>This action cannot be undone!</strong>
-                </div>
-                
-                <p>Are you sure you want to delete this document version?</p>
-                
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title mb-2">Version <span id="deleteVersionNumber"></span></h6>
-                        <div class="row text-muted small">
-                            <div class="col-6">
-                                <strong>Size:</strong> <span id="deleteVersionSize"></span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Created:</strong> <span id="deleteVersionDate"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <p class="text-muted small mt-3">This will:</p>
-                <ul class="text-muted small">
-                    <li>Permanently delete this version</li>
-                    <li>Remove the version from history</li>
-                    <li>Cannot be restored once deleted</li>
-                    <li>Current version will remain unaffected</li>
-                </ul>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cancel
-                </button>
-                <form method="post" asp-page-handler="DeleteVersion" class="d-inline" id="deleteVersionForm">
-                    <input type="hidden" id="deleteVersionId" name="versionId" />
-                    <button type="submit" class="btn btn-warning loading-btn">
-                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                        <i class="bi bi-trash me-1"></i>
-                        <span class="btn-text">Delete Version</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@functions {
-    private static string FormatFileSize(long bytes)
-    {
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int counter = 0;
-        decimal number = bytes;
-        while (Math.Round(number / 1024) >= 1)
+        @if (Model.CanEdit)
         {
-            number /= 1024;
-            counter++;
+            <a class="btn btn-secondary btn-sm" asp-page="/Documents/Edit" asp-route-id="@d.Id" asp-fragment="new-version"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i>New version</a>
         }
-        return $"{number:n1} {suffixes[counter]}";
-    }
-}
+        else
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="@Model.DemoTip"><button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-file-earmark-plus" aria-hidden="true"></i>New version</button></span>
+        }
+        @if (Model.CanManage)
+        {
+            <button type="button" class="btn btn-secondary btn-sm" data-dfh-action="move" data-id="@d.Id" data-title="@d.Title" data-location="@location"><i class="bi bi-arrows-move" aria-hidden="true"></i>Move</button>
+        }
+        else
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="@Model.OwnerTip"><button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-arrows-move" aria-hidden="true"></i>Move</button></span>
+        }
+        <button type="button" class="btn btn-secondary btn-sm" data-dfh-tab-open="sharing"><i class="bi bi-share" aria-hidden="true"></i>Share</button>
+        <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download</button>
+        </form>
+        <div class="dropdown">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                @if (Model.CanEdit)
+                {
+                    <li><a class="dropdown-item" asp-page="/Documents/Edit" asp-route-id="@d.Id"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</a></li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@Model.DemoTip"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</span></li>
+                }
+                @if (d.Versions.Count > 1)
+                {
+                    <li><a class="dropdown-item" asp-page="/Documents/Compare" asp-route-id="@d.Id"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare versions…</a></li>
+                }
+                <li><button type="button" class="dropdown-item" data-dfh-copy-link><i class="bi bi-link-45deg" aria-hidden="true"></i>Copy link</button></li>
+                <li><hr class="dropdown-divider" /></li>
+                @if (Model.CanManage)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item text-danger" data-dfh-action="delete" data-id="@d.Id" data-title="@d.Title"
+                                data-location="@location" data-size="@sizeInfo" data-versions="@d.Versions.Count">
+                            <i class="bi bi-trash" aria-hidden="true"></i>Delete…
+                        </button>
+                    </li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@Model.OwnerTip"><i class="bi bi-trash" aria-hidden="true"></i>Delete…</span></li>
+                }
+            </ul>
+        </div>
+    </div>
 
-@section Styles {
-<style>
-    /* .section-heading / .section-heading-success live in components.css */
-    .token-panel {
-        background: var(--surface-secondary) !important;
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-    }
+    @* D5: placeholder until a real preview (PDF.js) exists *@
+    <div class="dfh-preview">
+        <div class="dfh-preview-page">
+            <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+            <h2 class="dfh-preview-title">@d.Title</h2>
+            <span class="dfh-preview-meta">@Dfh.FileSize(d.FileSize)@(current != null ? $" · v{current.Number}" : "") · modified @Dfh.Relative(d.ModifiedAt)</span>
+            <p class="dfh-preview-note">A preview isn't available yet. Download the file to open it on your computer.</p>
+            <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
+                <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download @label</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-    /* AI Summary card — theme-aware so it never flashes a white slab in dark mode. */
-    .ai-summary-card {
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    }
-    .ai-summary-card .card-body {
-        background: var(--surface-primary);
-        color: var(--text-primary);
-    }
-    .ai-summary-card .card-text {
-        color: var(--text-primary);
-        line-height: 1.6;
-    }
-    .ai-summary-header {
-        /* Violet "AI" banner (Slate + Sky --ai-color family). Kept a deep, saturated
-           gradient — theme-independent — so the white text stays readable in both
-           light and dark (the --ai-color token itself is a light violet in dark mode). */
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-        color: #fff;
-        border-bottom: none;
-        padding: 0.85rem 1.1rem;
-    }
-    .ai-summary-header .card-title,
-    .ai-summary-header small { color: rgba(255, 255, 255, 0.95); }
-    .ai-confidence-badge {
-        background: rgba(255, 255, 255, 0.22);
-        color: #fff;
-        font-weight: 600;
-        backdrop-filter: blur(2px);
-    }
-    .text-primary-token { color: var(--text-primary); }
+<partial name="_DocumentDialogs" model='new DocumentDialogsView("/Documents", Model.Tree)' />
 
-    /* Neutral Bootstrap alerts (sharing section) — theme-aware; danger/success/warning keep their semantic colors. */
-    .alert-secondary,
-    .alert-light,
-    .alert-info {
-        background: var(--surface-secondary);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-    }
-    .alert-info .alert-link { color: var(--accent-color); }
-</style>
-}
+@* Delete one old version *@
+<div class="modal" id="dfh-version-delete-modal" tabindex="-1" aria-labelledby="dfh-version-delete-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" asp-page-handler="DeleteVersion" asp-route-id="@d.Id" data-dfh-busy="Deleting…">
+            <div class="modal-header">
+                <h2 class="modal-title" id="dfh-version-delete-title">Delete version?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body dfh-modal-stack">
+                <p class="m-0">The file of this version will be removed. The document and its other versions stay. It can't be undone.</p>
+                <input type="hidden" name="versionId" value="" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash" aria-hidden="true"></i>Delete version</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @section Scripts {
-    <script>
-        // Confirm delete document function
-        function confirmDeleteDocument(documentId, title, size, createdDate) {
-            // Populate modal with document details
-            document.getElementById('deleteDocumentId').value = documentId;
-            document.getElementById('deleteDocumentTitle').textContent = title;
-            document.getElementById('deleteDocumentSize').textContent = size;
-            document.getElementById('deleteDocumentDate').textContent = createdDate;
-            
-            // Show the modal
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            deleteModal.show();
-        }
-
-        // Confirm delete version function
-        function confirmDeleteVersion(versionId, versionNumber, size, createdDate) {
-            // Populate modal with version details
-            document.getElementById('deleteVersionId').value = versionId;
-            document.getElementById('deleteVersionNumber').textContent = versionNumber;
-            document.getElementById('deleteVersionSize').textContent = size;
-            document.getElementById('deleteVersionDate').textContent = createdDate;
-            
-            // Show the modal
-            const deleteVersionModal = new bootstrap.Modal(document.getElementById('deleteVersionModal'));
-            deleteVersionModal.show();
-        }
-
-        // Initialize Bootstrap tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        // Delete form loading state
-        const deleteForm = document.getElementById('deleteForm');
-        if (deleteForm) {
-            deleteForm.addEventListener('submit', function() {
-                const loadingBtn = deleteForm.querySelector('.loading-btn');
-                if (loadingBtn) {
-                    const spinner = loadingBtn.querySelector('.spinner-border');
-                    const btnText = loadingBtn.querySelector('.btn-text');
-                    const icon = loadingBtn.querySelector('.bi');
-                    
-                    spinner.classList.remove('d-none');
-                    if (icon) icon.classList.add('d-none');
-                    if (btnText) btnText.textContent = 'Deleting...';
-                    loadingBtn.disabled = true;
-                }
-            });
-        }
-
-        // Delete version form loading state
-        const deleteVersionForm = document.getElementById('deleteVersionForm');
-        if (deleteVersionForm) {
-            deleteVersionForm.addEventListener('submit', function() {
-                const loadingBtn = deleteVersionForm.querySelector('.loading-btn');
-                if (loadingBtn) {
-                    const spinner = loadingBtn.querySelector('.spinner-border');
-                    const btnText = loadingBtn.querySelector('.btn-text');
-                    const icon = loadingBtn.querySelector('.bi');
-                    
-                    spinner.classList.remove('d-none');
-                    if (icon) icon.classList.add('d-none');
-                    if (btnText) btnText.textContent = 'Deleting...';
-                    loadingBtn.disabled = true;
-                }
-            });
-        }
-
-        // Add loading state to download buttons
-        document.querySelectorAll('.download-form button').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const icon = this.querySelector('i');
-                const originalText = this.innerHTML;
-                
-                // Show loading state
-                this.disabled = true;
-                icon.className = 'bi bi-download spin';
-                
-                // Reset after a delay (file download should trigger)
-                setTimeout(() => {
-                    this.disabled = false;
-                    this.innerHTML = originalText;
-                }, 3000);
-            });
-        });
-
-        // AI Model Selection Interactive Features
-        function initializeAIModelSelection() {
-            const modelSelect = document.getElementById('comparisonModel');
-            const qualitySelect = document.getElementById('comparisonQuality');
-            const descriptionSpan = document.getElementById('modelDescription');
-            const costSpan = document.getElementById('estimatedCost');
-
-            if (!modelSelect || !qualitySelect) return;
-
-            function updateModelInfo() {
-                const selectedModel = modelSelect.value || 'claude-haiku-4-5';
-                const selectedQuality = qualitySelect.value || 'balanced';
-
-                // Update description
-                const descriptions = {
-                    'gpt-4.1': 'Most capable GPT model - highest quality analysis',
-                    'gpt-4.1-mini': 'Fast & efficient - high quality with good speed',
-                    'gpt-4o': 'Advanced model - good balance of quality and cost',
-                    'gpt-4o-mini': 'Cost effective - good quality, lowest cost',
-                    'claude-haiku-4-5': 'Fast & cost effective - great quality, lowest Claude cost',
-                    'claude-sonnet-5': 'Near-Opus quality - excellent balance of quality and cost',
-                    'claude-opus-4-8': 'Most capable Claude model - highest quality analysis'
-                };
-
-                const description = descriptions[selectedModel] || 'AI-powered version comparison';
-                descriptionSpan.textContent = description;
-
-                // Update cost estimate (simplified calculation)
-                const baseCosts = {
-                    'gpt-4.1': 0.020,
-                    'gpt-4.1-mini': 0.008,
-                    'gpt-4o': 0.015,
-                    'gpt-4o-mini': 0.005,
-                    'claude-haiku-4-5': 0.004,
-                    'claude-sonnet-5': 0.010,
-                    'claude-opus-4-8': 0.018
-                };
-
-                const qualityMultipliers = {
-                    'fast': 0.7,
-                    'balanced': 1.0,
-                    'detailed': 1.5
-                };
-
-                const baseCost = baseCosts[selectedModel] || 0.005;
-                const multiplier = qualityMultipliers[selectedQuality] || 1.0;
-                const estimatedCost = (baseCost * multiplier).toFixed(3);
-
-                costSpan.textContent = `Cost: ~$${estimatedCost}`;
-                costSpan.className = estimatedCost > 0.015 ? 'text-warning' : 'text-success';
-            }
-
-            // Add event listeners
-            modelSelect.addEventListener('change', updateModelInfo);
-            qualitySelect.addEventListener('change', updateModelInfo);
-
-            // Initialize on page load
-            updateModelInfo();
-        }
-
-        // Initialize AI features when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeAIModelSelection();
-        });
-    </script>
-    
-    <style>
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-        
-        @@keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .list-group-item-primary {
-            background-color: var(--surface-secondary);
-            border-color: var(--accent-color);
-        }
-    </style>
-} 
+    <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/details.js" asp-append-version="true"></script>
+}

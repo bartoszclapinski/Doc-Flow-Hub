@@ -22,13 +22,6 @@
       ]
     },
     {
-      "library": "Chart.js@4.4.1",
-      "destination": "wwwroot/lib/chart.js/",
-      "files": [
-        "chart.umd.min.js"
-      ]
-    },
-    {
       "library": "jquery@3.7.1",
       "destination": "wwwroot/lib/jquery/dist/",
       "files": [
@@ -50,6 +43,34 @@
       "files": [
         "jquery.validate.unobtrusive.js",
         "jquery.validate.unobtrusive.min.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "@fontsource/ibm-plex-sans@5.3.0",
+      "destination": "wwwroot/lib/fonts/ibm-plex-sans/",
+      "files": [
+        "files/ibm-plex-sans-latin-400-normal.woff2",
+        "files/ibm-plex-sans-latin-500-normal.woff2",
+        "files/ibm-plex-sans-latin-600-normal.woff2",
+        "files/ibm-plex-sans-latin-ext-400-normal.woff2",
+        "files/ibm-plex-sans-latin-ext-500-normal.woff2",
+        "files/ibm-plex-sans-latin-ext-600-normal.woff2",
+        "LICENSE"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "@fontsource/jetbrains-mono@5.3.0",
+      "destination": "wwwroot/lib/fonts/jetbrains-mono/",
+      "files": [
+        "files/jetbrains-mono-latin-400-normal.woff2",
+        "files/jetbrains-mono-latin-500-normal.woff2",
+        "files/jetbrains-mono-latin-600-normal.woff2",
+        "files/jetbrains-mono-latin-ext-400-normal.woff2",
+        "files/jetbrains-mono-latin-ext-500-normal.woff2",
+        "files/jetbrains-mono-latin-ext-600-normal.woff2",
+        "LICENSE"
       ]
     }
   ]

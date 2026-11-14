@@ -22,6 +22,10 @@ namespace DocFlowHub.Web.Pages.Account
             _logger = logger;
         }
 
+        // The "signed out" page only makes sense once the cookie is gone.
+        public IActionResult OnGet() =>
+            User.Identity?.IsAuthenticated == true ? RedirectToPage("/Index") : Page();
+
         public async Task<IActionResult> OnPost(string returnUrl = null)
         {
             await _signInManager.SignOutAsync();

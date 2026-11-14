@@ -1,0 +1,20 @@
+@model DocFlowHub.Web.ViewComponents.StatusBarModel
+<footer class="dfh-statusbar" role="contentinfo">
+    <span class="dfh-statusbar-item"><i class="bi bi-hdd-stack" aria-hidden="true"></i>@Model.StorageLabel</span>
+    @if (!string.IsNullOrEmpty(Model.Path))
+    {
+        <span class="dfh-statusbar-item dfh-statusbar-path">@Model.Path</span>
+    }
+    <span class="dfh-statusbar-spacer"></span>
+    @if (Model.AiRequestsToday.HasValue)
+    {
+        <span class="dfh-statusbar-item dfh-statusbar-ai" title="AI requests today / daily limit">
+            <i class="bi bi-stars" aria-hidden="true"></i>AI · @Model.AiRequestsToday@(Model.AiDailyLimit.HasValue ? $" / {Model.AiDailyLimit}" : "") req today
+        </span>
+    }
+    @if (Model.IsDemo)
+    {
+        <span class="dfh-statusbar-item"><i class="bi bi-lock" aria-hidden="true"></i>demo · read-only</span>
+    }
+    <span class="dfh-statusbar-item dfh-statusbar-version">@Model.Version</span>
+</footer>

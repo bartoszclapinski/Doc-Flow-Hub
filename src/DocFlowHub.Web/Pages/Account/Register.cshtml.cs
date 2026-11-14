@@ -44,8 +44,6 @@ namespace DocFlowHub.Web.Pages.Account
 
         public string ReturnUrl { get; set; }
 
-        public IList<AuthenticationScheme> ExternalLogins { get; set; }
-
         public class InputModel
         {
             [Required]
@@ -64,7 +62,7 @@ namespace DocFlowHub.Web.Pages.Account
             public string Email { get; set; }
 
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 8)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }
@@ -75,7 +73,7 @@ namespace DocFlowHub.Web.Pages.Account
             public string ConfirmPassword { get; set; }
         }
 
-        public async Task<IActionResult> OnGetAsync(string returnUrl = null)
+        public IActionResult OnGet(string returnUrl = null)
         {
             // Registration is disabled in the read-only public demo.
             if (_demoMode.IsEnabled)
@@ -84,7 +82,6 @@ namespace DocFlowHub.Web.Pages.Account
             }
 
             ReturnUrl = returnUrl;
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             return Page();
         }
 
@@ -97,7 +94,6 @@ namespace DocFlowHub.Web.Pages.Account
             }
 
             returnUrl ??= Url.Content("~/");
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
                 var user = CreateUser();

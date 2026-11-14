@@ -1,0 +1,29 @@
+@model DocFlowHub.Web.Ui.FolderFieldsView
+@* Name, description and place of a folder (Create and Edit). *@
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Folder <span class="dfh-muted">· in @Model.ProjectName</span></legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Name</span>
+            <input name="Name" value="@Model.Name" class="form-control" maxlength="100" required autofocus />
+            @if (Model.NameError != null)
+            {
+                <span class="field-validation-error">@Model.NameError</span>
+            }
+        </label>
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Description</span>
+            <input name="Description" value="@Model.Description" class="form-control" maxlength="500" placeholder="Optional" />
+        </label>
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Inside</span>
+            <select name="ParentFolderId" class="form-select">
+                <option value="" selected="@(Model.ParentFolderId == null)">@Model.ProjectName (project root)</option>
+                @foreach (var f in Model.Parents)
+                {
+                    <option value="@f.Id" selected="@(Model.ParentFolderId == f.Id)">@(new string(' ', f.Level * 3))@(f.Level > 0 ? "└ " : "")@f.Name</option>
+                }
+            </select>
+        </label>
+    </div>
+</fieldset>

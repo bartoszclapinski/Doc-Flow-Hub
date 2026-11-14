@@ -1,0 +1,132 @@
+@model DocumentInspectorView
+@{
+    var d = Model.Doc;
+    var (label, kind) = Dfh.FileType(d.FileType);
+    var location = d.Location ?? "No project";
+    var canChange = d.IsOwner && !Model.IsDemo;
+    var changeTip = Model.IsDemo ? "Read-only demo — changes are disabled" : "Only the owner can move or delete this document";
+    var sizeInfo = $"{Dfh.FileSize(d.FileSize)} · {d.VersionCount} {Dfh.Noun(d.VersionCount, "version")}"
+                   + (d.VersionCount > 1 ? $" · {Dfh.FileSize(d.VersionBytes)} total" : "");
+}
+<div class="dfh-insp-section" data-dfh-inspector-for="@d.Id">
+    <div class="dfh-insp-identity">
+        <span class="dfh-filetype dfh-filetype--lg dfh-filetype--@kind">@label</span>
+        <h2 class="dfh-insp-title">@d.Title</h2>
+        <span class="dfh-insp-path">@location</span>
+    </div>
+
+    <div class="dfh-insp-actions">
+        <form method="post" asp-page="/Documents/Index" asp-page-handler="Download">
+            <input type="hidden" name="documentId" value="@d.Id" />
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download</button>
+        </form>
+        <a class="btn btn-secondary btn-sm" href="/Documents/Details/@d.Id"><i class="bi bi-eye" aria-hidden="true"></i>Open</a>
+        <div class="dropdown">
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions">
+                <i class="bi bi-three-dots" aria-hidden="true"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                @* Anyone who can open the document may edit it; moving and deleting are the owner's (S12-4). *@
+                @if (!Model.IsDemo)
+                {
+                    <li><a class="dropdown-item" href="/Documents/Edit/@d.Id"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</a></li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</span></li>
+                }
+                @if (canChange)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item" data-dfh-action="move" data-id="@d.Id" data-title="@d.Title" data-location="@location">
+                            <i class="bi bi-arrows-move" aria-hidden="true"></i>Move to…
+                        </button>
+                    </li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-arrows-move" aria-hidden="true"></i>Move to…</span></li>
+                }
+                @if (d.VersionCount > 1)
+                {
+                    <li><a class="dropdown-item" href="/Documents/Details/@d.Id#compare"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare versions…</a></li>
+                }
+                <li><hr class="dropdown-divider" /></li>
+                @if (canChange)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item text-danger" data-dfh-action="delete" data-id="@d.Id" data-title="@d.Title"
+                                data-location="@location" data-size="@sizeInfo" data-versions="@d.VersionCount">
+                            <i class="bi bi-trash" aria-hidden="true"></i>Delete…
+                        </button>
+                    </li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-trash" aria-hidden="true"></i>Delete…</span></li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <dl class="dfh-kv dfh-kv--side">
+        <dt>Owner</dt>
+        <dd>@d.OwnerName@(d.IsOwner ? " (you)" : "")</dd>
+        <dt>Workspace</dt>
+        <dd>@(d.TeamName ?? "Private")</dd>
+        <dt>Size</dt>
+        <dd class="dfh-mono">@Dfh.FileSize(d.FileSize)</dd>
+        <dt>Version</dt>
+        <dd class="dfh-mono">@(d.Version != null ? $"v{d.Version}" : "—")@(d.Hash != null ? $" · {d.Hash}" : "")</dd>
+        <dt>Modified</dt>
+        <dd title="@Dfh.Timestamp(d.ModifiedAt)">@Dfh.Relative(d.ModifiedAt)</dd>
+        @if (d.Categories.Count > 0)
+        {
+            <dt>Categories</dt>
+            <dd>@string.Join(", ", d.Categories)</dd>
+        }
+    </dl>
+</div>
+
+<section class="dfh-ai-summary" aria-label="AI summary">
+    <span class="dfh-ai-label"><i class="bi bi-stars" aria-hidden="true"></i>AI summary</span>
+    @if (d.Summary != null)
+    {
+        <p class="dfh-ai-text-block">@d.Summary.Text</p>
+        <span class="dfh-ai-meta">
+            @d.Summary.Model@(d.Summary.Confidence is double c ? $" · confidence {c.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}" : "") · <span title="@Dfh.Timestamp(d.Summary.GeneratedAt)">@Dfh.Relative(d.Summary.GeneratedAt)</span>
+        </span>
+    }
+    else
+    {
+        <p class="dfh-ai-text-block is-muted">No summary yet.@(Model.IsDemo ? "" : " You can generate one in the document's AI tab.")</p>
+    }
+</section>
+
+<section class="dfh-version-list" aria-label="History">
+    <div class="dfh-version-head">
+        <span class="dfh-version-title">History</span>
+        @if (d.VersionCount > 1)
+        {
+            <a href="/Documents/Details/@d.Id#compare"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare</a>
+        }
+    </div>
+    <ol class="dfh-versions">
+        @for (var i = 0; i < d.RecentVersions.Count; i++)
+        {
+            var v = d.RecentVersions[i];
+            var message = v.Message ?? (v.Number == 1 ? "Initial upload" : "No description");
+            <li class="@(i == 0 ? "is-current" : null)">
+                <span class="dfh-dot @(i == 0 ? "dfh-dot--accent" : "dfh-dot--past")" aria-hidden="true"></span>
+                <span class="dfh-mono">v@(v.Number)</span>
+                <span class="dfh-ellipsis@(v.Message == null ? " dfh-muted" : "")" title="@message · @v.Author">@message</span>
+                <span class="dfh-muted" title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span>
+            </li>
+        }
+    </ol>
+    @if (d.VersionCount > d.RecentVersions.Count)
+    {
+        <a class="dfh-version-more" href="/Documents/Details/@d.Id">All @d.VersionCount versions</a>
+    }
+</section>

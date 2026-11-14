@@ -1,534 +1,282 @@
+using DocFlowHub.Core.Models.AI;
+using DocFlowHub.Core.Models.Documents.Browser;
+using DocFlowHub.Core.Models.Teams;
+using DocFlowHub.Core.Models.Teams.Dto;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
+using DocFlowHub.Web.Ui;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Models.Documents.Dto;
-using DocFlowHub.Core.Models.Documents;
-using DocFlowHub.Core.Models.Common;
-using DocFlowHub.Core.Models.Teams;
-using DocFlowHub.Core.Models.Teams.Dto;
-using DocFlowHub.Core.Models.AI;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
 
-namespace DocFlowHub.Web.Pages.Documents
+namespace DocFlowHub.Web.Pages.Documents;
+
+/// <summary>
+/// Document details (design 3b): editor tabs, toolbar, preview placeholder (D5) and an inspector with
+/// Info / AI / Versions / Sharing tabs. Delete and move use the shared dialogs (Documents handlers).
+/// </summary>
+[Authorize]
+public class DetailsModel : PageModel
 {
-    [Authorize]
-    public class DetailsModel : PageModel
+    private static readonly string[] Tabs = { "info", "ai", "versions", "sharing" };
+
+    private readonly IDocumentBrowserService _browser;
+    private readonly IDocumentService _documentService;
+    private readonly IDocumentSummaryService _summaryService;
+    private readonly IAISettingsService _aiSettings;
+    private readonly IAIUsageTrackingService _aiUsage;
+    private readonly ITeamService _teamService;
+    private readonly IDemoModeService _demoMode;
+    private readonly ILogger<DetailsModel> _logger;
+
+    public DetailsModel(
+        IDocumentBrowserService browser,
+        IDocumentService documentService,
+        IDocumentSummaryService summaryService,
+        IAISettingsService aiSettings,
+        IAIUsageTrackingService aiUsage,
+        ITeamService teamService,
+        IDemoModeService demoMode,
+        ILogger<DetailsModel> logger)
     {
-        private readonly IDocumentService _documentService;
-        private readonly IDocumentCategoryService _categoryService;
-        private readonly ITeamService _teamService;
-        private readonly IVersionComparisonService _versionComparisonService;
-        private readonly IAISettingsService _aiSettingsService;
+        _browser = browser;
+        _documentService = documentService;
+        _summaryService = summaryService;
+        _aiSettings = aiSettings;
+        _aiUsage = aiUsage;
+        _teamService = teamService;
+        _demoMode = demoMode;
+        _logger = logger;
+    }
 
-        public DetailsModel(
-            IDocumentService documentService,
-            IDocumentCategoryService categoryService,
-            ITeamService teamService,
-            IVersionComparisonService versionComparisonService,
-            IAISettingsService aiSettingsService)
+    [BindProperty(SupportsGet = true)]
+    public int Id { get; set; }
+
+    /// <summary>Inspector tab: info (default), ai, versions or sharing.</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Tab { get; set; }
+
+    public DocumentDetails Doc { get; private set; } = new();
+    public DocumentTree Tree { get; private set; } = new();
+    public IReadOnlyList<TeamDto> Teams { get; private set; } = Array.Empty<TeamDto>();
+    public bool IsDemo => _demoMode.IsEnabled;
+
+    /// <summary>Anyone who can open the document may edit it and upload versions (S12-4).</summary>
+    public bool CanEdit => !IsDemo;
+
+    /// <summary>Move, share, delete and delete versions: the owner only (S12-4).</summary>
+    public bool CanManage => Doc.IsOwner && !IsDemo;
+
+    public string ActiveTab => Tabs.Contains(Tab) ? Tab! : "info";
+
+    /// <summary>"Summaries" switch in Settings · AI (it only hides the AI option when uploading).</summary>
+    public bool SummariesOn { get; private set; } = true;
+
+    /// <summary>Today's AI requests and the fixed limits (design 7d "failed · limit").</summary>
+    public UserRateLimits? Limits { get; private set; }
+
+    public bool LimitReached => Limits != null &&
+        (Limits.CurrentDailyOperations >= Limits.DailyOperationLimit || Limits.CurrentHourlyOperations >= Limits.HourlyOperationLimit);
+    public string DemoTip => "Read-only demo — changes are disabled";
+    public string OwnerTip => IsDemo ? DemoTip : "Only the owner can do this";
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            _documentService = documentService;
-            _categoryService = categoryService;
-            _teamService = teamService;
-            _versionComparisonService = versionComparisonService;
-            _aiSettingsService = aiSettingsService;
+            return RedirectToPage("/Account/Login");
         }
 
-        public DocumentDto Document { get; set; } = null!;
-        public PagedResult<DocumentVersionDto> Versions { get; set; } = new();
-        public IEnumerable<DocumentCategoryDto> Categories { get; set; } = new List<DocumentCategoryDto>();
-        public IEnumerable<TeamDto> UserTeams { get; set; } = new List<TeamDto>();
-        public string? ErrorMessage { get; set; }
-        public string? SuccessMessage { get; set; }
-
-        [BindProperty(SupportsGet = true)]
-        public int Id { get; set; }
-
-        [BindProperty(SupportsGet = true)]
-        public int PageNumber { get; set; } = 1;
-
-        [BindProperty]
-        public int? ShareWithTeamId { get; set; }
-
-        // Version Comparison Properties
-        [BindProperty]
-        public int? FromVersionNumber { get; set; }
-
-        [BindProperty]
-        public int? ToVersionNumber { get; set; }
-
-        [BindProperty]
-        public string? ComparisonAIModel { get; set; }
-
-        [BindProperty]
-        public string? ComparisonQuality { get; set; }
-
-        public VersionComparison? ComparisonResult { get; set; }
-        public bool IsComparing { get; set; }
-        public AISettings? UserAISettings { get; set; }
-        public IEnumerable<(string ApiString, string DisplayName)> AvailableAIModels { get; set; } = new List<(string, string)>();
-
-        public async Task<IActionResult> OnGetAsync()
+        var details = await _browser.GetDetailsAsync(userId, Id);
+        if (!details.Succeeded || details.Data == null)
         {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
+            // Distinguish "not yours" (403 page) from "does not exist" (404 page).
+            var exists = await _documentService.GetDocumentByIdAsync(Id);
+            return exists.Succeeded ? Forbid() : NotFound();
+        }
+        Doc = details.Data;
 
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                return NotFound();
-            }
+        if (Doc.IsOwner)
+        {
+            var tree = await _browser.GetTreeAsync(userId);
+            if (tree.Succeeded && tree.Data != null) Tree = tree.Data;
 
-            Document = documentResult.Data;
-
-            // Verify user has access to this document using secure method
-            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
-            if (!accessResult.Succeeded || !accessResult.Data)
-            {
-                return Forbid();
-            }
-
-            // Load version history
-            var versionsResult = await _documentService.GetDocumentVersionsAsync(Id, new DocumentFilter 
-            { 
-                PageNumber = PageNumber, 
-                PageSize = 10 
-            });
-            
-            if (versionsResult.Succeeded)
-            {
-                Versions = versionsResult.Data;
-            }
-
-            // Load categories
-            var categoriesResult = await _categoryService.GetDocumentCategoriesAsync(Id);
-            if (categoriesResult.Succeeded)
-            {
-                Categories = categoriesResult.Data;
-            }
-
-            // Load user teams for sharing
-            var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
-            if (teamsResult.Succeeded)
-            {
-                UserTeams = teamsResult.Data.Items;
-            }
-
-            // Load user AI settings for version comparison
-            var aiSettingsResult = await _aiSettingsService.GetUserSettingsAsync(userId);
-            if (aiSettingsResult.Succeeded)
-            {
-                UserAISettings = aiSettingsResult.Data;
-            }
-
-            // Load available AI models for dropdown
-            AvailableAIModels = AIModelHelper.GetAllModels()
-                .Select(m => (m.ToApiString(), m.ToDisplayName()))
-                .ToList();
-
-            return Page();
+            var teams = await _teamService.GetUserTeamsAsync(userId, new TeamFilter { PageSize = 100 });
+            if (teams.Succeeded && teams.Data != null) Teams = teams.Data.Items.OrderBy(t => t.Name).ToList();
         }
 
-        public async Task<IActionResult> OnPostDownloadAsync(int versionId)
+        if (Doc.Summary == null)
         {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Verify user has access to this document using secure method
-            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
-            if (!accessResult.Succeeded || !accessResult.Data)
-            {
-                return Forbid();
-            }
-
-            // Get version details
-            var versionResult = await _documentService.GetDocumentVersionAsync(Id, versionId);
-            if (!versionResult.Succeeded)
-            {
-                ErrorMessage = "Version not found";
-                return Page();
-            }
-
-            var version = versionResult.Data;
-
-            // Get document details for filename
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                return Page();
-            }
-
-            var document = documentResult.Data;
-
-            // Download the file
-            var downloadResult = await _documentService.DownloadDocumentVersionAsync(Id, versionId);
-            if (!downloadResult.Succeeded)
-            {
-                ErrorMessage = downloadResult.Error;
-                return Page();
-            }
-
-            var contentType = GetContentType(version.FileType);
-            var fileName = $"{document.Title}_v{version.VersionNumber}{version.FileType}";
-
-            return File(downloadResult.Data, contentType, fileName);
-        }
-
-        public async Task<IActionResult> OnPostDeleteAsync()
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Get document details first to check ownership
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                return Page();
-            }
-
-            var document = documentResult.Data;
-
-            // Verify user owns this document (only owners can delete)
-            if (document.OwnerId != userId)
-            {
-                ErrorMessage = "You can only delete documents that you own.";
-                return Page();
-            }
-
-            // Delete the document
-            var deleteResult = await _documentService.DeleteDocumentAsync(Id);
-            if (!deleteResult.Succeeded)
-            {
-                ErrorMessage = deleteResult.Error;
-                return Page();
-            }
-
-            // Redirect to documents index with success message
-            TempData["SuccessMessage"] = $"Document '{document.Title}' has been successfully deleted.";
-            return RedirectToPage("./Index");
-        }
-
-        public async Task<IActionResult> OnPostDeleteVersionAsync(int versionId)
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Get document details first to check ownership
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            var document = documentResult.Data;
-
-            // Verify user owns this document (only owners can delete versions)
-            if (document.OwnerId != userId)
-            {
-                ErrorMessage = "You can only delete versions of documents that you own.";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            // Prevent deletion of current version
-            if (versionId == document.CurrentVersionId)
-            {
-                ErrorMessage = "Cannot delete the current active version of the document.";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            // Delete the version using the service
-            var deleteResult = await _documentService.DeleteDocumentVersionAsync(Id, versionId, userId);
-            if (!deleteResult.Succeeded)
-            {
-                ErrorMessage = deleteResult.Error;
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-            
-            SuccessMessage = "Document version has been successfully deleted.";
-            await LoadPageDataAsync(userId);
-            return Page();
-        }
-
-        private static string GetContentType(string fileExtension)
-        {
-            return fileExtension.ToLower() switch
-            {
-                ".pdf" => "application/pdf",
-                ".doc" => "application/msword",
-                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                ".md" => "text/markdown",
-                ".txt" => "text/plain",
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                ".gif" => "image/gif",
-                _ => "application/octet-stream"
-            };
-        }
-
-        public async Task<IActionResult> OnPostShareWithTeamAsync()
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Verify user owns this document (only owners can share)
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            var document = documentResult.Data;
-            if (document.OwnerId != userId)
-            {
-                ErrorMessage = "Only document owners can share documents with teams";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            if (!ShareWithTeamId.HasValue)
-            {
-                ErrorMessage = "Please select a team to share with";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            // Validate that the user is a member of the selected team
-            var userTeamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
-            if (!userTeamsResult.Succeeded || !userTeamsResult.Data.Items.Any(t => t.Id == ShareWithTeamId.Value))
-            {
-                ErrorMessage = "You can only share documents with teams you are a member of";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            var shareResult = await _documentService.ShareDocumentWithTeamAsync(Id, ShareWithTeamId.Value);
-            if (shareResult.Succeeded)
-            {
-                SuccessMessage = "Document successfully shared with the team!";
-            }
-            else
-            {
-                ErrorMessage = shareResult.Error;
-            }
-
-            return RedirectToPage(new { id = Id });
-        }
-
-        public async Task<IActionResult> OnPostUnshareFromTeamAsync()
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Verify user owns this document (only owners can unshare)
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (!documentResult.Succeeded)
-            {
-                ErrorMessage = documentResult.Error;
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            var document = documentResult.Data;
-            if (document.OwnerId != userId)
-            {
-                ErrorMessage = "Only document owners can unshare documents from teams";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            var unshareResult = await _documentService.UnshareDocumentFromTeamAsync(Id);
-            if (unshareResult.Succeeded)
-            {
-                SuccessMessage = "Document successfully unshared from the team!";
-            }
-            else
-            {
-                ErrorMessage = unshareResult.Error;
-            }
-
-            return RedirectToPage(new { id = Id });
-        }
-
-        public async Task<IActionResult> OnPostCompareVersionsAsync()
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            // Verify user has access to this document
-            var accessResult = await _documentService.CanUserAccessDocumentAsync(Id, userId);
-            if (!accessResult.Succeeded || !accessResult.Data)
-            {
-                return Forbid();
-            }
-
-            // Validate version selection
-            if (!FromVersionNumber.HasValue || !ToVersionNumber.HasValue)
-            {
-                ErrorMessage = "Please select two versions to compare";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
-            if (FromVersionNumber.Value == ToVersionNumber.Value)
-            {
-                ErrorMessage = "Please select two different versions to compare";
-                await LoadPageDataAsync(userId);
-                return Page();
-            }
-
+            // Only needed for the "no summary yet" card; a failure leaves the plain card.
             try
             {
-                IsComparing = true;
-                
-                // Ensure we compare from older to newer version for consistency
-                var fromVersion = Math.Min(FromVersionNumber.Value, ToVersionNumber.Value);
-                var toVersion = Math.Max(FromVersionNumber.Value, ToVersionNumber.Value);
-
-                // Determine AI model to use - priority: selected model > user preference > default
-                var aiModel = GetSelectedAIModel();
-
-                // Generate AI comparison with usage tracking and selected model
-                var comparisonResult = await _versionComparisonService.CompareDocumentVersionsAsync(Id, fromVersion, toVersion, aiModel, userId);
-                
-                if (comparisonResult.Succeeded && comparisonResult.Data != null)
-                {
-                    ComparisonResult = comparisonResult.Data;
-                    var modelDisplayName = aiModel.ToDisplayName();
-                    SuccessMessage = $"Successfully compared version {fromVersion} to version {toVersion} using {modelDisplayName}";
-                }
-                else
-                {
-                    ErrorMessage = comparisonResult.Error ?? "Failed to generate version comparison. Please try again.";
-                }
+                var settings = await _aiSettings.GetUserSettingsAsync(userId);
+                if (settings.Succeeded && settings.Data != null) SummariesOn = settings.Data.SummarizationEnabled;
+                var limits = await _aiUsage.GetUserRateLimitsAsync(userId);
+                if (limits.Succeeded) Limits = limits.Data;
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Error comparing versions: {ex.Message}";
+                _logger.LogWarning(ex, "Could not load the AI state of document {DocumentId}", Id);
             }
-            finally
-            {
-                IsComparing = false;
-            }
-
-            await LoadPageDataAsync(userId);
-            return Page();
         }
 
-        private async Task LoadPageDataAsync(string userId)
+        ViewData["StatusPath"] = string.Join(" / ",
+            new[] { Doc.Location, Doc.Title + Doc.FileType.ToLowerInvariant() }.Where(p => !string.IsNullOrEmpty(p)));
+        return Page();
+    }
+
+    /// <summary>Downloads one version (the current one when versionId is not given).</summary>
+    public async Task<IActionResult> OnPostDownloadAsync(int? versionId)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            // Load document data
-            var documentResult = await _documentService.GetDocumentByIdAsync(Id);
-            if (documentResult.Succeeded)
-            {
-                Document = documentResult.Data;
-            }
-
-            // Load version history
-            var versionsResult = await _documentService.GetDocumentVersionsAsync(Id, new DocumentFilter 
-            { 
-                PageNumber = PageNumber, 
-                PageSize = 10 
-            });
-            
-            if (versionsResult.Succeeded)
-            {
-                Versions = versionsResult.Data;
-            }
-
-            // Load categories
-            var categoriesResult = await _categoryService.GetDocumentCategoriesAsync(Id);
-            if (categoriesResult.Succeeded)
-            {
-                Categories = categoriesResult.Data;
-            }
-
-            // Load user teams for sharing
-            var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
-            if (teamsResult.Succeeded)
-            {
-                UserTeams = teamsResult.Data.Items;
-            }
-
-            // Load user AI settings
-            var aiSettingsResult = await _aiSettingsService.GetUserSettingsAsync(userId);
-            if (aiSettingsResult.Succeeded)
-            {
-                UserAISettings = aiSettingsResult.Data;
-            }
-
-            // Load available AI models for dropdown
-            AvailableAIModels = AIModelHelper.GetAllModels()
-                .Select(m => (m.ToApiString(), m.ToDisplayName()))
-                .ToList();
+            return Unauthorized();
         }
 
-        /// <summary>
-        /// Helper method to determine which AI model to use for comparison
-        /// Priority: 1) User selection 2) User preferences 3) Default
-        /// </summary>
-        private AIModel GetSelectedAIModel()
+        var details = await _browser.GetDetailsAsync(userId, Id);
+        if (!details.Succeeded || details.Data == null)
         {
-            // If user explicitly selected a recognized model, use that (Claude + GPT both
-            // supported). A non-empty but unrecognized value (e.g. a stale dropdown entry)
-            // falls back to the user's own preference — not the global default — so the
-            // comparison still honors what the user configured.
-            if (!string.IsNullOrEmpty(ComparisonAIModel)
-                && AIModelHelper.TryFromApiString(ComparisonAIModel, out var selected))
+            return Forbid();
+        }
+
+        var version = versionId == null
+            ? details.Data.Current
+            : details.Data.Versions.FirstOrDefault(v => v.Id == versionId);
+        if (version == null)
+        {
+            return Back("versions", error: "That version no longer exists.");
+        }
+
+        var download = await _documentService.DownloadDocumentVersionAsync(Id, version.Id);
+        if (!download.Succeeded || download.Data == null)
+        {
+            return Back("versions", error: download.Error ?? "The file could not be downloaded.");
+        }
+
+        var extension = string.IsNullOrEmpty(version.FileType) ? details.Data.FileType : version.FileType;
+        var fileName = version == details.Data.Current
+            ? $"{details.Data.Title}{extension}"
+            : $"{details.Data.Title}_v{version.Number}{extension}";
+        return File(download.Data, ContentType(extension), fileName);
+    }
+
+    public async Task<IActionResult> OnPostDeleteVersionAsync(int versionId)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _documentService.DeleteDocumentVersionAsync(Id, versionId, userId);
+        return result.Succeeded
+            ? Back("versions", success: "Version deleted")
+            : Back("versions", error: result.Error ?? "The version could not be deleted.");
+    }
+
+    public async Task<IActionResult> OnPostShareAsync(int? teamId)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var details = await _browser.GetDetailsAsync(userId, Id);
+        if (!details.Succeeded || details.Data == null || !details.Data.IsOwner)
+        {
+            return Back("sharing", error: "Only the owner can change who can see this document.");
+        }
+
+        if (teamId == null)
+        {
+            if (details.Data.TeamId == null)
             {
-                return selected;
+                return Back("sharing");
             }
-
-            return GetUserPreferredModel();
+            var unshare = await _documentService.UnshareDocumentFromTeamAsync(Id);
+            return unshare.Succeeded
+                ? Back("sharing", success: "The document is private again")
+                : Back("sharing", error: unshare.Error ?? "The document could not be made private.");
         }
 
-        /// <summary>
-        /// Get the user's preferred AI model from their settings
-        /// </summary>
-        private AIModel GetUserPreferredModel()
+        var teams = await _teamService.GetUserTeamsAsync(userId, new TeamFilter { PageSize = 100 });
+        var team = teams.Succeeded ? teams.Data?.Items.FirstOrDefault(t => t.Id == teamId) : null;
+        if (team == null)
         {
-            // PreferredModel is already an AIModel enum, so just return it directly
-            return UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
+            return Back("sharing", error: "You can only share with a team you belong to.");
         }
 
-        /// <summary>
-        /// Get display string for the user's preferred model (for view)
-        /// </summary>
-        public string GetPreferredModelDisplay()
+        var share = await _documentService.ShareDocumentWithTeamAsync(Id, team.Id);
+        return share.Succeeded
+            ? Back("sharing", success: $"Shared with {team.Name}")
+            : Back("sharing", error: share.Error ?? "The document could not be shared.");
+    }
+
+    /// <summary>Generates the AI summary of a document that has none (it never replaces an existing one).</summary>
+    public async Task<IActionResult> OnPostGenerateSummaryAsync()
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            var preferredModel = UserAISettings?.PreferredModel ?? AIModelHelper.GetDefaultModel();
-            return preferredModel.ToApiString();
+            return Unauthorized();
+        }
+
+        var details = await _browser.GetDetailsAsync(userId, Id);
+        if (!details.Succeeded || details.Data == null)
+        {
+            return Forbid();
+        }
+        if (details.Data.Summary != null)
+        {
+            return Back("ai");
+        }
+
+        // The daily and hourly limits were only counted before; a manual summary now respects them.
+        if (!await _aiUsage.CheckRateLimitsAsync(userId, "Summary"))
+        {
+            return Back("ai", error: "Your AI limit is reached. It resets at midnight UTC (hourly limit: at the top of the hour).");
+        }
+
+        var settings = await _aiSettings.GetUserSettingsAsync(userId);
+        var model = settings.Succeeded && settings.Data != null ? settings.Data.PreferredModel : AIModelHelper.GetDefaultModel();
+        try
+        {
+            var result = await _summaryService.GenerateSummaryAsync(Id, model);
+            return result.Succeeded
+                ? Back("ai", success: "AI summary ready")
+                : Back("ai", error: result.Error ?? "The summary could not be generated.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Generating the summary of document {DocumentId} failed", Id);
+            return Back("ai", error: "The summary could not be generated. Try again later.");
         }
     }
-} 
+
+    private IActionResult Back(string tab, string? success = null, string? error = null)
+    {
+        if (success != null) TempData["ToastSuccess"] = success;
+        if (error != null) TempData["ToastError"] = error;
+        return RedirectToPage(new { id = Id, tab = tab == "info" ? null : tab });
+    }
+
+    private static string ContentType(string fileExtension) => fileExtension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".md" => "text/markdown",
+        ".txt" => "text/plain",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        _ => "application/octet-stream",
+    };
+
+    /// <summary>MIME type shown in the inspector ("application/pdf").</summary>
+    public static string MimeType(string fileExtension) => ContentType(fileExtension);
+}

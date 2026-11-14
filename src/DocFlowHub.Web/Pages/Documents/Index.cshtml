@@ -1,2889 +1,446 @@
 @page
-@using DocFlowHub.Web.Extensions
 @model DocFlowHub.Web.Pages.Documents.IndexModel
+@using DocFlowHub.Core.Models.Documents.Browser
 @{
     ViewData["Title"] = "Documents";
+    ViewData["FullBleed"] = true;
+    var s = Model.State;
+    var tree = Model.Tree;
+    var docs = Model.Documents;
+    var returnUrl = s.Href;
+    var demoTip = "Read-only demo — changes are disabled";
+
+    var typeLabel = s.Type == null ? null : Dfh.FileType(s.Type).Label.ToLowerInvariant();
+    var ownerLabel = s.Owner switch { "me" => "me", "others" => "others", _ => null };
+    var categoryName = s.Category is int cat ? Model.Categories.FirstOrDefault(c => c.Id == cat)?.Name ?? "unknown" : null;
+    var scopeFolder = s.Folder is int fid ? tree.FindFolder(fid) : null;
+    // An empty project or folder of the user's own gets the "upload here" box (7a).
+    var ownScope = s.Folder != null ? scopeFolder != null : s.Project is int pid && tree.FindProject(pid) != null;
+    var scopeName = Model.Breadcrumb.Count > 0 ? Model.Breadcrumb[^1].Label : "All documents";
+
+    // Columns that sort, with their direction icon.
+    string SortIcon(string? column) => (s.Sort == column) ? (s.Descending ? "bi-arrow-down" : "bi-arrow-up") : "";
+    string? AriaSort(string? column) => s.Sort == column ? (s.Descending ? "descending" : "ascending") : null;
 }
 
-<div class="documents-container">
-    <!-- Modern Page Header -->
-    <div class="documents-page-header">
-        <div class="page-header-content">
-            <div class="page-header-info">
-                <h1 class="page-title">
-                    <div class="page-icon">📄</div>
-                    Documents
-                </h1>
-                <p class="page-subtitle">Manage and organize your documents with modern workflows</p>
-            </div>
-            <div class="page-header-actions">
-                <a asp-page="./Upload" class="modern-btn modern-btn-primary">
-                    <i class="bi bi-cloud-upload"></i>
-                    <span>Upload Document</span>
-                </a>
-            </div>
+@section ToolWindow {
+    <aside class="dfh-toolwindow" aria-label="Projects and teams">
+        <div class="dfh-panel-header">
+            <span class="dfh-panel-title">Projects</span>
+            @if (Model.IsDemo)
+            {
+                <span class="dfh-icon-btn is-disabled" tabindex="0" title="@demoTip"><i class="bi bi-plus-lg" aria-hidden="true"></i></span>
+            }
+            else
+            {
+                <a class="dfh-icon-btn" asp-page="/Projects/Create" title="New project" aria-label="New project"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
+            }
+            <a class="dfh-icon-btn" asp-page="/Projects/Index" title="Manage projects" aria-label="Manage projects"><i class="bi bi-three-dots" aria-hidden="true"></i></a>
         </div>
-    </div>
 
-    <!-- Document Stats Grid -->
-    <div class="documents-stats-grid">
-        <div class="documents-stat-card blue">
-            <div class="documents-stat-header">
-                <div class="documents-stat-info">
-                    <h3>Total Documents</h3>
-                    <div class="documents-stat-number">@Model.Documents.TotalItems</div>
-                    <div class="documents-stat-change">@Model.Documents.Items.Count() shown</div>
+        <ul class="dfh-tree" role="tree" aria-label="Projects">
+            <li role="treeitem" aria-selected="@(!s.HasScope ? "true" : "false")">
+                <div class="dfh-tree-row@(!s.HasScope ? " is-selected" : "")" style="--level: 0">
+                    <span class="dfh-tree-toggle" aria-hidden="true"></span>
+                    <a class="dfh-tree-link" href="@s.Scoped().Href" aria-current="@(!s.HasScope ? "page" : null)">
+                        <i class="bi bi-files dfh-tree-icon" aria-hidden="true"></i>
+                        <span class="dfh-tree-name">All documents</span>
+                        <span class="dfh-tree-count">@tree.TotalDocuments</span>
+                    </a>
                 </div>
-                <div class="documents-stat-icon">📄</div>
-            </div>
-        </div>
-
-        <div class="documents-stat-card green">
-            <div class="documents-stat-header">
-                <div class="documents-stat-info">
-                    <h3>My Documents</h3>
-                    <div class="documents-stat-number">@Model.Documents.Items.Count(d => d.OwnerId == User.GetUserId())</div>
-                    <div class="documents-stat-change">owned by you</div>
-                </div>
-                <div class="documents-stat-icon">👤</div>
-            </div>
-        </div>
-
-        <div class="documents-stat-card cyan">
-            <div class="documents-stat-header">
-                <div class="documents-stat-info">
-                    <h3>Team Documents</h3>
-                    <div class="documents-stat-number">@Model.Documents.Items.Count(d => !string.IsNullOrEmpty(d.TeamName))</div>
-                    <div class="documents-stat-change">shared documents</div>
-                </div>
-                <div class="documents-stat-icon">👥</div>
-            </div>
-        </div>
-
-        <div class="documents-stat-card yellow">
-            <div class="documents-stat-header">
-                <div class="documents-stat-info">
-                    <h3>File Types</h3>
-                    <div class="documents-stat-number">@Model.Documents.Items.Select(d => d.FileType).Distinct().Count()</div>
-                    <div class="documents-stat-change">different formats</div>
-                </div>
-                <div class="documents-stat-icon">🗂️</div>
-            </div>
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="modern-alert modern-alert-danger">
-            <i class="bi bi-exclamation-circle"></i>
-            <span>@Model.ErrorMessage</span>
-            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-    }
-
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="modern-alert modern-alert-success">
-            <i class="bi bi-check-circle"></i>
-            <span>@TempData["SuccessMessage"]</span>
-            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-    }
-
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="modern-alert modern-alert-danger">
-            <i class="bi bi-exclamation-triangle"></i>
-            <span>@TempData["ErrorMessage"]</span>
-            <button type="button" class="modern-alert-close" data-bs-dismiss="alert">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-    }
-
-    <!-- Enhanced Filter Panel -->
-    <div class="documents-filter-card">
-        <div class="filter-card-header">
-            <h3 class="filter-title">
-                <i class="bi bi-funnel"></i>
-                Filter & Search
-            </h3>
-            <p class="filter-subtitle">Find your documents quickly</p>
-        </div>
-        
-        <form method="get" class="filter-form">
-            <div class="filter-grid">
-                <!-- Search -->
-                <div class="filter-group">
-                        <label asp-for="Filter.SearchTerm" class="filter-label">
-                        <i class="bi bi-search"></i>Search Documents
-                        </label>
-                        <input asp-for="Filter.SearchTerm" class="filter-input" 
-                               placeholder="Search by title, description...">
-                </div>
-
-                <!-- Team Filter -->
-                @if (Model.UserTeams != null && Model.UserTeams.Any())
-                {
-                    <div class="filter-group">
-                            <label asp-for="Filter.TeamId" class="filter-label">
-                            <i class="bi bi-building"></i>Workspace
-                            </label>
-                            <select asp-for="Filter.TeamId" class="filter-select">
-                                <option value="">All Documents</option>
-                                <option value="0" selected="@(Model.Filter.TeamId == 0)">My Private Documents</option>
-                                @foreach (var team in Model.UserTeams)
-                                {
-                                    <option value="@team.Id" selected="@(Model.Filter.TeamId == team.Id)">
-                                        @team.Name (@team.MemberCount members)
-                                    </option>
-                                }
-                            </select>
-                    </div>
-                }
-
-                <!-- Categories -->
-                @if (Model.Categories != null && Model.Categories.Any())
-                {
-                    <div class="filter-group">
-                            <label class="filter-label">
-                            <i class="bi bi-tags"></i>Category
-                            </label>
-                            <select asp-for="Filter.CategoryId" class="filter-select">
-                                <option value="">All Categories</option>
-                                @foreach (var category in Model.Categories)
-                                {
-                                    <option value="@category.Id" selected="@(Model.Filter.CategoryId == category.Id)">
-                                        @category.Name
-                                    </option>
-                                }
-                            </select>
-                    </div>
-                }
-
-                <!-- Project Filter -->
-                <div class="filter-group">
-                        <label asp-for="ProjectId" class="filter-label">
-                        <i class="bi bi-kanban"></i>Project
-                        </label>
-                        <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="filter-select" onchange="this.form.submit();">
-                            <option value="">All Projects</option>
-                            <option value="0" selected="@(Model.ProjectId == 0)">Unassigned</option>
-                        </select>
-                </div>
-
-                <!-- Folder Filter -->
-                <div class="filter-group">
-                        <label asp-for="FolderId" class="filter-label">
-                        <i class="bi bi-folder"></i>Folder
-                        </label>
-                        <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="filter-select"></select>
-                    </div>
-                </div>
-
-                <!-- Filter Actions -->
-                    <div class="filter-actions">
-                        <button type="submit" class="modern-btn modern-btn-primary">
-                    <i class="bi bi-search"></i>
-                    <span>Apply Filters</span>
-                        </button>
-                        <a asp-page="./Index" class="modern-btn modern-btn-outline">
-                    <i class="bi bi-arrow-clockwise"></i>
-                    <span>Clear All</span>
+            </li>
+            @foreach (var project in tree.Projects)
+            {
+                var selected = s.Project == project.Id && s.Folder == null;
+                var hasFolders = project.Folders.Count > 0;
+                <li role="treeitem" aria-selected="@(selected ? "true" : "false")" aria-expanded="@(hasFolders ? "true" : null)">
+                    <div class="dfh-tree-row@(selected ? " is-selected" : "")" style="--level: 0">
+                        @if (hasFolders)
+                        {
+                            <button type="button" class="dfh-tree-toggle" data-dfh-tree-toggle aria-label="Expand or collapse @project.Name"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                        }
+                        else
+                        {
+                            <span class="dfh-tree-toggle" aria-hidden="true"></span>
+                        }
+                        <a class="dfh-tree-link" href="@s.Scoped(project: project.Id).Href" aria-current="@(selected ? "page" : null)">
+                            <span class="dfh-swatch" style="background: @Dfh.ProjectColor(project.Color, project.Id)" aria-hidden="true"></span>
+                            <span class="dfh-tree-name">@project.Name</span>
+                            <span class="dfh-tree-count">@project.DocumentCount</span>
                         </a>
-            </div>
-        </form>
+                    </div>
+                    @if (hasFolders)
+                    {
+                        <ul role="group">
+                            @foreach (var folder in project.Folders)
+                            {
+                                <partial name="_DocumentTreeFolder" model="new DocumentTreeFolderNode(folder, project.Id, 1, s, Model.OpenFolders)" />
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ul>
+        @if (tree.Projects.Count == 0)
+        {
+            <p class="dfh-tree-note">No projects yet. Projects group documents into folders.</p>
+        }
+
+        <div class="dfh-panel-header dfh-panel-header--divided">
+            <span class="dfh-panel-title">Teams</span>
+        </div>
+        <ul class="dfh-tree" aria-label="Teams">
+            @foreach (var team in tree.Teams)
+            {
+                var selected = s.Team == team.Id;
+                <li>
+                    <a class="dfh-tree-row dfh-tree-row--flat@(selected ? " is-selected" : "")" href="@s.Scoped(team: team.Id).Href"
+                       aria-current="@(selected ? "page" : null)" title="Documents shared with @team.Name">
+                        <i class="bi bi-people dfh-tree-icon" aria-hidden="true"></i>
+                        <span class="dfh-tree-name">@team.Name</span>
+                        <span class="dfh-tree-count" title="@team.MemberCount @Dfh.Noun(team.MemberCount, "member")">@team.MemberCount</span>
+                    </a>
+                </li>
+            }
+        </ul>
+        @if (tree.Teams.Count == 0)
+        {
+            <p class="dfh-tree-note">You are not in a team yet.</p>
+        }
+
+        <div class="dfh-toolwindow-spacer"></div>
+        <div class="dfh-toolwindow-footer">
+            <span>Storage</span>
+            <span class="dfh-mono" title="@Dfh.Number(tree.TotalDocuments) @Dfh.Noun(tree.TotalDocuments, "document")">@Dfh.FileSize(tree.StorageBytes)</span>
+        </div>
+    </aside>
+}
+
+@section Inspector {
+    <aside class="dfh-inspector" aria-label="Document details">
+        <div class="dfh-panel-header is-inspector">
+            <span class="dfh-panel-title">Details</span>
+        </div>
+        <div class="dfh-inspector-body" id="dfh-inspector-body" aria-live="polite"
+             data-id="@Model.Selected?.Id" data-return-url="@returnUrl">
+            @if (Model.Selected != null)
+            {
+                <partial name="_DocumentInspector" model="new DocumentInspectorView(Model.Selected, Model.IsDemo, returnUrl)" />
+            }
+            else
+            {
+                <div class="dfh-empty dfh-empty--inline">
+                    <span class="dfh-empty-title">Nothing selected</span>
+                    <p>Select a document to see its details, AI summary and history.</p>
+                </div>
+            }
+        </div>
+    </aside>
+}
+
+<div class="dfh-column">
+    <div class="dfh-viewtabs" role="tablist" aria-label="Views">
+        <a class="dfh-viewtab is-active" role="tab" aria-selected="true" href="@s.Href"><i class="bi bi-files" aria-hidden="true"></i>Documents</a>
     </div>
 
-    <!-- Documents Content -->
-    @if (!Model.Documents.Items.Any())
+    <div class="dfh-toolbar">
+        <nav class="dfh-breadcrumb" aria-label="Location">
+            @for (var i = 0; i < Model.Breadcrumb.Count; i++)
+            {
+                var (label, href) = Model.Breadcrumb[i];
+                if (i > 0)
+                {
+                    <span class="dfh-breadcrumb-sep" aria-hidden="true">/</span>
+                }
+                if (i == Model.Breadcrumb.Count - 1)
+                {
+                    <span class="dfh-breadcrumb-current" aria-current="location">@label</span>
+                }
+                else
+                {
+                    <a href="@href">@label</a>
+                }
+            }
+        </nav>
+        @if (docs != null)
+        {
+            <span class="dfh-toolbar-count">@Dfh.Number(docs.Total) @Dfh.Noun(docs.Total, "document")</span>
+        }
+
+        @if (s.HasFilters)
+        {
+            <div class="dfh-tokens" aria-label="Active filters">
+                @if (s.Q != null)
+                {
+                    <span class="dfh-token dfh-token--query">"@s.Q"<a href="@((s with { Q = null, Page = 1 }).Href)" aria-label="Clear the search"><i class="bi bi-x" aria-hidden="true"></i></a></span>
+                }
+                @if (typeLabel != null)
+                {
+                    <span class="dfh-token"><span class="dfh-token-key">type:</span>@typeLabel<a href="@((s with { Type = null, Page = 1 }).Href)" aria-label="Remove the type filter"><i class="bi bi-x" aria-hidden="true"></i></a></span>
+                }
+                @if (ownerLabel != null)
+                {
+                    <span class="dfh-token"><span class="dfh-token-key">owner:</span>@ownerLabel<a href="@((s with { Owner = null, Page = 1 }).Href)" aria-label="Remove the owner filter"><i class="bi bi-x" aria-hidden="true"></i></a></span>
+                }
+                @if (categoryName != null)
+                {
+                    <span class="dfh-token"><span class="dfh-token-key">category:</span>@categoryName<a href="@((s with { Category = null, Page = 1 }).Href)" aria-label="Remove the category filter"><i class="bi bi-x" aria-hidden="true"></i></a></span>
+                }
+            </div>
+        }
+        <span class="dfh-spacer"></span>
+
+        <div class="dropdown">
+            <button type="button" class="dfh-filter-btn@(s.Type != null ? " is-active" : "")" data-bs-toggle="dropdown" aria-expanded="false">
+                Type<i class="bi bi-chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dfh-filter-menu">
+                <li><a class="dropdown-item" href="@((s with { Type = null, Page = 1 }).Href)"><i class="bi @(s.Type == null ? "bi-check-lg" : "")" aria-hidden="true"></i>Any type</a></li>
+                @foreach (var t in tree.FileTypes)
+                {
+                    var active = s.Type == t.FileType;
+                    var (label, kind) = Dfh.FileType(t.FileType);
+                    <li>
+                        <a class="dropdown-item" href="@((s with { Type = t.FileType, Page = 1 }).Href)" aria-current="@(active ? "true" : null)">
+                            <i class="bi @(active ? "bi-check-lg" : "")" aria-hidden="true"></i>
+                            <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                            <span class="dfh-menu-meta">@t.Count</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="dropdown">
+            <button type="button" class="dfh-filter-btn@(s.Owner != null ? " is-active" : "")" data-bs-toggle="dropdown" aria-expanded="false">
+                Owner<i class="bi bi-chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dfh-filter-menu">
+                @foreach (var (value, label) in new (string?, string)[] { (null, "Anyone"), ("me", "Owned by me"), ("others", "Shared with me") })
+                {
+                    var active = s.Owner == value;
+                    <li>
+                        <a class="dropdown-item" href="@((s with { Owner = value, Page = 1 }).Href)" aria-current="@(active ? "true" : null)">
+                            <i class="bi @(active ? "bi-check-lg" : "")" aria-hidden="true"></i>@label
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="dropdown">
+            <button type="button" class="dfh-filter-btn@(s.Category != null ? " is-active" : "")" data-bs-toggle="dropdown" aria-expanded="false">
+                Category<i class="bi bi-chevron-down" aria-hidden="true"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dfh-filter-menu">
+                <li><a class="dropdown-item" href="@((s with { Category = null, Page = 1 }).Href)"><i class="bi @(s.Category == null ? "bi-check-lg" : "")" aria-hidden="true"></i>Any category</a></li>
+                @foreach (var c in Model.Categories)
+                {
+                    var active = s.Category == c.Id;
+                    <li>
+                        <a class="dropdown-item" href="@((s with { Category = c.Id, Page = 1 }).Href)" aria-current="@(active ? "true" : null)">
+                            <i class="bi @(active ? "bi-check-lg" : "")" aria-hidden="true"></i>@c.Name
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="dfh-bulkbar" id="dfh-bulkbar" hidden>
+        <span class="dfh-bulkbar-count"><b data-dfh-bulk-count>0</b> selected</span>
+        @if (Model.IsDemo)
+        {
+            <span class="d-inline-block" tabindex="0" title="@demoTip"><button type="button" class="dfh-bulk-action" disabled><i class="bi bi-arrows-move" aria-hidden="true"></i>Move</button></span>
+            <span class="d-inline-block" tabindex="0" title="@demoTip"><button type="button" class="dfh-bulk-action is-danger" disabled><i class="bi bi-trash" aria-hidden="true"></i>Delete</button></span>
+        }
+        else
+        {
+            <button type="button" class="dfh-bulk-action" data-dfh-bulk="move"><i class="bi bi-arrows-move" aria-hidden="true"></i>Move</button>
+            <button type="button" class="dfh-bulk-action is-danger" data-dfh-bulk="delete"><i class="bi bi-trash" aria-hidden="true"></i>Delete</button>
+        }
+        <span class="dfh-spacer"></span>
+        <button type="button" class="dfh-bulk-action is-plain" data-dfh-bulk="clear">Clear</button>
+    </div>
+
+    @if (docs == null)
     {
-        <div class="documents-empty-state">
-            <div class="empty-state-content">
-                <div class="empty-state-icon">📂</div>
-                <h3 class="empty-state-title">No documents found</h3>
-                <p class="empty-state-subtitle">Try adjusting your filters or upload your first document to get started</p>
-                <div class="empty-state-actions">
-                    <a asp-page="./Upload" class="modern-btn modern-btn-primary">
-                        <i class="bi bi-cloud-upload"></i>
-                        <span>Upload Document</span>
-                    </a>
-                    <a asp-page="./Index" class="modern-btn modern-btn-outline">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        <span>Clear Filters</span>
-                    </a>
-                </div>
+        <div class="dfh-empty dfh-fill">
+            <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+            <span class="dfh-empty-title">The documents could not be loaded</span>
+            <p>@Model.ErrorMessage Try again in a moment.</p>
+            <a class="btn btn-secondary" href="@s.Href">Retry</a>
+        </div>
+    }
+    else if (docs.Total == 0 && !s.HasFilters && tree.TotalDocuments == 0)
+    {
+        @* 7a, variant for a user without any document *@
+        <div class="dfh-fill dfh-fill--pad">
+            <div class="dfh-empty dfh-empty--box">
+                <i class="bi bi-files" aria-hidden="true"></i>
+                <span class="dfh-empty-title">No documents yet</span>
+                <p>Upload a document, or ask a teammate to share one with your team. It will show up here.</p>
+                @if (!Model.IsDemo)
+                {
+                    <a class="btn btn-primary" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+                }
+            </div>
+        </div>
+    }
+    else if (docs.Total == 0 && !s.HasFilters && ownScope)
+    {
+        @* 7a: an empty project or folder *@
+        <div class="dfh-fill dfh-fill--pad">
+            <div class="dfh-empty dfh-empty--box">
+                <i class="bi bi-folder2" aria-hidden="true"></i>
+                <span class="dfh-empty-title">This @(s.Folder != null ? "folder" : "project") is empty</span>
+                <p>Upload a document straight into <span class="dfh-mono">@scopeName</span>, or move documents here from the list.</p>
+                @if (!Model.IsDemo)
+                {
+                    <div class="dfh-empty-actions">
+                        <a class="btn btn-primary" asp-page="/Documents/Upload" asp-route-projectId="@s.Project" asp-route-folderId="@s.Folder"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+                        <a class="btn btn-secondary" asp-page="/Folders/Create" asp-route-ProjectId="@s.Project" asp-route-ParentFolderId="@s.Folder"><i class="bi bi-folder-plus" aria-hidden="true"></i>New folder</a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (docs.Total == 0)
+    {
+        @* 7b: no results *@
+        <div class="dfh-fill">
+            <div class="dfh-empty dfh-empty--left">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span class="dfh-empty-title">No documents match @(s.HasFilters ? "these filters" : "here")</span>
+                <p>
+                    Nothing in <span class="dfh-mono dfh-text-2">@string.Join(" / ", Model.Breadcrumb.Select(b => b.Label))</span>@(s.Q != null ? $" for “{s.Q}”" : "")@(typeLabel != null ? $", type {typeLabel}" : "")@(ownerLabel == "me" ? ", owned by you" : ownerLabel == "others" ? ", shared with you" : "")@(categoryName != null ? $", in {categoryName}" : "").
+                </p>
+                <ul class="dfh-link-list">
+                    @if (s.HasScope)
+                    {
+                        <li><a href="@s.Scoped().Href">Search all documents instead</a></li>
+                    }
+                    @if (typeLabel != null)
+                    {
+                        <li><a href="@((s with { Type = null, Page = 1 }).Href)">Remove type:@typeLabel</a></li>
+                    }
+                    @if (ownerLabel != null)
+                    {
+                        <li><a href="@((s with { Owner = null, Page = 1 }).Href)">Remove owner:@ownerLabel</a></li>
+                    }
+                    @if (s.HasFilters)
+                    {
+                        <li><a href="@s.WithoutFilters().Href">Clear all filters</a></li>
+                    }
+                </ul>
             </div>
         </div>
     }
     else
     {
-        <!-- Results Summary -->
-        <div class="results-summary-card">
-            <div class="results-info">
-                <i class="bi bi-list-ul"></i>
-                <span>Showing <strong>@Model.Documents.Items.Count()</strong> of <strong>@Model.Documents.TotalItems</strong> documents</span>
-            </div>
-            <div class="page-info">
-                <i class="bi bi-file-earmark"></i>
-                <span>Page <strong>@Model.Documents.PageNumber</strong> of <strong>@Model.Documents.TotalPages</strong></span>
-            </div>
-        </div>
-
-        <!-- Enhanced Bulk Action Bar -->
-        <div id="bulkActionBar" class="bulk-action-card d-none">
-            <div class="bulk-action-content">
-                <div class="bulk-action-info">
-                    <div class="bulk-action-icon">✓</div>
-                    <div class="bulk-action-text">
-                        <span id="selectedCount" class="bulk-count">0 documents selected</span>
-                        <small class="bulk-subtitle">Choose an action below</small>
-                    </div>
-                </div>
-                <div class="bulk-action-buttons">
-                    <button type="button" id="clearSelectionBtn" class="action-btn clear">
-                        <i class="bi bi-x-lg"></i>
-                        <span>Clear</span>
-                    </button>
-                    <button type="button" id="bulkMoveBtn" class="action-btn move">
-                        <i class="bi bi-arrows-move"></i>
-                        <span>Move</span>
-                    </button>
-                    <button type="button" id="bulkDeleteBtn" class="action-btn delete">
-                        <i class="bi bi-trash"></i>
-                        <span>Delete</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Enhanced Documents Table -->
-        <div class="documents-table-card view-cards" id="documentsViewCard">
-            <div class="table-card-header">
-                <div class="table-header-info">
-                    <h3 class="table-title">
-                        <i class="bi bi-folder2-open"></i>
-                        Documents
-                    </h3>
-                    <p class="table-subtitle">Manage your document collection</p>
-                </div>
-                <div class="table-actions">
-                    <div class="view-toggle" role="group" aria-label="View mode">
-                        <button type="button" class="view-toggle-btn active" data-view="cards" title="Card view" aria-label="Card view">
-                            <i class="bi bi-grid-3x3-gap"></i>
-                        </button>
-                        <button type="button" class="view-toggle-btn" data-view="table" title="Table view" aria-label="Table view">
-                            <i class="bi bi-list-ul"></i>
-                        </button>
-                    </div>
-                    <button class="table-action-btn" title="Refresh" onclick="window.location.reload()">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Card grid view (default) -->
-            <div class="documents-grid">
-                @foreach (var document in Model.Documents.Items)
-                {
-                    <div class="document-card">
-                        <div class="doc-card-top">
-                            <div class="document-icon @GetFileIconClass(document.FileType)">
-                                <i class="bi @GetFileIcon(document.FileType)"></i>
-                            </div>
-                            <div class="dropdown">
-                                <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown" aria-label="Document actions">
-                                    <i class="bi bi-three-dots-vertical"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                    <li>
-                                        <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
-                                            <i class="bi bi-eye"></i>
-                                            <span>View Details</span>
-                                        </a>
-                                    </li>
-                                    @if (document.OwnerId == User.GetUserId())
+        <div class="dfh-fill" data-dfh-doc-scroll>
+            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table data-demo="@(Model.IsDemo ? "true" : "false")"
+                   data-inspector-url="/Documents?handler=Inspector&id={id}" data-open-url="/Documents/Details/{id}"
+                   aria-label="Documents" aria-multiselectable="true">
+                <colgroup>
+                    <col class="dfh-col-check" />
+                    <col />
+                    <col class="dfh-hide-md" style="width: 116px" />
+                    <col style="width: 44px" />
+                    <col class="dfh-hide-md" style="width: 72px" />
+                    <col style="width: 92px" />
+                    <col class="dfh-hide-lg" style="width: 132px" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col" class="dfh-check-cell">
+                            <input type="checkbox" class="form-check-input dfh-check" id="dfh-check-all" aria-label="Select all documents on this page" />
+                        </th>
+                        <th scope="col" aria-sort="@AriaSort("name")"><a class="dfh-sort" href="@s.SortedBy("name").Href">Name<i class="bi @SortIcon("name")" aria-hidden="true"></i></a></th>
+                        <th scope="col" class="dfh-hide-md">Workspace</th>
+                        <th scope="col">Ver</th>
+                        <th scope="col" class="is-num dfh-hide-md" aria-sort="@AriaSort("size")"><a class="dfh-sort" href="@s.SortedBy("size").Href"><i class="bi @SortIcon("size")" aria-hidden="true"></i>Size</a></th>
+                        <th scope="col" aria-sort="@AriaSort(null)"><a class="dfh-sort" href="@s.SortedBy(null).Href">Modified<i class="bi @SortIcon(null)" aria-hidden="true"></i></a></th>
+                        <th scope="col" class="dfh-hide-lg">Author</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < docs.Items.Count; i++)
+                    {
+                        var doc = docs.Items[i];
+                        var (label, kind) = Dfh.FileType(doc.FileType);
+                        var first = i == 0;
+                        <tr class="@(first ? "is-selected" : null)" data-id="@doc.Id" data-title="@doc.Title" data-ext="@label" data-kind="@kind"
+                            data-location="@(doc.Location ?? "No project")" data-owner="@(doc.IsOwner ? "1" : "0")"
+                            data-version="@(doc.Version ?? 0)" data-ai="@(doc.HasSummary ? "1" : "0")" data-size="@Dfh.FileSize(doc.FileSize)@(doc.Version != null ? $" · v{doc.Version}" : "")"
+                            tabindex="@(first ? "0" : "-1")" aria-selected="@(first ? "true" : "false")">
+                            <td class="dfh-check-cell">
+                                <input type="checkbox" class="form-check-input dfh-check dfh-row-check" value="@doc.Id" aria-label="Select @doc.Title" />
+                            </td>
+                            <td class="dfh-col-name">
+                                <div class="dfh-name-cell">
+                                    <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                                    <a class="dfh-cell-link dfh-ellipsis" href="/Documents/Details/@doc.Id" title="@doc.Title">@doc.Title</a>
+                                    @if (doc.HasSummary)
                                     {
-                                        <li>
-                                            <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
-                                                <i class="bi bi-pencil"></i>
-                                                <span>Edit</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <button type="button" class="dropdown-item text-danger"
-                                                    onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
-                                                <i class="bi bi-trash"></i>
-                                                <span>Delete</span>
-                                            </button>
-                                        </li>
-                                        <li>
-                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
-                                                <i class="bi bi-arrows-angle-right"></i>
-                                                <span>Move</span>
-                                            </button>
-                                        </li>
+                                        <i class="bi bi-stars dfh-ai-star" title="AI summary available" aria-label="AI summary available"></i>
                                     }
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
-                                            <button type="submit" class="dropdown-item text-success">
-                                                <i class="bi bi-download"></i>
-                                                <span>Download</span>
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <a asp-page="./Details" asp-route-id="@document.Id" class="doc-card-title">@document.Title</a>
-
-                        @if (!string.IsNullOrEmpty(document.Description))
-                        {
-                            <p class="doc-card-desc">@(document.Description.Length > 100 ? document.Description.Substring(0, 100) + "..." : document.Description)</p>
-                        }
-
-                        @if (document.Categories != null && document.Categories.Any())
-                        {
-                            <div class="document-categories">
-                                @foreach (var category in document.Categories.Take(2))
-                                {
-                                    <span class="category-tag">@category.Name</span>
-                                }
-                                @if (document.Categories.Count > 2)
-                                {
-                                    <span class="category-tag more">+@(document.Categories.Count - 2)</span>
-                                }
-                            </div>
-                        }
-
-                        <div class="doc-card-meta">
-                            @if (!string.IsNullOrEmpty(document.TeamName))
-                            {
-                                <span class="workspace-badge team" title="@document.TeamName">
-                                    <i class="bi bi-people"></i>
-                                    <span>@(document.TeamName.Length > 14 ? document.TeamName.Substring(0, 14) + "..." : document.TeamName)</span>
+                                    <button type="button" class="dfh-row-menu-btn" data-dfh-row-menu aria-haspopup="menu" aria-label="Actions for @doc.Title" tabindex="-1"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
+                                </div>
+                            </td>
+                            <td class="is-muted dfh-hide-md">
+                                <span class="dfh-workspace" title="@(doc.TeamName != null ? $"Shared with {doc.TeamName}" : "Only you can see this document")">
+                                    <i class="bi @(doc.TeamName != null ? "bi-people" : "bi-lock")" aria-hidden="true"></i><span class="dfh-ellipsis">@(doc.TeamName ?? "Private")</span>
                                 </span>
-                            }
-                            else
-                            {
-                                <span class="workspace-badge private">
-                                    <i class="bi bi-lock"></i>
-                                    <span>Private</span>
+                            </td>
+                            <td class="is-mono is-2 dfh-col-ver">@(doc.Version != null ? $"v{doc.Version}" : "—")</td>
+                            <td class="is-mono is-muted is-num dfh-col-size dfh-hide-md">@Dfh.FileSize(doc.FileSize)</td>
+                            <td class="is-muted dfh-col-modified" title="@Dfh.Timestamp(doc.ModifiedAt)">@Dfh.Relative(doc.ModifiedAt)</td>
+                            <td class="dfh-hide-lg">
+                                <span class="dfh-person">
+                                    <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(doc.OwnerName)</span>
+                                    <span class="dfh-ellipsis">@doc.OwnerName</span>
                                 </span>
-                            }
-                            <span class="doc-card-size">@FormatFileSize(document.FileSize) · @document.FileType.ToUpper()</span>
-                        </div>
-
-                        <div class="doc-card-footer">
-                            <span><i class="bi bi-clock"></i> @((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</span>
-                            <span class="doc-card-owner">@document.OwnerName</span>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <div class="modern-table-container">
-                <table class="modern-table">
-                    <thead>
-                        <tr>
-                            <!-- Selection Column -->
-                            <th class="select-column">
-                                <input type="checkbox" id="selectAll" class="modern-checkbox" title="Select all documents">
-                            </th>
-                            <th class="document-column sortable">
-                                <a href="@Model.GetSortUrl("Title", ViewData["TitleSortDirection"]?.ToString() ?? "asc")" class="table-sort-link">
-                                    <i class="bi bi-file-earmark"></i>
-                                    <span>Document</span>
-                                    @if (ViewData["CurrentSort"]?.ToString() == "Title")
-                                    {
-                                        <i class="bi bi-caret-@(ViewData["TitleSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th class="workspace-column d-none d-md-table-cell">
-                                <i class="bi bi-building"></i>
-                                <span>Workspace</span>
-                            </th>
-                            <th class="modified-column sortable d-none d-lg-table-cell">
-                                <a href="@Model.GetSortUrl("UpdatedAt", ViewData["UpdatedAtSortDirection"]?.ToString() ?? "desc")" class="table-sort-link">
-                                    <i class="bi bi-clock"></i>
-                                    <span>Modified</span>
-                                    @if (ViewData["CurrentSort"]?.ToString() == "UpdatedAt")
-                                    {
-                                        <i class="bi bi-caret-@(ViewData["UpdatedAtSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th class="size-column sortable d-none d-xl-table-cell">
-                                <a href="@Model.GetSortUrl("FileSize", ViewData["FileSizeSortDirection"]?.ToString() ?? "desc")" class="table-sort-link">
-                                    <i class="bi bi-hdd"></i>
-                                    <span>Size</span>
-                                    @if (ViewData["CurrentSort"]?.ToString() == "FileSize")
-                                    {
-                                        <i class="bi bi-caret-@(ViewData["FileSizeSortDirection"]?.ToString() == "desc" ? "down" : "up")-fill"></i>
-                                    }
-                                </a>
-                            </th>
-                            <th class="actions-column">Actions</th>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var document in Model.Documents.Items)
-                        {
-                            <tr class="modern-table-row">
-                                <!-- Document Selection -->
-                                <td class="select-cell">
-                                    <input type="checkbox" class="modern-checkbox document-checkbox" 
-                                           value="@document.Id" data-title="@document.Title" data-size="@FormatFileSize(document.FileSize)" data-date="@document.CreatedAt.ToString("MMM dd, yyyy")">
-                                </td>
-
-                                <!-- Document Info -->
-                                <td class="document-cell">
-                                    <div class="document-info">
-                                        <div class="document-icon @GetFileIconClass(document.FileType)">
-                                            <i class="bi @GetFileIcon(document.FileType)"></i>
-                                        </div>
-                                        <div class="document-details">
-                                            <div class="document-title">@document.Title</div>
-                                            @if (!string.IsNullOrEmpty(document.Description))
-                                            {
-                                                <div class="document-description">
-                                                    @(document.Description.Length > 80 ? document.Description.Substring(0, 80) + "..." : document.Description)
-                                                </div>
-                                            }
-                                            <!-- Mobile-only info -->
-                                            <div class="document-mobile-info d-md-none">
-                                                @if (!string.IsNullOrEmpty(document.TeamName))
-                                                {
-                                                    <span class="document-badge team">
-                                                        <i class="bi bi-people"></i>@document.TeamName
-                                                    </span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="document-badge private">
-                                                        <i class="bi bi-lock"></i>Private
-                                                    </span>
-                                                }
-                                                <span class="document-date">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd"))</span>
-                                            </div>
-                                            @if (document.Categories != null && document.Categories.Any())
-                                            {
-                                                <div class="document-categories">
-                                                    @foreach (var category in document.Categories.Take(2))
-                                                    {
-                                                        <span class="category-tag">@category.Name</span>
-                                                    }
-                                                    @if (document.Categories.Count > 2)
-                                                    {
-                                                        <span class="category-tag more">+@(document.Categories.Count - 2)</span>
-                                                    }
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <!-- Workspace -->
-                                <td class="workspace-cell d-none d-md-table-cell">
-                                    @if (!string.IsNullOrEmpty(document.TeamName))
-                                    {
-                                        <span class="workspace-badge team" title="@document.TeamName">
-                                            <i class="bi bi-people"></i>
-                                            <span>@(document.TeamName.Length > 12 ? document.TeamName.Substring(0, 12) + "..." : document.TeamName)</span>
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="workspace-badge private">
-                                            <i class="bi bi-lock"></i>
-                                            <span>Private</span>
-                                        </span>
-                                    }
-                                </td>
-
-                                <!-- Modified -->
-                                <td class="modified-cell d-none d-lg-table-cell">
-                                    <div class="modified-info">
-                                        <div class="modified-date">@((document.UpdatedAt ?? document.CreatedAt).ToString("MMM dd, yyyy"))</div>
-                                        <div class="modified-by">by @document.OwnerName</div>
-                                    </div>
-                                </td>
-
-                                <!-- Size -->
-                                <td class="size-cell d-none d-xl-table-cell">
-                                    <div class="size-info">
-                                        <div class="file-size">@FormatFileSize(document.FileSize)</div>
-                                        <div class="file-type">@document.FileType.ToUpper()</div>
-                                    </div>
-                                </td>
-
-                                <!-- Actions -->
-                                <td class="actions-cell">
-                                    <div class="dropdown">
-                                        <button class="action-dropdown-btn" type="button" data-bs-toggle="dropdown">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                            <li>
-                                                <a class="dropdown-item" asp-page="./Details" asp-route-id="@document.Id">
-                                                    <i class="bi bi-eye"></i>
-                                                    <span>View Details</span>
-                                                </a>
-                                            </li>
-                                            @if (document.OwnerId == User.GetUserId())
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" asp-page="./Edit" asp-route-id="@document.Id">
-                                                        <i class="bi bi-pencil"></i>
-                                                        <span>Edit</span>
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item text-danger" 
-                                                                        onclick="confirmDeleteDocument(@document.Id, @Html.Raw(Json.Serialize(document.Title)), '@FormatFileSize(document.FileSize)', '@document.CreatedAt.ToString("MMM dd, yyyy")')">
-                                                        <i class="bi bi-trash"></i>
-                                                        <span>Delete</span>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#moveModal" data-document-id="@document.Id">
-                                                        <i class="bi bi-arrows-angle-right"></i>
-                                                        <span>Move</span>
-                                                    </button>
-                                                </li>
-                                            }
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form method="post" asp-page-handler="Download" asp-route-documentId="@document.Id" class="d-inline">
-                                                    <button type="submit" class="dropdown-item text-success">
-                                                        <i class="bi bi-download"></i>
-                                                        <span>Download</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </table>
         </div>
 
-        <!-- Enhanced Pagination -->
-        @if (Model.Documents.TotalPages > 1)
-        {
-            <div class="pagination-container">
-                <nav class="pagination-nav">
-                    <ul class="modern-pagination">
-                        @if (Model.Documents.PageNumber > 1)
-                        {
-                            <li class="pagination-item">
-                                <a asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber - 1)" class="pagination-link prev">
-                                    <i class="bi bi-chevron-left"></i>
-                                    <span>Previous</span>
-                                </a>
-                            </li>
-                        }
-                        
-                        @for (var i = Math.Max(1, Model.Documents.PageNumber - 2); i <= Math.Min(Model.Documents.TotalPages, Model.Documents.PageNumber + 2); i++)
-                        {
-                            <li class="pagination-item">
-                                <a asp-page="./Index" asp-route-pageNumber="@i" 
-                                   class="pagination-link @(i == Model.Documents.PageNumber ? "active" : "")">@i</a>
-                            </li>
-                        }
-                        
-                        @if (Model.Documents.PageNumber < Model.Documents.TotalPages)
-                        {
-                            <li class="pagination-item">
-                                <a asp-page="./Index" asp-route-pageNumber="@(Model.Documents.PageNumber + 1)" class="pagination-link next">
-                                    <span>Next</span>
-                                    <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                </nav>
-            </div>
-        }
+        <nav class="dfh-pager" aria-label="Pages">
+            <span class="dfh-mono">@docs.From–@docs.To of @Dfh.Number(docs.Total)</span>
+            <span class="dfh-pager-nav">
+                @if (docs.Page > 1)
+                {
+                    <a class="dfh-pager-btn" href="@((s with { Page = docs.Page - 1 }).Href)" rel="prev">Prev</a>
+                }
+                else
+                {
+                    <span class="dfh-pager-btn is-disabled" aria-disabled="true">Prev</span>
+                }
+                @if (docs.PageCount > 1)
+                {
+                    <span class="dfh-mono">@docs.Page / @docs.PageCount</span>
+                }
+                @if (docs.Page < docs.PageCount)
+                {
+                    <a class="dfh-pager-btn" href="@((s with { Page = docs.Page + 1 }).Href)" rel="next">Next</a>
+                }
+                else
+                {
+                    <span class="dfh-pager-btn is-disabled" aria-disabled="true">Next</span>
+                }
+            </span>
+        </nav>
     }
 </div>
 
-<!-- Modern Bulk Delete Modal -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content modern-modal">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    Confirm Bulk Document Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="modern-alert modern-alert-danger">
-                    <i class="bi bi-warning"></i>
-                    <strong>This action cannot be undone!</strong>
-                </div>
-                
-                <p>Are you sure you want to delete <strong><span id="bulkDeleteCount"></span></strong> documents?</p>
-                
-                <div class="modern-card">
-                    <h6 class="mb-3">Documents to be deleted:</h6>
-                    <div class="bulk-delete-list">
-                        <div id="bulkDeleteList"></div>
-                    </div>
-                </div>
-                
-                <div id="bulkDeleteProgress" class="d-none">
-                    <div class="modern-progress">
-                        <div class="modern-progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <small class="progress-text">
-                        <span id="bulkProgressText">Preparing deletion...</span>
-                    </small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                    <span>Cancel</span>
-                </button>
-                <button type="button" id="confirmBulkDelete" class="modern-btn modern-btn-danger">
-                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                    <i class="bi bi-trash"></i>
-                    <span class="btn-text">Delete All Documents</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modern Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content modern-modal">
-            <div class="modal-header">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    Confirm Document Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="modern-alert modern-alert-danger">
-                    <i class="bi bi-warning"></i>
-                    <strong>This action cannot be undone!</strong>
-                </div>
-                
-                <p>Are you sure you want to delete this document?</p>
-                
-                <div class="modern-card">
-                    <h6 id="deleteDocumentTitle"></h6>
-                    <div class="delete-document-info">
-                        <div class="info-item">
-                            <strong>Size:</strong> <span id="deleteDocumentSize"></span>
-                        </div>
-                        <div class="info-item">
-                            <strong>Created:</strong> <span id="deleteDocumentDate"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                    <span>Cancel</span>
-                </button>
-                <form method="post" asp-page-handler="Delete" class="d-inline" id="deleteForm">
-                    <input type="hidden" id="deleteDocumentId" name="documentId" />
-                    <button type="submit" class="modern-btn modern-btn-danger loading-btn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                        <i class="bi bi-trash"></i>
-                        <span class="btn-text">Delete Document</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modern Move Document Modal -->
-<div class="modal fade" id="moveModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content modern-modal">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="bi bi-arrows-angle-right"></i>
-                    Move Document
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="moveDocumentId" />
-                <div class="form-group">
-                    <label class="modern-form-label">
-                        <i class="bi bi-kanban"></i>Project
-                    </label>
-                    <select id="moveProjectSelect" class="modern-form-select">
-                        <option value="">Keep current</option>
-                        <option value="0">Unassigned</option>
-                        @foreach (var project in Model.Projects)
-                        {
-                            <option value="@project.Id">@project.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="modern-form-label">
-                        <i class="bi bi-folder"></i>Folder (optional)
-                    </label>
-                    <select id="moveFolderSelect" class="modern-form-select">
-                        <option value="">None</option>
-                        @foreach (var folder in Model.Folders)
-                        {
-                            <option value="@folder.Id">@folder.Name</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
-                    <i class="bi bi-x"></i>
-                    <span>Cancel</span>
-                </button>
-                <button type="button" id="confirmMoveBtn" class="modern-btn modern-btn-primary">
-                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                    <i class="bi bi-arrows-angle-right"></i>
-                    <span class="btn-text">Move</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@functions {
-    private string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        int order = 0;
-        double size = bytes;
-        
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-
-        return $"{size:0.##} {sizes[order]}";
-    }
-
-    private string GetFileIcon(string fileType)
-    {
-        return fileType.ToLower() switch
-        {
-            ".pdf" => "bi-file-earmark-pdf",
-            ".doc" or ".docx" => "bi-file-earmark-word",
-            ".txt" => "bi-file-earmark-text",
-            ".md" => "bi-markdown",
-            ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
-            _ => "bi-file-earmark"
-        };
-    }
-
-    private string GetFileIconClass(string fileType)
-    {
-        return fileType.ToLower() switch
-        {
-            ".pdf" => "pdf-icon",
-            ".doc" or ".docx" => "word-icon",
-            ".txt" => "text-icon",
-            ".md" => "markdown-icon",
-            ".jpg" or ".jpeg" or ".png" or ".gif" => "image-icon",
-            _ => ""
-        };
-    }
-}
+<partial name="_DocumentDialogs" model="new DocumentDialogsView(returnUrl, tree)" />
 
 @section Scripts {
-    <script>
-        // Documents view toggle (Cards / Table) — presentation only, persisted per browser
-        (function () {
-            var STORAGE_KEY = 'docflowhub-docs-view';
-            var card = document.getElementById('documentsViewCard');
-            if (!card) return;
-            var buttons = card.querySelectorAll('.view-toggle-btn');
-
-            function applyView(view) {
-                var mode = view === 'table' ? 'table' : 'cards';
-                card.classList.toggle('view-cards', mode === 'cards');
-                card.classList.toggle('view-table', mode === 'table');
-                buttons.forEach(function (b) {
-                    b.classList.toggle('active', b.getAttribute('data-view') === mode);
-                });
-            }
-
-            var stored = null;
-            try { stored = localStorage.getItem(STORAGE_KEY); } catch (e) { }
-            if (stored) applyView(stored);
-
-            buttons.forEach(function (b) {
-                b.addEventListener('click', function () {
-                    var view = b.getAttribute('data-view');
-                    applyView(view);
-                    try { localStorage.setItem(STORAGE_KEY, view); } catch (e) { }
-                });
-            });
-        })();
-
-        // Confirm delete document function
-        function confirmDeleteDocument(documentId, title, size, createdDate) {
-            document.getElementById('deleteDocumentId').value = documentId;
-            document.getElementById('deleteDocumentTitle').textContent = title;
-            document.getElementById('deleteDocumentSize').textContent = size;
-            document.getElementById('deleteDocumentDate').textContent = createdDate;
-            
-            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            deleteModal.show();
-        }
-
-        // Initialize bulk selection functionality
-        function initializeBulkSelection() {
-            const selectAllCheckbox = document.getElementById('selectAll');
-            const documentCheckboxes = document.querySelectorAll('.document-checkbox');
-            const bulkActionBar = document.getElementById('bulkActionBar');
-            const selectedCountSpan = document.getElementById('selectedCount');
-            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-
-            selectAllCheckbox.addEventListener('change', function() {
-                documentCheckboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                updateBulkActionBar();
-            });
-
-            documentCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateBulkActionBar);
-            });
-
-            clearSelectionBtn.addEventListener('click', function() {
-                documentCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-                updateBulkActionBar();
-            });
-
-            bulkDeleteBtn.addEventListener('click', function() {
-                const selectedCheckboxes = document.querySelectorAll('.document-checkbox:checked');
-                const selectedDocuments = Array.from(selectedCheckboxes).map(checkbox => ({
-                    id: checkbox.value,
-                    title: checkbox.dataset.title,
-                    size: checkbox.dataset.size,
-                    date: checkbox.dataset.date
-                }));
-                
-                if (selectedDocuments.length > 0) {
-                    showBulkDeleteModal(selectedDocuments);
-                }
-            });
-
-            function updateBulkActionBar() {
-                const selectedCheckboxes = document.querySelectorAll('.document-checkbox:checked');
-                const count = selectedCheckboxes.length;
-                const totalCheckboxes = documentCheckboxes.length;
-                
-                if (count > 0) {
-                    bulkActionBar.classList.remove('d-none');
-                    selectedCountSpan.textContent = `${count} document${count > 1 ? 's' : ''} selected`;
-                } else {
-                    bulkActionBar.classList.add('d-none');
-                }
-                
-                if (count === 0) {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = false;
-                } else if (count === totalCheckboxes) {
-                    selectAllCheckbox.checked = true;
-                    selectAllCheckbox.indeterminate = false;
-                } else {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = true;
-                }
-            }
-        }
-
-        function showBulkDeleteModal(selectedDocuments) {
-            if (!selectedDocuments || selectedDocuments.length === 0) return;
-            
-            document.getElementById('bulkDeleteCount').textContent = 
-                `${selectedDocuments.length} document${selectedDocuments.length > 1 ? 's' : ''}`;
-            
-            const listContainer = document.getElementById('bulkDeleteList');
-            listContainer.innerHTML = selectedDocuments.map(doc => `
-                <div class="bulk-delete-item">
-                    <div class="bulk-item-info">
-                        <div class="bulk-item-title">${escapeHtml(doc.title)}</div>
-                        <div class="bulk-item-meta">${doc.size} • Created ${doc.date}</div>
-                    </div>
-                    <div class="bulk-item-icon">
-                        <i class="bi bi-file-earmark"></i>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.getElementById('bulkDeleteProgress').classList.add('d-none');
-            const confirmBtn = document.getElementById('confirmBulkDelete');
-            const spinner = confirmBtn.querySelector('.spinner-border');
-            const btnText = confirmBtn.querySelector('.btn-text');
-            const icon = confirmBtn.querySelector('.bi');
-            
-            confirmBtn.disabled = false;
-            spinner.classList.add('d-none');
-            icon.classList.remove('d-none');
-            btnText.textContent = `Delete All Documents`;
-            
-            window.bulkDeleteDocuments = selectedDocuments;
-            
-            const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
-            modal.show();
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function updateUIAfterBulkDelete(result) {
-            result.results.forEach(item => {
-                if (item.success) {
-                    const checkbox = document.querySelector(`.document-checkbox[value="${item.documentId}"]`);
-                    if (checkbox) {
-                        const row = checkbox.closest('tr');
-                        if (row) {
-                            row.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                            row.style.opacity = '0';
-                            row.style.transform = 'translateX(-20px)';
-                            
-                            setTimeout(() => {
-                                row.remove();
-                                const remainingRows = document.querySelectorAll('.modern-table-row');
-                                if (remainingRows.length === 0) {
-                                    showEmptyState();
-                                }
-                            }, 500);
-                        }
-                    }
-                }
-            });
-
-            setTimeout(() => {
-                clearAllSelections();
-                showSuccessToast(result);
-            }, 100);
-        }
-
-        function clearAllSelections() {
-            const selectAllCheckbox = document.getElementById('selectAll');
-            const documentCheckboxes = document.querySelectorAll('.document-checkbox');
-            const bulkActionBar = document.getElementById('bulkActionBar');
-            
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            }
-            
-            documentCheckboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            
-            if (bulkActionBar) {
-                bulkActionBar.classList.add('d-none');
-            }
-        }
-
-        function showEmptyState() {
-            const tableContainer = document.querySelector('.modern-table-container');
-            if (tableContainer) {
-                tableContainer.innerHTML = `
-                    <div class="documents-empty-state">
-                        <div class="empty-state-content">
-                            <div class="empty-state-icon">📂</div>
-                            <h3 class="empty-state-title">No documents found</h3>
-                            <p class="empty-state-subtitle">All documents have been successfully deleted.</p>
-                            <div class="empty-state-actions">
-                                <a href="/Documents/Upload" class="modern-btn modern-btn-primary">
-                                    <i class="bi bi-cloud-upload"></i>
-                                    <span>Upload New Document</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function showSuccessToast(result) {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-success border-0 position-fixed" 
-                     style="top: 20px; right: 20px; z-index: 9999;" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi bi-check-circle"></i>
-                            ${getSuccessMessage(result)}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" 
-                                data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', toastHtml);
-            
-            const toastElement = document.body.lastElementChild;
-            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
-            toast.show();
-            
-            toastElement.addEventListener('hidden.bs.toast', () => {
-                toastElement.remove();
-            });
-        }
-
-        function getSuccessMessage(result) {
-            if (result.isFullySuccessful) {
-                return `Successfully deleted ${result.successfulDeletions} document${result.successfulDeletions > 1 ? 's' : ''}!`;
-            } else if (result.hasPartialFailure) {
-                return `Partially successful: ${result.successfulDeletions} of ${result.totalRequested} documents deleted.`;
-            } else {
-                return 'Bulk delete operation completed.';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeBulkSelection();
-            
-            document.getElementById('confirmBulkDelete').addEventListener('click', async function() {
-                const documentsToDelete = window.bulkDeleteDocuments;
-                if (!documentsToDelete || documentsToDelete.length === 0) return;
-                
-                const confirmBtn = this;
-                const spinner = confirmBtn.querySelector('.spinner-border');
-                const btnText = confirmBtn.querySelector('.btn-text');
-                const icon = confirmBtn.querySelector('.bi');
-                
-                confirmBtn.disabled = true;
-                spinner.classList.remove('d-none');
-                icon.classList.add('d-none');
-                btnText.textContent = 'Deleting...';
-                
-                const progressDiv = document.getElementById('bulkDeleteProgress');
-                const progressBar = progressDiv.querySelector('.modern-progress-bar');
-                const progressText = document.getElementById('bulkProgressText');
-                progressDiv.classList.remove('d-none');
-                progressText.textContent = `Deleting ${documentsToDelete.length} document(s)...`;
-                
-                try {
-                    const requestData = {
-                        documentIds: documentsToDelete.map(doc => parseInt(doc.id))
-                    };
-                    
-                    const response = await fetch('/Documents/Index?handler=BulkDelete', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                        },
-                        body: JSON.stringify(requestData)
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    progressBar.style.transition = 'width 0.5s ease';
-                    progressBar.style.width = '100%';
-                    
-                    if (result.success) {
-                        if (result.isFullySuccessful) {
-                            progressText.textContent = `Successfully deleted all ${result.successfulDeletions} document(s)!`;
-                        } else if (result.hasPartialFailure) {
-                            progressText.textContent = `Partially successful: ${result.successfulDeletions} of ${result.totalRequested} document(s) deleted.`;
-                        } else {
-                            progressText.textContent = `No documents were deleted. Please check permissions.`;
-                        }
-                        
-                        setTimeout(() => {
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
-                            modal.hide();
-                            
-                            if (result.successfulDeletions > 0) {
-                                updateUIAfterBulkDelete(result);
-                            }
-                        }, 2000);
-                        
-                    } else {
-                        progressText.textContent = `Error: ${result.error || 'Unknown error occurred'}`;
-                        progressBar.classList.add('bg-danger');
-                        
-                        setTimeout(() => {
-                            confirmBtn.disabled = false;
-                            spinner.classList.add('d-none');
-                            icon.classList.remove('d-none');
-                            btnText.textContent = 'Retry Deletion';
-                        }, 2000);
-                    }
-                    
-                } catch (error) {
-                    console.error('Bulk delete error:', error);
-                    progressText.textContent = `Network error: ${error.message}`;
-                    progressBar.classList.add('bg-danger');
-                    
-                    setTimeout(() => {
-                        confirmBtn.disabled = false;
-                        spinner.classList.add('d-none');
-                        icon.classList.remove('d-none');
-                        btnText.textContent = 'Retry Deletion';
-                    }, 2000);
-                }
-            });
-
-            const deleteForm = document.getElementById('deleteForm');
-            if (deleteForm) {
-                deleteForm.addEventListener('submit', function() {
-                    const loadingBtn = deleteForm.querySelector('.loading-btn');
-                    if (loadingBtn) {
-                        const spinner = loadingBtn.querySelector('.spinner-border');
-                        const btnText = loadingBtn.querySelector('.btn-text');
-                        const icon = loadingBtn.querySelector('.bi');
-                        
-                        spinner.classList.remove('d-none');
-                        if (icon) icon.classList.add('d-none');
-                        if (btnText) btnText.textContent = 'Deleting...';
-                        loadingBtn.disabled = true;
-                    }
-                });
-            }
-
-            const moveModal = document.getElementById('moveModal');
-            if(moveModal){
-                let selectedDocId = null;
-                moveModal.addEventListener('show.bs.modal', function(event){
-                    const button = event.relatedTarget;
-                    selectedDocId = button.getAttribute('data-document-id');
-                    document.getElementById('moveDocumentId').value = selectedDocId;
-                });
-
-                document.getElementById('confirmMoveBtn').addEventListener('click', async function(){
-                    const btn = this;
-                    const spinner = btn.querySelector('.spinner-border');
-                    const btnText = btn.querySelector('.btn-text');
-                    btn.disabled = true;
-                    spinner.classList.remove('d-none');
-
-                    const isBulk = window.bulkMoveIds && window.bulkMoveIds.length > 0;
-                    
-                    try{
-                        let response;
-                        if(isBulk){
-                            const payload = {
-                                documentIds: window.bulkMoveIds.map(id=>parseInt(id)),
-                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value):null,
-                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value):null
-                            };
-                            response = await fetch('/Documents/Index?handler=BulkMove',{
-                                method:'POST', 
-                                headers:{'Content-Type':'application/json','RequestVerificationToken':document.querySelector('input[name="__RequestVerificationToken"]').value},
-                                body:JSON.stringify(payload)
-                            });
-                        } else {
-                            const requestPayload = {
-                                documentId: parseInt(document.getElementById('moveDocumentId').value),
-                                projectId: document.getElementById('moveProjectSelect').value ? parseInt(document.getElementById('moveProjectSelect').value) : null,
-                                folderId: document.getElementById('moveFolderSelect').value ? parseInt(document.getElementById('moveFolderSelect').value) : null
-                            };
-                            response = await fetch('/Documents/Index?handler=Move', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                                },
-                                body: JSON.stringify(requestPayload)
-                            });
-                        }
-
-                        const result = await response.json();
-                        if(result.success){
-                            window.location.reload();
-                        } else {
-                            alert(result.error || 'Move failed');
-                        }
-                    } catch(err){
-                        console.error(err);
-                        alert('Network error');
-                    } finally {
-                        spinner.classList.add('d-none');
-                        btn.disabled = false;
-                        btnText.textContent = 'Move';
-                    }
-                });
-
-                document.getElementById('moveProjectSelect').addEventListener('change', async function(){
-                    const projectId = this.value;
-                    const folderSelect = document.getElementById('moveFolderSelect');
-                    folderSelect.options.length = 0;
-                    const defaultOpt = new Option('None', '');
-                    folderSelect.add(defaultOpt);
-                    if(!projectId){
-                        return;
-                    }
-                    try{
-                        const resp = await fetch(`/Documents/Index?handler=Folders&projectId=${projectId}`);
-                        const data = await resp.json();
-                        if(data.success){
-                            data.folders.forEach(f => {
-                               const opt = new Option(f.name, f.id);
-                               folderSelect.add(opt);
-                            });
-                        }
-                    }catch(err){ console.error(err); }
-                });
-            }
-
-            document.getElementById('bulkMoveBtn').addEventListener('click', function(){
-                const selected = Array.from(document.querySelectorAll('.document-checkbox:checked')).map(cb=>cb.value);
-                if(selected.length===0){ alert('No documents selected'); return; }
-                window.bulkMoveIds = selected;
-                document.getElementById('moveProjectSelect').value='';
-                const folderSel = document.getElementById('moveFolderSelect');
-                folderSel.options.length = 0; folderSel.add(new Option('None',''));
-                const modal = new bootstrap.Modal(document.getElementById('moveModal'));
-                modal.show();
-            });
-        });
-    </script>
-    
-    <style>
-        /* Modern Documents Container */
-        .documents-container {
-            padding: 32px;
-            max-width: 100vw;
-            overflow-x: hidden;
-        }
-
-        /* Page Header */
-        .documents-page-header {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 20px;
-            padding: 32px;
-            margin-bottom: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-        }
-
-        .page-header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 24px;
-        }
-
-        .page-header-info .page-title {
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .page-icon {
-            font-size: 40px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .page-subtitle {
-            font-size: 16px;
-            color: var(--text-secondary);
-            margin: 0;
-        }
-
-        /* Enhanced Modern Button Styling */
-        .modern-btn {
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 10px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .page-header-actions .modern-btn {
-            padding: 12px 24px;
-            border-radius: 12px;
-        }
-
-        .modern-btn-primary {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            color: var(--text-inverse);
-            box-shadow: 0 6px 20px var(--accent-light);
-            border: none;
-        }
-
-        .modern-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px var(--accent-light);
-            color: var(--text-inverse);
-            background: linear-gradient(135deg, var(--accent-hover), var(--accent-color));
-        }
-
-        .modern-btn-outline {
-            background: transparent;
-            color: #6b7280;
-            border: 2px solid #d1d5db;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .modern-btn-outline:hover {
-            background: rgba(2, 132, 199, 0.1);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.15);
-        }
-
-        /* Theme-specific overrides for outline buttons */
-        [data-theme="light"] .modern-btn-outline {
-            background: #ffffff;
-            color: #374151;
-            border-color: #d1d5db;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        [data-theme="light"] .modern-btn-outline:hover {
-            background: rgba(2, 132, 199, 0.05);
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        [data-theme="dark"] .modern-btn-outline {
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.8);
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        [data-theme="dark"] .modern-btn-outline:hover {
-            background: rgba(2, 132, 199, 0.1);
-            color: var(--accent-hover);
-            border-color: var(--accent-hover);
-        }
-
-        /* Filter Actions Specific Styling */
-        .filter-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .filter-actions .modern-btn {
-            min-width: 130px;
-            justify-content: center;
-        }
-
-        .filter-actions .modern-btn i {
-            font-size: 16px;
-        }
-
-
-
-        /* Document Stats Grid - Improved Responsive Layout */
-        .documents-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-            margin-bottom: 32px;
-        }
-
-        .documents-stat-card {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            padding: 24px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .documents-stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--accent-color);
-        }
-
-        .documents-stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.12);
-        }
-
-        .documents-stat-card.blue {
-            --accent-color: #3b82f6;
-        }
-
-        .documents-stat-card.green {
-            --accent-color: #10b981;
-        }
-
-        .documents-stat-card.cyan {
-            --accent-color: #06b6d4;
-        }
-
-        .documents-stat-card.yellow {
-            --accent-color: #f59e0b;
-        }
-
-        .documents-stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .documents-stat-info h3 {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .documents-stat-number {
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .documents-stat-change {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .documents-stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 80%, transparent));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-        }
-
-        /* Modern Alerts */
-        .modern-alert {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .modern-alert::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: var(--alert-color);
-        }
-
-        .modern-alert-success {
-            --alert-color: #10b981;
-            border-left-color: var(--alert-color);
-        }
-
-        .modern-alert-danger {
-            --alert-color: #ef4444;
-            border-left-color: var(--alert-color);
-        }
-
-        .modern-alert i {
-            color: var(--alert-color);
-            font-size: 18px;
-        }
-
-        .modern-alert span {
-            flex: 1;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .modern-alert-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .modern-alert-close:hover {
-            background: var(--surface-hover);
-            color: var(--text-primary);
-        }
-
-        /* Enhanced Filter Card */
-        .documents-filter-card {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-glass);
-            position: relative;
-        }
-
-        /* Dark theme base styling using design system variables */
-        [data-theme="dark"] .documents-filter-card,
-        html[data-theme="dark"] .documents-filter-card,
-        body[data-theme="dark"] .documents-filter-card {
-            background: var(--surface-primary) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            border-color: var(--border-color) !important;
-            box-shadow: var(--shadow-glass) !important;
-        }
-
-        .filter-card-header {
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border-secondary);
-        }
-
-        .filter-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .filter-subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin: 0;
-        }
-
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .filter-input,
-        .filter-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid var(--border-secondary);
-            border-radius: 8px;
-            background: var(--surface-secondary);
-            color: var(--text-primary);
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .filter-input:focus,
-        .filter-select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px var(--accent-light);
-            background: var(--surface-primary);
-        }
-
-        /* Dark theme filter styling - Using proper design system variables */
-        [data-theme="dark"] .documents-filter-card {
-            background: var(--surface-primary) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            border-color: var(--border-color) !important;
-            box-shadow: var(--shadow-glass) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-card-header {
-            border-bottom-color: var(--border-color) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-title {
-            color: var(--text-primary) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-subtitle {
-            color: var(--text-secondary) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-label {
-            color: var(--text-secondary) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-input,
-        [data-theme="dark"] .documents-filter-card .filter-select {
-            background: var(--surface-secondary) !important;
-            border-color: var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-input:focus,
-        [data-theme="dark"] .documents-filter-card .filter-select:focus {
-            background: var(--surface-tertiary) !important;
-            border-color: var(--accent-color) !important;
-            box-shadow: 0 0 0 3px var(--accent-light) !important;
-        }
-
-        [data-theme="dark"] .documents-filter-card .filter-input::placeholder {
-            color: var(--text-muted) !important;
-        }
-
-        /* Additional dark theme support for option elements */
-        [data-theme="dark"] .documents-filter-card select option {
-            background: var(--surface-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Alternative dark theme detection methods for broader compatibility */
-        html[data-theme="dark"] .documents-filter-card,
-        body[data-theme="dark"] .documents-filter-card,
-        .dark .documents-filter-card {
-            background: var(--surface-primary) !important;
-            border-color: var(--border-color) !important;
-            box-shadow: var(--shadow-glass) !important;
-        }
-
-        html[data-theme="dark"] .documents-filter-card .filter-input,
-        html[data-theme="dark"] .documents-filter-card .filter-select,
-        body[data-theme="dark"] .documents-filter-card .filter-input,
-        body[data-theme="dark"] .documents-filter-card .filter-select,
-        .dark .documents-filter-card .filter-input,
-        .dark .documents-filter-card .filter-select {
-            background: var(--surface-secondary) !important;
-            border-color: var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        html[data-theme="dark"] .documents-filter-card .filter-title,
-        body[data-theme="dark"] .documents-filter-card .filter-title,
-        .dark .documents-filter-card .filter-title {
-            color: var(--text-primary) !important;
-        }
-
-        html[data-theme="dark"] .documents-filter-card .filter-subtitle,
-        body[data-theme="dark"] .documents-filter-card .filter-subtitle,
-        .dark .documents-filter-card .filter-subtitle {
-            color: var(--text-secondary) !important;
-        }
-
-        html[data-theme="dark"] .documents-filter-card .filter-label,
-        body[data-theme="dark"] .documents-filter-card .filter-label,
-        .dark .documents-filter-card .filter-label {
-            color: var(--text-secondary) !important;
-        }
-
-        .filter-actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        /* Empty State */
-        .documents-empty-state {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .empty-state-content {
-            text-align: center;
-            max-width: 400px;
-            padding: 40px;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            opacity: 0.6;
-            margin-bottom: 24px;
-            color: var(--text-muted);
-        }
-
-        .empty-state-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-        }
-
-        .empty-state-subtitle {
-            font-size: 16px;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-
-        .empty-state-actions {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        /* Results Summary */
-        .results-summary-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding: 16px 20px;
-            background: var(--surface-secondary);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border-secondary);
-            border-radius: 12px;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .results-info,
-        .page-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Enhanced Bulk Action Bar */
-        .bulk-action-card {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            border: 1px solid var(--accent-color);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 12px 40px color-mix(in srgb, var(--accent-color) 25%, transparent);
-            animation: slideInDown 0.3s ease;
-        }
-
-        .bulk-action-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .bulk-action-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .bulk-action-icon {
-            font-size: 24px;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .bulk-action-text {
-            color: white;
-        }
-
-        .bulk-count {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .bulk-subtitle {
-            display: block;
-            opacity: 0.8;
-            font-size: 12px;
-        }
-
-        .bulk-action-buttons {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .action-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .action-btn.clear {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        .action-btn.move {
-            background: rgba(59, 130, 246, 0.3);
-            color: white;
-        }
-
-        .action-btn.delete {
-            background: rgba(239, 68, 68, 0.3);
-            color: white;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Enhanced Table */
-        .documents-table-card {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            margin-bottom: 24px;
-        }
-
-        .table-card-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border-secondary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.02);
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-
-        .table-header-info .table-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .table-subtitle {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin: 0;
-        }
-
-        .table-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .table-action-btn {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: var(--surface-secondary);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .table-action-btn:hover {
-            background: var(--surface-hover);
-            color: var(--text-primary);
-        }
-
-        /* ===== View toggle (Cards / Table) ===== */
-        .view-toggle {
-            display: inline-flex;
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 2px;
-            gap: 2px;
-        }
-
-        .view-toggle-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 30px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: var(--transition-all);
-        }
-
-        .view-toggle-btn:hover { color: var(--accent-color); }
-
-        .view-toggle-btn.active {
-            background: var(--surface-primary);
-            color: var(--accent-color);
-            box-shadow: var(--shadow-sm);
-        }
-
-        /* View switching — one view visible at a time */
-        .documents-table-card.view-cards .modern-table-container { display: none; }
-        .documents-table-card.view-table .documents-grid { display: none; }
-
-        /* ===== Card grid ===== */
-        .documents-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-            padding: 1.25rem;
-        }
-
-        .document-card {
-            display: flex;
-            flex-direction: column;
-            gap: 0.7rem;
-            background: var(--surface-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 1.1rem;
-            transition: var(--transition-all);
-        }
-
-        .document-card:hover {
-            border-color: var(--accent-color);
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
-        }
-
-        .doc-card-top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-        }
-
-        .doc-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-decoration: none;
-            line-height: 1.35;
-            word-break: break-word;
-        }
-
-        .doc-card-title:hover { color: var(--accent-color); }
-
-        .doc-card-desc {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin: 0;
-            line-height: 1.5;
-        }
-
-        .doc-card-meta {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            margin-top: auto;
-        }
-
-        .doc-card-size {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            white-space: nowrap;
-        }
-
-        .doc-card-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            padding-top: 0.6rem;
-            border-top: 1px solid var(--border-light);
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .doc-card-owner {
-            font-weight: 600;
-            color: var(--text-secondary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        @@media (max-width: 480px) {
-            .documents-grid { grid-template-columns: 1fr; padding: 1rem; }
-        }
-
-        .modern-table-container {
-            overflow-x: auto;
-        }
-
-        .modern-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-        }
-
-        .modern-table thead th {
-            padding: 16px 20px;
-            text-align: left;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-secondary);
-            background: var(--surface-secondary);
-        }
-
-        .modern-table tbody td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-light);
-            color: var(--text-primary);
-        }
-
-        .modern-table-row {
-            transition: all 0.2s ease;
-        }
-
-        .modern-table-row:hover {
-            background: var(--surface-hover);
-        }
-
-        .select-column {
-            width: 50px;
-            text-align: center;
-        }
-
-        .document-column {
-            width: 40%;
-        }
-
-        .workspace-column {
-            width: 15%;
-        }
-
-        .modified-column {
-            width: 20%;
-        }
-
-        .size-column {
-            width: 10%;
-        }
-
-        .actions-column {
-            width: 10%;
-            text-align: center;
-        }
-
-        .table-sort-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: color 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .table-sort-link:hover {
-            color: var(--text-primary);
-        }
-
-        /* Checkbox Styling */
-        .modern-checkbox {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            background: #ffffff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-
-        .modern-checkbox:checked {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            border-color: var(--accent-color);
-            transform: scale(1.05);
-        }
-
-        .modern-checkbox:checked::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .modern-checkbox:indeterminate {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            border-color: var(--accent-color);
-        }
-
-        .modern-checkbox:indeterminate::after {
-            content: '−';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .modern-checkbox:hover {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
-
-        /* Dark mode checkbox styling */
-        [data-theme="dark"] .modern-checkbox {
-            background: #374151;
-            border-color: #6b7280;
-        }
-
-        [data-theme="dark"] .modern-checkbox:checked {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            border-color: var(--accent-hover);
-        }
-
-        [data-theme="dark"] .modern-checkbox:indeterminate {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            border-color: var(--accent-hover);
-        }
-
-        [data-theme="dark"] .modern-checkbox:hover {
-            border-color: var(--accent-hover);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
-
-        /* Table cell styling for checkboxes */
-        .select-cell {
-            text-align: center;
-            vertical-align: middle;
-            width: 50px;
-        }
-
-        /* Document Info Styling */
-        .document-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .document-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-        }
-
-        /* PDF Files - Red */
-        .document-icon .bi-file-earmark-pdf {
-            color: #ffffff;
-            parent-background: linear-gradient(135deg, #ef4444, #dc2626);
-            parent-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-        }
-
-        /* Word Documents - Blue */
-        .document-icon .bi-file-earmark-word {
-            color: #ffffff;
-            parent-background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            parent-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-        }
-
-        /* Text Files - Cyan */
-        .document-icon .bi-file-earmark-text {
-            color: #ffffff;
-            parent-background: linear-gradient(135deg, #06b6d4, #0891b2);
-            parent-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
-        }
-
-        /* Markdown Files - Purple */
-        .document-icon .bi-markdown {
-            color: #ffffff;
-            parent-background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            parent-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-        }
-
-        /* Image Files - Purple */
-        .document-icon .bi-file-earmark-image {
-            color: #ffffff;
-            parent-background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            parent-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-        }
-
-        /* Generic Files - Default Blue */
-        .document-icon .bi-file-earmark {
-            color: #ffffff;
-        }
-
-        /* Dynamic styling with JavaScript-like approach using CSS */
-        .document-icon.pdf-icon {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-        }
-
-        .document-icon.word-icon {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-        }
-
-        .document-icon.text-icon {
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2);
-        }
-
-        .document-icon.markdown-icon {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-        }
-
-        .document-icon.image-icon {
-            background: linear-gradient(135deg, #10b981, #059669);
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-        }
-
-        /* Dark theme adjustments */
-        [data-theme="dark"] .document-icon {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        [data-theme="dark"] .document-icon.pdf-icon {
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-        }
-
-        [data-theme="dark"] .document-icon.word-icon {
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-        }
-
-        [data-theme="dark"] .document-icon.text-icon {
-            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
-        }
-
-        [data-theme="dark"] .document-icon.markdown-icon {
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-        }
-
-        [data-theme="dark"] .document-icon.image-icon {
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        .document-details {
-            flex-grow: 1;
-            min-width: 0;
-        }
-
-        .document-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .document-description {
-            font-size: 12px;
-            color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .document-mobile-info {
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .document-categories {
-            margin-top: 8px;
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-
-        .category-tag {
-            font-size: 10px;
-            padding: 2px 8px;
-            background: var(--primary);
-            color: white;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-
-        .category-tag.more {
-            background: var(--text-muted);
-        }
-
-        .document-badge,
-        .workspace-badge {
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .document-badge.team,
-        .workspace-badge.team {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-        }
-
-        .document-badge.private,
-        .workspace-badge.private {
-            background: var(--text-muted);
-            color: white;
-        }
-
-        .document-date {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .modified-info,
-        .size-info {
-            text-align: left;
-        }
-
-        .modified-date,
-        .file-size {
-            font-size: 13px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .modified-by,
-        .file-type {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .action-dropdown-btn {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: var(--surface-secondary);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .action-dropdown-btn:hover {
-            background: var(--surface-hover);
-            color: var(--text-primary);
-        }
-
-        /* Modern Dropdown */
-        .modern-dropdown {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            padding: 8px;
-            min-width: 180px;
-        }
-
-        .modern-dropdown .dropdown-item {
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--text-primary);
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .modern-dropdown .dropdown-item:hover {
-            background: var(--surface-hover);
-        }
-
-        .modern-dropdown .dropdown-item.text-danger {
-            color: #ef4444;
-        }
-
-        .modern-dropdown .dropdown-item.text-success {
-            color: #10b981;
-        }
-
-        /* Enhanced Pagination */
-        .pagination-container {
-            margin-top: 32px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .pagination-nav {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 12px;
-            padding: 12px;
-        }
-
-        .modern-pagination {
-            display: flex;
-            gap: 8px;
-            padding: 0;
-            margin: 0;
-            list-style: none;
-        }
-
-        .pagination-item {
-            display: flex;
-        }
-
-        .pagination-link {
-            padding: 10px 16px;
-            border-radius: 8px;
-            background: var(--surface-secondary);
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 44px;
-            justify-content: center;
-        }
-
-        .pagination-link:hover {
-            background: var(--surface-hover);
-            color: var(--text-primary);
-            transform: translateY(-1px);
-        }
-
-        .pagination-link.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent);
-        }
-
-        .pagination-link.prev,
-        .pagination-link.next {
-            font-size: 14px;
-            padding: 10px 20px;
-        }
-
-        /* Modern Modal Styling */
-        .modern-modal {
-            background: var(--surface-primary);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        }
-
-        .modern-modal .modal-header {
-            padding: 24px;
-            border-bottom: 1px solid var(--border-secondary);
-        }
-
-        .modern-modal .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .modern-modal .modal-body {
-            padding: 24px;
-        }
-
-        .modern-modal .modal-footer {
-            padding: 24px;
-            border-top: 1px solid var(--border-secondary);
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-
-        .modern-card {
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-secondary);
-            border-radius: 12px;
-            padding: 16px;
-            margin: 16px 0;
-        }
-
-        .modern-card h6 {
-            color: var(--text-primary);
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .bulk-delete-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .bulk-delete-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .bulk-delete-item:last-child {
-            border-bottom: none;
-        }
-
-        .bulk-item-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .bulk-item-title {
-            font-weight: 500;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .bulk-item-meta {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .bulk-item-icon {
-            color: var(--text-muted);
-            margin-left: 12px;
-        }
-
-        .delete-document-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .info-item {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .modern-progress {
-            background: var(--surface-secondary);
-            border-radius: 8px;
-            height: 8px;
-            overflow: hidden;
-            margin: 16px 0;
-        }
-
-        .modern-progress-bar {
-            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
-            height: 100%;
-            border-radius: 8px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            color: var(--text-muted);
-            margin-top: 8px;
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .modern-form-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .modern-form-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid var(--border-secondary);
-            border-radius: 8px;
-            background: var(--surface-secondary);
-            color: var(--text-primary);
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .modern-form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
-        }
-
-        .modern-btn-danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            border: none;
-            box-shadow: 0 8px 32px color-mix(in srgb, #ef4444 25%, transparent);
-        }
-
-        .modern-btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px color-mix(in srgb, #ef4444 35%, transparent);
-            color: white;
-        }
-
-        /* Responsive Design */
-        /* Large tablets and smaller desktops - 2x2 layout */
-        @@media (max-width: 1200px) {
-            .documents-stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-        }
-
-        @@media (max-width: 1024px) {
-            .documents-container {
-                padding: 24px;
-            }
-
-            .documents-stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-            }
-
-            .filter-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 16px;
-            }
-
-            .page-header-content {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .results-summary-card {
-                flex-direction: column;
-                gap: 8px;
-                text-align: center;
-            }
-
-            .bulk-action-content {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .bulk-action-buttons {
-                justify-content: center;
-            }
-
-            .table-card-header {
-                flex-direction: column;
-                text-align: center;
-            }
-        }
-
-        /* Tablets - keep 2x2 layout */
-        @@media (max-width: 768px) {
-            .documents-container {
-                padding: 16px;
-            }
-
-            .documents-stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
-            }
-        }
-
-        /* Mobile phones - single column */
-        @@media (max-width: 480px) {
-            .documents-container {
-                padding: 12px;
-            }
-
-            .documents-stats-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .filter-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-
-            .filter-actions {
-                flex-direction: column;
-            }
-
-            .empty-state-actions {
-                flex-direction: column;
-            }
-
-            .page-header-info .page-title {
-                font-size: 28px;
-            }
-
-            .documents-stat-number {
-                font-size: 28px;
-            }
-
-            .modern-table thead th,
-            .modern-table tbody td {
-                padding: 12px 16px;
-            }
-
-            .pagination-link {
-                padding: 8px 12px;
-                font-size: 14px;
-            }
-
-            .pagination-link.prev,
-            .pagination-link.next {
-                padding: 8px 16px;
-            }
-        }
-
-        /* Animation */
-        @@keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
-} 
+    <script src="~/js/dfh/tree.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/selectable-table.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/documents.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/menu.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/document-menu.js" asp-append-version="true"></script>
+}

@@ -1,10 +1,14 @@
 @page
 @model DocFlowHub.Web.Pages.Account.LogoutModel
 @{
-    ViewData["Title"] = "Log out";
+    ViewData["Title"] = "Signed out";
+    Layout = "_AuthLayout";
 }
 
-<header>
-    <h1>@ViewData["Title"]</h1>
-    <p>You have successfully logged out of the application.</p>
-</header> 
+<main class="dfh-auth-card">
+    <div class="dfh-auth-head">
+        <h1>You're signed out</h1>
+        <p>Thanks for using DocFlowHub.</p>
+    </div>
+    <a class="btn btn-primary dfh-btn-34" asp-page="./Login">Sign in again</a>
+</main>

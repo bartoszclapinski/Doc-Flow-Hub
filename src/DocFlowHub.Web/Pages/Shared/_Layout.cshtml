@@ -1,741 +1,126 @@
-@using Microsoft.AspNetCore.Mvc
-@using Microsoft.AspNetCore.Mvc.RazorPages
-@using Microsoft.AspNetCore.Mvc.TagHelpers
-@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using System.Text.Json
+@using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Identity
-@using DocFlowHub.Web
 @using DocFlowHub.Core.Identity
-
 @inject SignInManager<ApplicationUser> SignInManager
+@inject IAntiforgery Antiforgery
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
+@{
+    var signedIn = SignInManager.IsSignedIn(User);
+    var csrf = Antiforgery.GetAndStoreTokens(Context);
 
+    // Messages queued by the server for this request, shown as toasts by shell.js.
+    var serverToasts = new List<object>();
+    if (TempData["DemoReadOnlyMessage"] is string demoMessage)
+    {
+        serverToasts.Add(new { type = "info", message = demoMessage });
+    }
+    // Redesigned pages report the result of a form post with these two keys.
+    if (TempData["ToastSuccess"] is string toastSuccess)
+    {
+        serverToasts.Add(new { type = "success", message = toastSuccess });
+    }
+    if (TempData["ToastError"] is string toastError)
+    {
+        serverToasts.Add(new { type = "error", message = toastError });
+    }
+    // Older page models still report results in StatusMessage ("Error: …" for failures).
+    if (TempData["StatusMessage"] is string status && !string.IsNullOrWhiteSpace(status))
+    {
+        var failed = status.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+        var text = status.StartsWith("Error:", StringComparison.OrdinalIgnoreCase) ? status[6..].Trim() : status;
+        serverToasts.Add(new { type = failed ? "error" : "success", message = text });
+    }
+
+    // Pages redesigned for the IDE shell set ViewData["FullBleed"] = true and lay out their own
+    // panels; older pages get a padded, scrolling container.
+    var fullBleed = ViewData["FullBleed"] as bool? == true;
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark" data-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="DocFlowHub - Document Management System" />
-    <meta name="author" content="DocFlowHub Team" />
+    <meta name="description" content="DocFlowHub - document management" />
+    <meta name="csrf-token" content="@csrf.RequestToken" />
     <title>@ViewData["Title"] - DocFlowHub</title>
-    
-    <!-- Bootstrap CSS -->
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="~/favicon.ico" />
+    <link rel="preload" href="~/lib/fonts/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
-    <!-- Theme System CSS (Custom Properties) -->
-    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ux-enhancements.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    @* IDE redesign *@
+    <link rel="stylesheet" href="~/css/dfh/fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/bootstrap.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/responsive.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
-    
-    <style>
-        /* Modern Admin Dashboard Layout */
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: var(--font-primary);
-            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-            color: var(--text-primary);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        /* Header */
-        .header {
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .nav-left {
-            display: flex;
-            align-items: center;
-            gap: 32px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-        .logo:hover {
-            color: var(--text-primary);
-        }
-
-        .logo-icon {
-            width: 28px;
-            height: 28px;
-            background: var(--accent-color);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: var(--text-inverse);
-            font-size: 16px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 24px;
-        }
-
-        .nav-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            padding: 8px 12px;
-            border-radius: 6px;
-            transition: var(--transition-all);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            color: var(--accent-color);
-            background: var(--accent-light);
-        }
-
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        /* Header search (center) */
-        .nav-center {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            max-width: 480px;
-            margin: 0 24px;
-        }
-
-        .header-search {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 8px 12px;
-            transition: var(--transition-all);
-        }
-
-        .header-search:focus-within {
-            border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px var(--accent-light);
-        }
-
-        .header-search i {
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-
-        .header-search input {
-            border: none;
-            background: transparent;
-            outline: none;
-            color: var(--text-primary);
-            font-size: 14px;
-            width: 100%;
-        }
-
-        .header-search input::placeholder {
-            color: var(--text-muted);
-        }
-
-        /* Header Upload button (primary action) */
-        .header-upload-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--accent-color);
-            color: var(--text-inverse);
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            white-space: nowrap;
-            transition: var(--transition-all);
-        }
-
-        .header-upload-btn:hover {
-            background: var(--accent-hover);
-            color: var(--text-inverse);
-            transform: translateY(-1px);
-        }
-
-                 .theme-toggle {
-             background: var(--surface-secondary);
-             border: 1px solid var(--border-color);
-             border-radius: 8px;
-             padding: 8px;
-             color: var(--text-primary);
-             cursor: pointer;
-             transition: var(--transition-all);
-             font-size: 16px;
-             position: relative;
-             width: 40px;
-             height: 40px;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-         }
-
-         .theme-toggle:hover {
-             background: var(--surface-tertiary);
-             transform: scale(1.05);
-         }
-
-         .theme-icon {
-             transition: var(--transition-all);
-             display: flex;
-             align-items: center;
-             justify-content: center;
-         }
-
-         .theme-toggle .theme-icon-light {
-             opacity: 1;
-         }
-
-         .theme-toggle .theme-icon-dark {
-             opacity: 0;
-             position: absolute;
-             top: 50%;
-             left: 50%;
-             transform: translate(-50%, -50%);
-         }
-
-         /* Let JavaScript handle icon switching via opacity for smooth transitions */
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: var(--transition-all);
-            color: var(--text-primary);
-            text-decoration: none;
-            position: relative;
-        }
-
-        .user-menu:hover {
-            background: var(--surface-tertiary);
-            color: var(--text-primary);
-        }
-
-        .user-avatar {
-            width: 24px;
-            height: 24px;
-            background: var(--accent-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: var(--text-inverse);
-        }
-
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-size: 20px;
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        /* Main Layout */
-        .main-layout {
-            display: flex;
-            min-height: calc(100vh - 72px);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 240px;
-            background: var(--container-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-right: 1px solid var(--border-light);
-            padding: 24px 0;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 24px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: var(--transition-all);
-            border-left: 3px solid transparent;
-        }
-
-        .sidebar-item:hover {
-            color: var(--accent-color);
-            background: var(--accent-light);
-            border-left-color: rgba(var(--accent-rgb), 0.3);
-        }
-
-        .sidebar-item.active {
-            color: var(--accent-color);
-            background: var(--accent-light);
-            border-left-color: var(--accent-color);
-        }
-
-        .sidebar-icon {
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        /* Content */
-        .content {
-            flex: 1;
-            padding: 32px;
-            overflow-y: auto;
-            max-height: calc(100vh - 72px);
-        }
-
-        /* Constrain content width on large/4K screens so it doesn't stretch */
-        .content-container {
-            max-width: 1440px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* Demo mode: read-only flash shown when a mutating action is blocked */
-        .demo-readonly-flash {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            background: var(--ai-light);
-            border: 1px solid var(--ai-color);
-            color: var(--text-primary);
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            margin-bottom: 1.25rem;
-            font-size: 0.9rem;
-        }
-
-        .demo-readonly-flash i { color: var(--ai-color); }
-
-        /* Responsive */
-        @@media (max-width: 1024px) {
-            .sidebar {
-                width: 200px;
-            }
-        }
-
-        @@media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -240px;
-                top: 72px;
-                height: calc(100vh - 72px);
-                z-index: 50;
-                width: 240px;
-            }
-            
-            .sidebar.open {
-                left: 0;
-            }
-            
-            .content {
-                padding: 20px;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-
-            .nav-center {
-                display: none;
-            }
-
-            .mobile-menu-toggle {
-                display: block;
-            }
-        }
-
-        @@media (max-width: 480px) {
-            .header {
-                padding: 12px 16px;
-            }
-            
-            .content {
-                padding: 16px;
-            }
-            
-            .nav-right {
-                gap: 8px;
-            }
-
-            .user-menu span:not(.user-avatar) {
-                display: none;
-            }
-
-            .header-upload-btn span {
-                display: none;
-            }
-        }
-
-        /* Admin Badge */
-        .admin-badge {
-            background: var(--accent-color);
-            color: var(--text-inverse);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        /* Login partial overrides */
-        .dropdown-menu {
-            background: var(--container-bg);
-            border: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        .dropdown-item {
-            color: var(--text-primary);
-        }
-
-        .dropdown-item:hover {
-            background: var(--surface-secondary);
-            color: var(--text-primary);
-        }
-    </style>
 </head>
-<body>
-    <!-- Global Loading Overlay -->
-    <div id="global-loading" class="global-loading d-none">
-        <div class="loading-content">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-3 text-muted">Processing your request...</p>
-        </div>
-    </div>
+<body class="dfh-shell">
+    <partial name="_TitleBar" />
 
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
-        <div id="success-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-success text-white">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <strong class="me-auto">Success</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body" id="success-toast-body">
-                Operation completed successfully!
-            </div>
-        </div>
-
-        <div id="error-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-danger text-white">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong class="me-auto">Error</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body" id="error-toast-body">
-                An error occurred. Please try again.
-            </div>
-        </div>
-
-        <div id="info-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-info text-white">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <strong class="me-auto">Information</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body" id="info-toast-body">
-                Information message.
-            </div>
-        </div>
-    </div>
-
-    <!-- Header -->
-    <header class="header">
-        <div class="nav-left">
-            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
-                <i class="bi bi-list"></i>
-            </button>
-            <a class="logo" asp-area="" asp-page="/Index">
-                <div class="logo-icon">D</div>
-                <span>DocFlowHub</span>
-            </a>
-        </div>
-        @if (SignInManager.IsSignedIn(User))
+    @* Page-wide banners (design 7e). The demo one can be dismissed for the browser session. *@
+    <div class="dfh-shell-banners">
+        @if (signedIn && DemoMode.IsEnabled)
         {
-            <div class="nav-center">
-                <form class="header-search" method="get" asp-area="" asp-page="/Documents/Index" role="search">
-                    <i class="bi bi-search"></i>
-                    <input type="search" name="Filter.SearchTerm" placeholder="Search documents..." aria-label="Search documents" />
-                </form>
+            <div class="dfh-banner dfh-banner--ai" data-dfh-dismiss-key="demo-banner" hidden>
+                <i class="bi bi-lock" aria-hidden="true"></i>
+                <span class="dfh-grow">Demo is read-only. Uploads, edits and deletes are disabled.</span>
+                <button type="button" class="dfh-banner-close" data-dfh-dismiss aria-label="Hide this message"><i class="bi bi-x" aria-hidden="true"></i></button>
             </div>
         }
-        <div class="nav-right">
-            @if (SignInManager.IsSignedIn(User))
+    </div>
+
+    <div class="dfh-workbench">
+        @if (signedIn)
+        {
+            <partial name="_Rail" />
+        }
+        @await RenderSectionAsync("ToolWindow", required: false)
+        <main class="dfh-main" id="main">
+            @if (fullBleed)
             {
-                <a class="header-upload-btn" asp-area="" asp-page="/Documents/Upload">
-                    <i class="bi bi-cloud-upload"></i> <span>Upload</span>
-                </a>
+                @RenderBody()
             }
-            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-                <span class="theme-icon theme-icon-light"><i class="bi bi-sun"></i></span>
-                <span class="theme-icon theme-icon-dark"><i class="bi bi-moon-stars"></i></span>
-            </button>
-            <partial name="_LoginPartial" />
-        </div>
-    </header>
+            else
+            {
+                <div class="dfh-page">@RenderBody()</div>
+            }
+        </main>
+        @await RenderSectionAsync("Inspector", required: false)
+    </div>
 
-         <!-- Main Layout -->
-     <div class="main-layout">
-         @{
-             var currentPage = ViewContext.RouteData.Values["Page"]?.ToString();
-             var isAdminPage = currentPage?.StartsWith("/Admin") == true;
-         }
-         
-         @if (isAdminPage)
-         {
-             <!-- Admin Sidebar -->
-             <aside class="sidebar" id="sidebar">
-                 <a class="sidebar-item @(currentPage == "/Admin/Index" ? "active" : "")" asp-area="" asp-page="/Admin/Index">
-                     <div class="sidebar-icon"><i class="bi bi-speedometer2"></i></div>
-                     <span>Dashboard</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Users") == true ? "active" : "")" asp-area="" asp-page="/Admin/Users/Index">
-                     <div class="sidebar-icon"><i class="bi bi-people"></i></div>
-                     <span>Users</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Roles") == true ? "active" : "")" asp-area="" asp-page="/Admin/Roles/Index">
-                     <div class="sidebar-icon"><i class="bi bi-person-badge"></i></div>
-                     <span>Roles</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Admin/Settings") == true ? "active" : "")" asp-area="" asp-page="/Admin/Settings/Index">
-                     <div class="sidebar-icon"><i class="bi bi-gear"></i></div>
-                     <span>Settings</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage == "/Admin/Analytics" ? "active" : "")" asp-area="" asp-page="/Admin/Analytics">
-                     <div class="sidebar-icon"><i class="bi bi-graph-up"></i></div>
-                     <span>Analytics</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage == "/Admin/UserLimits" ? "active" : "")" asp-area="" asp-page="/Admin/UserLimits">
-                     <div class="sidebar-icon"><i class="bi bi-shield-check"></i></div>
-                     <span>User Limits</span>
-                 </a>
-                 <hr style="border-color: var(--border-color); margin: 16px 24px;">
-                 <a class="sidebar-item" asp-area="" asp-page="/Index">
-                     <div class="sidebar-icon"><i class="bi bi-arrow-left"></i></div>
-                     <span>Back to App</span>
-                 </a>
-             </aside>
-         }
-         else
-         {
-             <!-- Regular Sidebar -->
-             <aside class="sidebar" id="sidebar">
-                 <a class="sidebar-item @(currentPage == "/Index" ? "active" : "")" asp-area="" asp-page="/Index">
-                     <div class="sidebar-icon"><i class="bi bi-speedometer2"></i></div>
-                     <span>Dashboard</span>
-                 </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Documents") == true ? "active" : "")" asp-area="" asp-page="/Documents/Index">
-                     <div class="sidebar-icon"><i class="bi bi-folder"></i></div>
-                     <span>Documents</span>
-                 </a>
-                <a class="sidebar-item @(currentPage?.StartsWith("/Projects") == true || currentPage?.StartsWith("/Folders") == true ? "active" : "")" asp-area="" asp-page="/Projects/Index">
-                    <div class="sidebar-icon"><i class="bi bi-kanban"></i></div>
-                    <span>Projects</span>
-                </a>
-                 <a class="sidebar-item @(currentPage?.StartsWith("/Teams") == true ? "active" : "")" asp-area="" asp-page="/Teams/Index">
-                     <div class="sidebar-icon"><i class="bi bi-people"></i></div>
-                     <span>Teams</span>
-                 </a>
-                 @if (SignInManager.IsSignedIn(User))
-                 {
-                     <a class="sidebar-item @(currentPage?.StartsWith("/Settings") == true ? "active" : "")" asp-area="" asp-page="/Settings/AI">
-                         <div class="sidebar-icon"><i class="bi bi-robot"></i></div>
-                         <span>AI Settings</span>
-                     </a>
-                 }
-                 @if (User.IsInRole("Administrator"))
-                 {
-                     <hr style="border-color: var(--border-color); margin: 16px 24px;">
-                     <a class="sidebar-item @(currentPage?.StartsWith("/Admin") == true ? "active" : "")" asp-area="" asp-page="/Admin/Index">
-                         <div class="sidebar-icon"><i class="bi bi-shield-check"></i></div>
-                         <span>Admin Panel</span>
-                     </a>
-                 }
-             </aside>
-         }
+    @await Component.InvokeAsync("StatusBar")
+    @if (signedIn)
+    {
+        <partial name="_BottomNav" />
+    }
 
-         <!-- Content -->
-         <main class="content">
-             <div class="content-container">
-                 @if (TempData["DemoReadOnlyMessage"] != null)
-                 {
-                     <div class="demo-readonly-flash" role="alert">
-                         <i class="bi bi-lock-fill"></i>
-                         <span>@TempData["DemoReadOnlyMessage"]</span>
-                     </div>
-                 }
-                 @RenderBody()
-             </div>
-         </main>
-     </div>
+    @if (signedIn)
+    {
+        <partial name="_Palette" />
+    }
 
-    <!-- Scripts -->
+    <div id="dfh-toast-stack" class="dfh-toast-stack" aria-live="polite"></div>
+    @if (serverToasts.Count > 0)
+    {
+        <script type="application/json" id="dfh-server-toasts">@Html.Raw(JsonSerializer.Serialize(serverToasts))</script>
+    }
+
+    @* One antiforgery token for page scripts that read input[name="__RequestVerificationToken"]. *@
+    <input type="hidden" name="__RequestVerificationToken" value="@csrf.RequestToken" />
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/theme-manager.js" asp-append-version="true"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/shell.js" asp-append-version="true"></script>
+    @if (signedIn)
+    {
+        <script src="~/js/dfh/palette.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
-
-    <script>
-        // Global notification system
-        window.DocFlowHub = {
-            showSuccess: function(message) {
-                document.getElementById('success-toast-body').textContent = message;
-                const toast = new bootstrap.Toast(document.getElementById('success-toast'));
-                toast.show();
-            },
-            showError: function(message) {
-                document.getElementById('error-toast-body').textContent = message;
-                const toast = new bootstrap.Toast(document.getElementById('error-toast'));
-                toast.show();
-            },
-            showInfo: function(message) {
-                document.getElementById('info-toast-body').textContent = message;
-                const toast = new bootstrap.Toast(document.getElementById('info-toast'));
-                toast.show();
-            },
-            showLoading: function() {
-                document.getElementById('global-loading').classList.remove('d-none');
-            },
-            hideLoading: function() {
-                document.getElementById('global-loading').classList.add('d-none');
-            }
-        };
-
-        // Enhanced form submission handling
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mobile sidebar toggle
-            const sidebar = document.getElementById('sidebar');
-            const mobileToggle = document.getElementById('mobile-menu-toggle');
-            
-            if (mobileToggle && sidebar) {
-                mobileToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('open');
-                });
-                
-                // Close sidebar when clicking outside on mobile
-                document.addEventListener('click', function(event) {
-                    if (window.innerWidth <= 768) {
-                        if (!sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
-                            sidebar.classList.remove('open');
-                        }
-                    }
-                });
-            }
-            
-            // Initialize theme manager
-            if (window.ThemeManager) {
-                window.ThemeManager.init();
-            }
-
-            // Add loading states to all forms
-            const forms = document.querySelectorAll('form');
-            forms.forEach(function(form) {
-                form.addEventListener('submit', function(e) {
-                    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
-                    if (submitBtn && !submitBtn.disabled) {
-                        // Store original content
-                        const originalText = submitBtn.innerHTML;
-                        const originalDisabled = submitBtn.disabled;
-                        
-                        // Set loading state
-                        submitBtn.disabled = true;
-                        if (submitBtn.querySelector('i')) {
-                            submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-animation"></i> Processing...';
-                        } else {
-                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
-                        }
-                        
-                        // Reset after timeout (in case of errors)
-                        setTimeout(() => {
-                            submitBtn.innerHTML = originalText;
-                            submitBtn.disabled = originalDisabled;
-                        }, 10000);
-                    }
-                });
-            });
-
-            // Enhanced button interactions
-            const buttons = document.querySelectorAll('.btn');
-            buttons.forEach(function(btn) {
-                // Add ripple effect on click
-                btn.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    ripple.classList.add('btn-ripple');
-                    
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    
-                    ripple.style.width = ripple.style.height = size + 'px';
-                    ripple.style.left = x + 'px';
-                    ripple.style.top = y + 'px';
-                    
-                    this.appendChild(ripple);
-                    
-                    setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
-                });
-            });
-        });
-    </script>
 </body>
 </html>

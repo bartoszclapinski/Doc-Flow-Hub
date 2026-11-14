@@ -1,1742 +1,196 @@
 @page
-@using DocFlowHub.Web.Pages
 @model IndexModel
+@using DocFlowHub.Core.Models.Dashboard
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = User.Identity.IsAuthenticated ? "Dashboard" : "DocFlowHub - AI-Powered Document Management";
-    Layout = User.Identity.IsAuthenticated ? "_Layout" : null;
+    ViewData["Title"] = "Dashboard";
+    ViewData["FullBleed"] = true;
+    var d = Model.Dashboard;
+    var period = Model.SelectedPeriod;
 }
 
-@if (!User.Identity.IsAuthenticated)
-{
-    <!-- ===== BEAUTIFUL FULL-SCREEN LANDING PAGE FOR UNAUTHENTICATED USERS ===== -->
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>@ViewData["Title"]</title>
-        <meta name="description" content="Transform your document management with AI-powered intelligence, seamless team workflows, and enterprise-grade security." />
-        <meta name="keywords" content="document management, AI, collaboration, enterprise, security, team workflow" />
-        <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    </head>
-    <body>
-        <!-- Theme Toggle - Removed from landing page as requested -->
-
-        <!-- Navigation Bar -->
-        <nav class="landing-nav">
-            <div class="container">
-                <div class="nav-content">
-                    <div class="logo-section">
-                        <span class="landing-logo">DocFlowHub</span>
-                    </div>
-                    <div class="nav-links">
-                        <a href="/Account/Login" class="nav-link">Sign In</a>
-                        <a href="/Account/Register" class="nav-cta">Get Started</a>
-                    </div>
-                </div>
+@section Inspector {
+    @if (d != null)
+    {
+        <aside class="dfh-inspector dfh-inspector--wide" aria-label="Activity">
+            <div class="dfh-panel-header is-inspector">
+                <span class="dfh-panel-title">Activity</span>
+                <span class="dfh-mono dfh-muted">@DashboardPeriods.Label(period).ToLowerInvariant()</span>
             </div>
-        </nav>
-
-    <style>
-        /* Landing Page Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        /* Landing theme toggle removed as requested */
-
-        .theme-icon-dark {
-            opacity: 0;
-        }
-
-        [data-theme="dark"] .theme-icon-light {
-            opacity: 0;
-        }
-
-        [data-theme="dark"] .theme-icon-dark {
-            opacity: 1;
-        }
-
-        .landing-nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 999;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 0;
-            transition: all 0.3s ease;
-        }
-
-        [data-theme="dark"] .landing-nav {
-            background: var(--container-bg-solid);
-        }
-
-        .nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .landing-logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--accent-color);
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .nav-link {
-            color: var(--text-primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-        }
-
-        .nav-link:hover {
-            color: var(--accent-color);
-            background: rgba(2, 132, 199, 0.1);
-        }
-
-        .nav-cta {
-            background: var(--accent-color);
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-cta:hover {
-            background: rgba(2, 132, 199, 0.8);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
-            color: white;
-        }
-
-        .landing-page {
-            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-top: 80px; /* Account for fixed nav */
-        }
-
-        .hero-section {
-            padding: 120px 0 80px;
-            position: relative;
-            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-            color: white;
-            margin: 0;
-        }
-
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-        }
-
-        .hero-title {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            line-height: 1.1;
-        }
-
-        .hero-subtitle {
-            font-size: 1.5rem;
-            opacity: 0.95;
-            margin-bottom: 3rem;
-            line-height: 1.4;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 4rem;
-        }
-
-        .cta-button {
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 12px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .cta-primary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .cta-primary:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            color: white;
-        }
-
-        .cta-secondary {
-            background: white;
-            color: var(--accent-color);
-            border: 2px solid white;
-        }
-
-        .cta-secondary:hover {
-            background: rgba(255, 255, 255, 0.9);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            color: var(--accent-color);
-        }
-
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .hero-stat {
-            text-align: center;
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .hero-stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .hero-stat-label {
-            font-size: 1rem;
-            opacity: 0.9;
-        }
-
-        .features-section {
-            padding: 80px 0;
-            background: var(--container-bg);
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        .section-subtitle {
-            text-align: center;
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            margin-bottom: 4rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .trust-section .section-subtitle {
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 500;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
-
-        .feature-card {
-            background: var(--container-bg);
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(20px);
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.15);
-        }
-
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1.5rem;
-            display: block;
-        }
-
-        .feature-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-        }
-
-        .feature-description {
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .trust-section {
-            padding: 80px 0;
-            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-            color: white;
-            text-align: center;
-        }
-
-        .trust-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 3rem;
-            max-width: 1000px;
-            margin: 0 auto 4rem;
-        }
-
-        .trust-stat {
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-        }
-
-        .trust-number {
-            font-size: 3rem;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .trust-label {
-            font-size: 1.1rem;
-            opacity: 0.95;
-        }
-
-        .cta-section {
-            padding: 80px 0;
-            background: var(--container-bg);
-            text-align: center;
-        }
-
-        .cta-card {
-            background: var(--container-bg);
-            padding: 4rem;
-            border-radius: 24px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            backdrop-filter: blur(20px);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        @@media (max-width: 768px) {
-            .landing-nav {
-                padding: 0.75rem 0;
-            }
-            
-            .nav-content {
-                padding: 0 1rem;
-            }
-            
-            .landing-logo {
-                font-size: 1.5rem;
-            }
-            
-            .nav-links {
-                gap: 1rem;
-            }
-            
-            .nav-link, .nav-cta {
-                font-size: 0.9rem;
-                padding: 0.5rem 1rem;
-            }
-            
-            .landing-page {
-                padding-top: 70px;
-            }
-            
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            
-            .hero-subtitle {
-                font-size: 1.2rem;
-            }
-            
-            .hero-cta {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .hero-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .trust-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            /* Landing theme toggle removed */
-        }
-    </style>
-
-    <div class="landing-page">
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="container">
-                <div class="hero-content">
-                    <h1 class="hero-title">Transform Your Document Management</h1>
-                    <p class="hero-subtitle">
-                        Experience the future of document collaboration with AI-powered intelligence, 
-                        seamless team workflows, and enterprise-grade security.
-                    </p>
-                    
-                    <div class="hero-cta">
-                        <a href="/Account/Register" class="cta-button cta-primary">
-                            <i class="bi bi-rocket-takeoff"></i>
-                            Start Free Trial
-                        </a>
-                        <a href="/Account/Login" class="cta-button cta-secondary">
-                            <i class="bi bi-box-arrow-in-right"></i>
-                            Sign In
-                        </a>
-                    </div>
-
-                    <div class="hero-stats">
-                        <div class="hero-stat">
-                            <span class="hero-stat-number">50K+</span>
-                            <span class="hero-stat-label">Documents Processed</span>
-                        </div>
-                        <div class="hero-stat">
-                            <span class="hero-stat-number">1K+</span>
-                            <span class="hero-stat-label">Active Teams</span>
-                        </div>
-                        <div class="hero-stat">
-                            <span class="hero-stat-number">99.9%</span>
-                            <span class="hero-stat-label">Uptime</span>
-                        </div>
-                        <div class="hero-stat">
-                            <span class="hero-stat-number">24/7</span>
-                            <span class="hero-stat-label">Support</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Features Section -->
-        <section class="features-section">
-            <div class="container">
-                <h2 class="section-title">Powerful Features for Modern Teams</h2>
-                <p class="section-subtitle">
-                    Everything you need to manage, collaborate, and innovate with your documents
-                </p>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <span class="feature-icon">🤖</span>
-                        <h3 class="feature-title">AI-Powered Intelligence</h3>
-                        <p class="feature-description">
-                            Automatically generate summaries, compare versions, and extract insights 
-                            from your documents using advanced AI technology.
-                        </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon">👥</span>
-                        <h3 class="feature-title">Advanced Team Collaboration</h3>
-                        <p class="feature-description">
-                            Create teams, share documents, and collaborate in real-time with 
-                            granular permission controls and activity tracking.
-                        </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon">🔒</span>
-                        <h3 class="feature-title">Enterprise-Grade Security</h3>
-                        <p class="feature-description">
-                            Bank-level encryption, role-based access control, and compliance 
-                            with industry standards keep your data secure.
-                        </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon">📊</span>
-                        <h3 class="feature-title">Powerful Analytics</h3>
-                        <p class="feature-description">
-                            Gain insights into document usage, team productivity, and system 
-                            performance with comprehensive analytics dashboards.
-                        </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon">📁</span>
-                        <h3 class="feature-title">Smart Organization</h3>
-                        <p class="feature-description">
-                            Organize documents with projects, folders, categories, and smart 
-                            tagging for effortless content discovery.
-                        </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <span class="feature-icon">⚡</span>
-                        <h3 class="feature-title">Lightning Fast</h3>
-                        <p class="feature-description">
-                            Built on modern technology stack for maximum performance, 
-                            scalability, and reliability at enterprise scale.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Trust Section -->
-        <section class="trust-section">
-            <div class="container">
-                <h2 class="section-title">Trusted by Teams Worldwide</h2>
-                <p class="section-subtitle">
-                    Join thousands of organizations already transforming their document workflows
-                </p>
-
-                <div class="trust-stats">
-                    <div class="trust-stat">
-                        <span class="trust-number">500TB+</span>
-                        <span class="trust-label">Data Processed</span>
-                    </div>
-                    <div class="trust-stat">
-                        <span class="trust-number">150+</span>
-                        <span class="trust-label">Countries</span>
-                    </div>
-                    <div class="trust-stat">
-                        <span class="trust-number">98%</span>
-                        <span class="trust-label">Customer Satisfaction</span>
-                    </div>
-                    <div class="trust-stat">
-                        <span class="trust-number">SOC2</span>
-                        <span class="trust-label">Compliant</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Call to Action Section -->
-        <section class="cta-section">
-            <div class="container">
-                <div class="cta-card">
-                    <h2 class="section-title">Ready to Get Started?</h2>
-                    <p class="section-subtitle">
-                        Join thousands of teams already using DocFlowHub to transform their document workflows.
-                        Start your free trial today - no credit card required.
-                    </p>
-                    
-                    <div class="hero-cta">
-                        <a href="/Account/Register" class="cta-button" style="background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%); color: white; border: none;">
-                            <i class="bi bi-rocket-takeoff"></i>
-                            Start Free Trial
-                        </a>
-                        <a href="#features" class="cta-button" style="background: transparent; color: var(--accent-color); border: 2px solid var(--accent-color);">
-                            <i class="bi bi-play-circle"></i>
-                            Learn More
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    <script src="~/js/theme-manager.js" asp-append-version="true"></script>
-    <script>
-        // Initialize theme manager for landing page
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.ThemeManager) {
-                window.ThemeManager.setupThemeToggle();
-            }
-        });
-    </script>
-    </body>
-    </html>
+            <partial name="_ActivityFeed" model="new ActivityFeed(d.Activity, Links: true)" />
+        </aside>
+    }
 }
-else
-{
-    <!-- ===== MODERN DASHBOARD FOR AUTHENTICATED USERS ===== -->
-    <div class="dashboard-container">
-        <!-- Modern Page Header -->
-        <div class="dashboard-page-header">
-            <div class="page-header-content">
-                <div class="page-header-info">
-                    <h1 class="page-title">
-                        <div class="page-icon">🏠</div>
-                        Welcome, @Model.UserName!
-                    </h1>
-                    <p class="page-subtitle">Here's what's happening with your documents today</p>
-                </div>
-                <div class="page-header-actions">
-                    <a asp-page="/Documents/Upload" class="modern-btn modern-btn-primary">
-                        <i class="bi bi-cloud-upload"></i>
-                        <span>Upload Document</span>
-                    </a>
-                </div>
+
+<div class="dfh-column">
+    <header class="dfh-page-header">
+        <h1>Overview</h1>
+        @if (d != null)
+        {
+            <div class="dfh-statline" aria-label="Summary">
+                <span><b>@Dfh.Number(d.Documents)</b> @Dfh.Noun(d.Documents, "document")</span>
+                <span><b>@Dfh.Number(d.Versions)</b> @Dfh.Noun(d.Versions, "version")</span>
+                <span><b>@Dfh.Number(d.Teams)</b> @Dfh.Noun(d.Teams, "team")</span>
+                <span><b>@Dfh.Number(d.SharedWithMe)</b> shared with me</span>
+                @if (d.VersionsInPeriod != null)
+                {
+                    <span title="Versions uploaded, including new documents"><b class="@(d.VersionsInPeriod > 0 ? "is-positive" : "")">+@d.VersionsInPeriod</b> @DashboardPeriods.DeltaLabel(period)</span>
+                }
             </div>
+        }
+        <span class="dfh-spacer"></span>
+        <partial name="_PeriodPicker" model="period" />
+    </header>
+
+    @if (d == null)
+    {
+        <div class="dfh-empty dfh-fill">
+            <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+            <span class="dfh-empty-title">The dashboard could not be loaded</span>
+            <p>Try again in a moment. Your documents are still available in the Documents list.</p>
+            <a class="btn btn-secondary" asp-page="/Documents/Index">Open Documents</a>
+        </div>
+    }
+    else
+    {
+        <div class="dfh-section-header">
+            <span class="dfh-section-title">Recent documents</span>
+            <a asp-page="/Documents/Index">Open Documents</a>
         </div>
 
-        <!-- Quick Actions Panel -->
-        <div class="dashboard-quick-actions">
-            <div class="quick-actions-header">
-                <h3 class="quick-actions-title">
-                    <i class="bi bi-lightning-charge"></i>
-                    Quick Actions
-                </h3>
-                <p class="quick-actions-subtitle">Get started with common tasks</p>
-            </div>
-            <div class="quick-actions-grid">
-                <a asp-page="/Documents/Upload" class="quick-action-card">
-                    <div class="quick-action-icon blue">
-                        <i class="bi bi-cloud-upload"></i>
-                    </div>
-                    <div class="quick-action-info">
-                        <h4>Upload Document</h4>
-                        <p>Add new files to your library</p>
-                    </div>
-                </a>
-                <a asp-page="/Documents/Index" class="quick-action-card">
-                    <div class="quick-action-icon green">
-                        <i class="bi bi-folder2-open"></i>
-                    </div>
-                    <div class="quick-action-info">
-                        <h4>Browse Documents</h4>
-                        <p>View and manage your files</p>
-                    </div>
-                </a>
-                <a asp-page="/Teams/Create" class="quick-action-card">
-                    <div class="quick-action-icon cyan">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                    <div class="quick-action-info">
-                        <h4>Create Team</h4>
-                        <p>Start collaborating with others</p>
-                    </div>
-                </a>
-                <a asp-page="/Projects/Index" class="quick-action-card">
-                    <div class="quick-action-icon yellow">
-                        <i class="bi bi-kanban"></i>
-                    </div>
-                    <div class="quick-action-info">
-                        <h4>View Projects</h4>
-                        <p>Organize your work</p>
-                    </div>
-                </a>
-            </div>
+        <div class="dfh-fill">
+            @if (d.RecentDocuments.Count == 0)
+            {
+                <div class="dfh-empty">
+                    <i class="bi bi-files" aria-hidden="true"></i>
+                    <span class="dfh-empty-title">No documents yet</span>
+                    <p>Upload a document, or ask a teammate to share one with your team. It will show up here.</p>
+                    @if (!DemoMode.IsEnabled)
+                    {
+                        <a class="btn btn-primary" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+                    }
+                </div>
+            }
+            else
+            {
+                <table class="dfh-table">
+                    <colgroup>
+                        <col />
+                        <col style="width: 162px" />
+                        <col style="width: 52px" />
+                        <col style="width: 76px" />
+                        <col style="width: 96px" />
+                        <col style="width: 148px" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Ver</th>
+                            <th scope="col" class="is-num">Size</th>
+                            <th scope="col">Modified</th>
+                            <th scope="col">Author</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in d.RecentDocuments)
+                        {
+                            var (typeLabel, typeKind) = Dfh.FileType(doc.FileType);
+                            <tr data-dfh-href="/Documents/Details/@doc.Id">
+                                <td>
+                                    <div class="dfh-name-cell">
+                                        <span class="dfh-filetype dfh-filetype--@typeKind">@typeLabel</span>
+                                        <a class="dfh-cell-link dfh-ellipsis" href="/Documents/Details/@doc.Id">@doc.Title</a>
+                                        @if (doc.HasSummary)
+                                        {
+                                            <i class="bi bi-stars dfh-ai-star" title="AI summary available" aria-label="AI summary available"></i>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="is-mono is-muted" title="@doc.Location">@(doc.Location ?? "—")</td>
+                                <td class="is-mono is-2">@(doc.Version != null ? $"v{doc.Version}" : "—")</td>
+                                <td class="is-mono is-muted is-num">@Dfh.FileSize(doc.FileSize)</td>
+                                <td class="is-muted" title="@Dfh.Timestamp(doc.ModifiedAt)">@Dfh.Relative(doc.ModifiedAt)</td>
+                                <td>
+                                    <span class="dfh-person">
+                                        <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(doc.OwnerName)</span>
+                                        <span class="dfh-ellipsis">@doc.OwnerName</span>
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
 
-        <!-- Statistics Cards Grid -->
-        <div class="dashboard-stats-grid">
-            <div class="dashboard-stat-card blue">
-                <div class="dashboard-stat-header">
-                    <div class="dashboard-stat-info">
-                        <h3>Total Documents</h3>
-                        <div class="dashboard-stat-number counter" data-target="@Model.TotalDocuments">0</div>
-                        <div class="dashboard-stat-change">in your library</div>
-                    </div>
-                    <div class="dashboard-stat-icon">📄</div>
+        <div class="dfh-strip">
+            @* AI: there is no job queue, so this lists documents that have no summary yet (decision S10-2). *@
+            <section aria-labelledby="ai-title">
+                <div class="dfh-strip-head">
+                    <i class="bi bi-stars is-ai" aria-hidden="true"></i>
+                    <span class="dfh-strip-title" id="ai-title">AI summaries</span>
+                    <span class="dfh-mono">@d.DocumentsWithoutSummary without summary</span>
                 </div>
-            </div>
-
-            <div class="dashboard-stat-card green">
-                <div class="dashboard-stat-header">
-                    <div class="dashboard-stat-info">
-                        <h3>Teams</h3>
-                        <div class="dashboard-stat-number counter" data-target="@Model.TotalTeams">0</div>
-                        <div class="dashboard-stat-change">
-                            <span class="stat-badge owner">@Model.TeamsAsOwner owner</span>
-                            <span class="stat-badge member">@Model.TeamsAsMember member</span>
+                @if (d.NewestWithoutSummary.Count == 0)
+                {
+                    <p class="dfh-strip-note">@(d.Documents == 0 ? "Summaries appear here once you add documents." : "Every document has an AI summary.")</p>
+                }
+                else
+                {
+                    <ul class="dfh-dot-list">
+                        @foreach (var doc in d.NewestWithoutSummary)
+                        {
+                            <li>
+                                <span class="dfh-dot dfh-dot--ai-hollow" aria-hidden="true"></span>
+                                <a class="dfh-ellipsis" href="/Documents/Details/@doc.Id">@doc.Title</a>
+                                <span class="dfh-mono">no summary</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                <span class="dfh-spacer"></span>
+                @if (Model.AiRequestsToday != null && Model.AiDailyLimit is > 0)
+                {
+                    var used = Model.AiRequestsToday.Value;
+                    var limit = Model.AiDailyLimit.Value;
+                    var pct = Math.Min(100, used * 100.0 / limit);
+                    <div class="dfh-meter">
+                        <div class="dfh-meter-label"><span>Requests today</span><span class="dfh-mono">@Dfh.Number(used) / @Dfh.Number(limit)</span></div>
+                        <div class="dfh-meter-track" role="progressbar" aria-label="AI requests today" aria-valuemin="0" aria-valuemax="@limit" aria-valuenow="@used">
+                            <div class="dfh-meter-fill @(pct > 90 ? "dfh-meter-fill--warning" : "dfh-meter-fill--ai")" style="width: @Dfh.Percent(used, limit)"></div>
                         </div>
                     </div>
-                    <div class="dashboard-stat-icon">👥</div>
-                </div>
-            </div>
+                }
+            </section>
 
-            <div class="dashboard-stat-card cyan">
-                <div class="dashboard-stat-header">
-                    <div class="dashboard-stat-info">
-                        <h3>Recent Updates</h3>
-                        <div class="dashboard-stat-number counter" data-target="@Model.RecentUpdates">0</div>
-                        <div class="dashboard-stat-change">last 7 days</div>
-                    </div>
-                    <div class="dashboard-stat-icon">🕐</div>
-                </div>
-            </div>
+            <partial name="_StoragePanel" model="new StoragePanel(d.Storage, d.StorageBytes)" />
 
-            <div class="dashboard-stat-card yellow">
-                <div class="dashboard-stat-header">
-                    <div class="dashboard-stat-info">
-                        <h3>Shared With Me</h3>
-                        <div class="dashboard-stat-number counter" data-target="@Model.SharedDocuments">0</div>
-                        <div class="dashboard-stat-change">team documents</div>
-                    </div>
-                    <div class="dashboard-stat-icon">🔗</div>
+            <section class="is-flush" aria-labelledby="teams-title">
+                <div class="dfh-strip-head">
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                    <span class="dfh-strip-title" id="teams-title">Teams</span>
+                    <a asp-page="/Teams/Index">Manage</a>
                 </div>
-            </div>
+                @if (d.TeamList.Count == 0)
+                {
+                    <p class="dfh-strip-note">You're not in a team yet.</p>
+                }
+                else
+                {
+                    <ul class="dfh-team-list">
+                        @foreach (var team in d.TeamList)
+                        {
+                            <li>
+                                <span class="dfh-swatch" style="background: @Dfh.TeamColor(team.Id)" aria-hidden="true"></span>
+                                <a class="dfh-team-name dfh-ellipsis" href="/Teams/Details/@team.Id">@team.Name</a>
+                                <span class="dfh-chip">@team.Role</span>
+                                <span class="dfh-team-count" title="Members">@team.MemberCount</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
         </div>
-
-        <!-- Recent Documents, Teams, and Activity -->
-        <div class="dashboard-content-grid">
-            <!-- Recent Documents -->
-            <div class="dashboard-content-card">
-                <div class="content-card-header">
-                    <div class="content-card-title">
-                        <div class="content-card-icon blue">📄</div>
-                        <div>
-                            <h3>Recent Documents</h3>
-                            <p>Your latest files</p>
-                        </div>
-                    </div>
-                    <a asp-page="/Documents/Index" class="content-card-action">
-                        <span>View All</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="content-card-body">
-                    @if (Model.RecentDocuments.Any())
-                    {
-                        <div class="content-items-list">
-                            @foreach (var doc in Model.RecentDocuments.Take(4))
-                            {
-                                <a asp-page="/Documents/Details" asp-route-id="@doc.Id" class="content-item document-item">
-                                    <div class="content-item-icon @GetFileIconClass(doc.FileType)">
-                                        <i class="bi @GetFileIcon(doc.FileType)"></i>
-                                    </div>
-                                    <div class="content-item-info">
-                                        <h4>@doc.Title</h4>
-                                        <p>@(string.IsNullOrEmpty(doc.Description) ? "No description" : doc.Description)</p>
-                                        <span class="content-item-meta">
-                                            <i class="bi bi-calendar3"></i>
-                                            @doc.LastModified.ToString("MMM dd, yyyy")
-                                        </span>
-                                    </div>
-                                    <div class="content-item-arrow">
-                                        <i class="bi bi-chevron-right"></i>
-                                    </div>
-                                </a>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="content-empty-state">
-                            <div class="empty-icon">📄</div>
-                            <h4>No documents yet</h4>
-                            <p>Start by uploading your first document</p>
-                            <a asp-page="/Documents/Upload" class="empty-action-btn">
-                                <i class="bi bi-cloud-upload"></i>
-                                Upload Document
-                            </a>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Recent Teams -->
-            <div class="dashboard-content-card">
-                <div class="content-card-header">
-                    <div class="content-card-title">
-                        <div class="content-card-icon green">👥</div>
-                        <div>
-                            <h3>Recent Teams</h3>
-                            <p>Your collaborations</p>
-                        </div>
-                    </div>
-                    <a asp-page="/Teams/Index" class="content-card-action">
-                        <span>View All</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="content-card-body">
-                    @if (Model.RecentTeams.Any())
-                    {
-                        <div class="content-items-list">
-                            @foreach (var team in Model.RecentTeams.Take(4))
-                            {
-                                <a asp-page="/Teams/Details" asp-route-id="@team.Id" class="content-item team-item">
-                                    <div class="content-item-icon @(team.IsOwner ? "yellow" : "cyan")">
-                                        <i class="bi @(team.IsOwner ? "bi-star-fill" : "bi-people-fill")"></i>
-                                    </div>
-                                    <div class="content-item-info">
-                                        <div class="content-item-header">
-                                            <h4>@team.Name</h4>
-                                            <span class="member-count-badge">@team.MemberCount members</span>
-                                        </div>
-                                        <p>@(string.IsNullOrEmpty(team.Description) ? "No description" : team.Description)</p>
-                                        <div class="content-item-footer">
-                                            <span class="content-item-meta">
-                                                <i class="bi bi-calendar3"></i>
-                                                @team.LastModified.ToString("MMM dd, yyyy")
-                                            </span>
-                                            <span class="role-badge @(team.IsOwner ? "owner" : "member")">
-                                                @(team.IsOwner ? "Owner" : "Member")
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="content-item-arrow">
-                                        <i class="bi bi-chevron-right"></i>
-                                    </div>
-                                </a>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="content-empty-state">
-                            <div class="empty-icon">👥</div>
-                            <h4>No teams yet</h4>
-                            <p>Create or join a team to collaborate</p>
-                            <a asp-page="/Teams/Create" class="empty-action-btn green">
-                                <i class="bi bi-plus-circle"></i>
-                                Create Team
-                            </a>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="dashboard-content-card">
-                <div class="content-card-header">
-                    <div class="content-card-title">
-                        <div class="content-card-icon cyan">⚡</div>
-                        <div>
-                            <h3>Recent Activity</h3>
-                            <p>What's happening</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="content-card-body">
-                    @if (Model.RecentActivities.Any())
-                    {
-                        <div class="activity-timeline">
-                            @foreach (var activity in Model.RecentActivities.Take(5))
-                            {
-                                <div class="activity-item">
-                                    <div class="activity-marker @GetActivityColorClass(activity.Title)"></div>
-                                    <div class="activity-content">
-                                        <div class="activity-header">
-                                            <h4>@activity.Title</h4>
-                                            <span class="activity-time">@GetRelativeTime(activity.Timestamp)</span>
-                                        </div>
-                                        <p>@activity.Description</p>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="content-empty-state">
-                            <div class="empty-icon">⚡</div>
-                            <h4>No recent activity</h4>
-                            <p>Activity will appear here as you work</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@functions {
-    private string GetFileIcon(string fileType)
-    {
-        return fileType.ToLower() switch
-        {
-            ".pdf" => "bi-file-earmark-pdf",
-            ".doc" or ".docx" => "bi-file-earmark-word",
-            ".txt" => "bi-file-earmark-text",
-            ".md" => "bi-markdown",
-            ".jpg" or ".jpeg" or ".png" or ".gif" => "bi-file-earmark-image",
-            _ => "bi-file-earmark"
-        };
     }
-
-    private string GetFileIconClass(string fileType)
-    {
-        return fileType.ToLower() switch
-        {
-            ".pdf" => "red",
-            ".doc" or ".docx" => "blue",
-            ".txt" => "cyan",
-            ".md" => "purple",
-            ".jpg" or ".jpeg" or ".png" or ".gif" => "green",
-            _ => "gray"
-        };
-    }
-
-    private string FormatFileSize(long bytes)
-    {
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int counter = 0;
-        decimal number = bytes;
-        while (Math.Round(number / 1024) >= 1)
-        {
-            number /= 1024;
-            counter++;
-        }
-        return $"{number:n1} {suffixes[counter]}";
-    }
-
-    private string GetActivityMarkerClass(string activityTitle)
-    {
-        return activityTitle switch
-        {
-            "Document Created" => "bg-success",
-            "Document Updated" => "bg-primary",
-            "New Version Uploaded" => "bg-warning",
-            _ => "bg-secondary"
-        };
-    }
-
-    private string GetActivityColorClass(string activityTitle)
-    {
-        return activityTitle switch
-        {
-            "Document Created" => "green",
-            "Document Updated" => "blue",
-            "New Version Uploaded" => "yellow",
-            _ => "gray"
-        };
-    }
-
-    private string GetRelativeTime(DateTime timestamp)
-    {
-        var timeSpan = DateTime.Now - timestamp;
-        
-        if (timeSpan.TotalMinutes < 1)
-            return "Just now";
-        if (timeSpan.TotalMinutes < 60)
-            return $"{(int)timeSpan.TotalMinutes}m ago";
-        if (timeSpan.TotalHours < 24)
-            return $"{(int)timeSpan.TotalHours}h ago";
-        if (timeSpan.TotalDays < 7)
-            return $"{(int)timeSpan.TotalDays}d ago";
-        
-        return timestamp.ToString("MMM dd");
-    }
-}
-
-@section Styles {
-    <style>
-        /* ===== MODERN DASHBOARD STYLES ===== */
-        
-        /* Dashboard Container */
-        .dashboard-container {
-            padding: 2rem;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        /* Page Header */
-        .dashboard-page-header {
-            margin-bottom: 2rem;
-        }
-        
-        .dashboard-page-header .page-header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-        }
-        
-        .dashboard-page-header .page-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin: 0;
-        }
-        
-        .dashboard-page-header .page-icon {
-            font-size: 2.5rem;
-        }
-        
-        .dashboard-page-header .page-subtitle {
-            color: var(--text-secondary);
-            margin: 0.5rem 0 0 0;
-            font-size: 1.1rem;
-        }
-        
-        .dashboard-page-header .modern-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        .dashboard-page-header .modern-btn-primary {
-            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-            color: white;
-            border: none;
-        }
-        
-        .dashboard-page-header .modern-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
-            color: white;
-        }
-        
-        /* Quick Actions Panel */
-        .dashboard-quick-actions {
-            background: var(--surface-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            backdrop-filter: blur(20px);
-        }
-        
-        .quick-actions-header {
-            margin-bottom: 1.25rem;
-        }
-        
-        .quick-actions-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 0;
-        }
-        
-        .quick-actions-title i {
-            color: var(--accent-color);
-        }
-        
-        .quick-actions-subtitle {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin: 0.25rem 0 0 0;
-        }
-        
-        .quick-actions-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-        }
-        
-        .quick-action-card {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem 1.25rem;
-            background: var(--surface-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        .quick-action-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-glass);
-            border-color: var(--accent-color);
-        }
-        
-        .quick-action-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-        
-        .quick-action-icon.blue {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
-            color: #3b82f6;
-        }
-        
-        .quick-action-icon.green {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
-            color: #22c55e;
-        }
-        
-        .quick-action-icon.cyan {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
-            color: #06b6d4;
-        }
-        
-        .quick-action-icon.yellow {
-            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%);
-            color: #eab308;
-        }
-        
-        .quick-action-info h4 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-        
-        .quick-action-info p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin: 0.25rem 0 0 0;
-        }
-        
-        /* Statistics Cards Grid */
-        .dashboard-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .dashboard-stat-card {
-            background: var(--surface-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(20px);
-        }
-        
-        .dashboard-stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            border-radius: 16px 0 0 16px;
-        }
-        
-        .dashboard-stat-card.blue::before { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); }
-        .dashboard-stat-card.green::before { background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%); }
-        .dashboard-stat-card.cyan::before { background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); }
-        .dashboard-stat-card.yellow::before { background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%); }
-        
-        .dashboard-stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-glass);
-        }
-        
-        .dashboard-stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        
-        .dashboard-stat-info h3 {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin: 0 0 0.5rem 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .dashboard-stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            line-height: 1.1;
-        }
-        
-        .dashboard-stat-change {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-        
-        .stat-badge {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-right: 0.25rem;
-        }
-        
-        .stat-badge.owner {
-            background: rgba(234, 179, 8, 0.15);
-            color: #ca8a04;
-        }
-        
-        .stat-badge.member {
-            background: rgba(59, 130, 246, 0.15);
-            color: #3b82f6;
-        }
-        
-        .dashboard-stat-icon {
-            font-size: 2.5rem;
-            opacity: 0.8;
-        }
-        
-        /* ===== CONTENT CARDS GRID ===== */
-        .dashboard-content-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .dashboard-content-card {
-            background: var(--surface-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(20px);
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .dashboard-content-card:hover {
-            box-shadow: var(--shadow-glass);
-        }
-        
-        .content-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .content-card-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .content-card-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-        
-        .content-card-icon.blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%); }
-        .content-card-icon.green { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%); }
-        .content-card-icon.cyan { background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%); }
-        .content-card-icon.yellow { background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.1) 100%); }
-        
-        .content-card-title h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-        
-        .content-card-title p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin: 0.15rem 0 0 0;
-        }
-        
-        .content-card-action {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--accent-color);
-            text-decoration: none;
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-        
-        .content-card-action:hover {
-            background: rgba(2, 132, 199, 0.1);
-            color: var(--accent-color);
-        }
-        
-        .content-card-body {
-            padding: 0;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Content Items List */
-        .content-items-list {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .content-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem 1.5rem;
-            text-decoration: none;
-            border-bottom: 1px solid var(--border-color);
-            transition: all 0.2s ease;
-        }
-        
-        .content-item:last-child {
-            border-bottom: none;
-        }
-        
-        .content-item:hover {
-            background: rgba(2, 132, 199, 0.05);
-        }
-        
-        .content-item-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-        
-        .content-item-icon.blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%); color: #3b82f6; }
-        .content-item-icon.green { background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%); color: #22c55e; }
-        .content-item-icon.cyan { background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%); color: #06b6d4; }
-        .content-item-icon.yellow { background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%); color: #eab308; }
-        .content-item-icon.red { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%); color: #ef4444; }
-        .content-item-icon.purple { background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%); color: #a855f7; }
-        .content-item-icon.gray { background: linear-gradient(135deg, rgba(107, 114, 128, 0.15) 0%, rgba(107, 114, 128, 0.05) 100%); color: #6b7280; }
-        
-        .content-item-info {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .content-item-info h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .content-item-info p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin: 0.25rem 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .content-item-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .content-item-footer {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-top: 0.25rem;
-        }
-        
-        .content-item-meta {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .content-item-arrow {
-            color: var(--text-tertiary);
-            font-size: 0.85rem;
-            transition: transform 0.2s ease;
-        }
-        
-        .content-item:hover .content-item-arrow {
-            transform: translateX(3px);
-            color: var(--accent-color);
-        }
-        
-        .member-count-badge {
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 0.2rem 0.5rem;
-            border-radius: 6px;
-            background: rgba(107, 114, 128, 0.15);
-            color: var(--text-secondary);
-        }
-        
-        .role-badge {
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 0.2rem 0.5rem;
-            border-radius: 6px;
-        }
-        
-        .role-badge.owner {
-            background: rgba(234, 179, 8, 0.15);
-            color: #ca8a04;
-        }
-        
-        .role-badge.member {
-            background: rgba(59, 130, 246, 0.15);
-            color: #3b82f6;
-        }
-        
-        /* Activity Timeline */
-        .activity-timeline {
-            padding: 1rem 1.5rem;
-        }
-        
-        .activity-item {
-            display: flex;
-            gap: 1rem;
-            padding: 0.75rem 0;
-            position: relative;
-        }
-        
-        .activity-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 5px;
-            top: 28px;
-            bottom: -8px;
-            width: 2px;
-            background: var(--border-color);
-        }
-        
-        .activity-marker {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            margin-top: 4px;
-        }
-        
-        .activity-marker.blue { background: #3b82f6; }
-        .activity-marker.green { background: #22c55e; }
-        .activity-marker.yellow { background: #eab308; }
-        .activity-marker.cyan { background: #06b6d4; }
-        .activity-marker.gray { background: #6b7280; }
-        
-        .activity-content {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .activity-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-        
-        .activity-content h4 {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-        
-        .activity-time {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            white-space: nowrap;
-        }
-        
-        .activity-content p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin: 0.25rem 0 0 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        /* Empty State */
-        .content-empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            flex: 1;
-        }
-        
-        .content-empty-state .empty-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.6;
-        }
-        
-        .content-empty-state h4 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0 0 0.5rem 0;
-        }
-        
-        .content-empty-state p {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin: 0 0 1.25rem 0;
-        }
-        
-        .empty-action-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1.25rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-            border-radius: 10px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-        
-        .empty-action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.25);
-            color: white;
-        }
-        
-        .empty-action-btn.green {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-        }
-        
-        .empty-action-btn.green:hover {
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
-        }
-        
-        .counter {
-            font-weight: 700;
-        }
-        
-        /* Animation for counter */
-        @@keyframes countUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .counter {
-            animation: countUp 0.6s ease-out;
-        }
-        
-        /* ===== RESPONSIVE DESIGN ===== */
-        @@media (max-width: 1200px) {
-            .dashboard-stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .quick-actions-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .dashboard-content-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        @@media (max-width: 768px) {
-            .dashboard-container {
-                padding: 1rem;
-            }
-            
-            .dashboard-page-header .page-header-content {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .dashboard-page-header .page-title {
-                font-size: 1.5rem;
-            }
-            
-            .dashboard-page-header .page-icon {
-                font-size: 2rem;
-            }
-            
-            .quick-actions-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard-stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard-stat-number {
-                font-size: 2rem;
-            }
-            
-            .content-card-header {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-            
-            .content-card-action {
-                align-self: flex-start;
-            }
-            
-            .activity-header {
-                flex-direction: column;
-                gap: 0.25rem;
-            }
-        }
-        
-        /* ===== DARK THEME ADJUSTMENTS ===== */
-        [data-theme="dark"] .dashboard-stat-card {
-            background: var(--container-bg);
-        }
-        
-        [data-theme="dark"] .dashboard-quick-actions {
-            background: var(--container-bg);
-        }
-        
-        [data-theme="dark"] .quick-action-card {
-            background: var(--surface-secondary);
-        }
-        
-        [data-theme="dark"] .quick-action-card:hover {
-            background: rgba(70, 70, 70, 0.8);
-        }
-        
-        [data-theme="dark"] .stat-badge.owner {
-            background: rgba(234, 179, 8, 0.25);
-        }
-        
-        [data-theme="dark"] .stat-badge.member {
-            background: rgba(59, 130, 246, 0.25);
-        }
-        
-        [data-theme="dark"] .dashboard-content-card {
-            background: var(--container-bg);
-        }
-        
-        [data-theme="dark"] .content-item:hover {
-            background: rgba(2, 132, 199, 0.1);
-        }
-        
-        [data-theme="dark"] .member-count-badge {
-            background: rgba(107, 114, 128, 0.25);
-        }
-        
-        [data-theme="dark"] .role-badge.owner {
-            background: rgba(234, 179, 8, 0.25);
-        }
-        
-        [data-theme="dark"] .role-badge.member {
-            background: rgba(59, 130, 246, 0.25);
-        }
-    </style>
-}
-
-@section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animate counters
-            const counters = document.querySelectorAll('.counter');
-            
-            counters.forEach(counter => {
-                const target = parseInt(counter.getAttribute('data-target'));
-                let current = 0;
-                const increment = target / 20; // 20 steps
-                const duration = 1000; // 1 second
-                const stepTime = duration / 20;
-                
-                const timer = setInterval(() => {
-                    current += increment;
-                    if (current >= target) {
-                        current = target;
-                        clearInterval(timer);
-                    }
-                    counter.textContent = Math.floor(current);
-                }, stepTime);
-            });
-            
-            // Add smooth scrolling to links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
-            });
-        });
-    </script>
-}
+</div>

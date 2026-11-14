@@ -1,0 +1,290 @@
+/* Responsive rules (design "DocFlowHub Responsive", decision S15-6). Panels turn into overlays one by
+   one: first the inspector (≤1024), then the tool window (≤768), finally the rail becomes a bottom
+   navigation bar (<600) with 44px touch targets and 14px text. Wider screens are unchanged. */
+
+/* Controls that only exist for narrow screens. shell.js un-hides the panel toggles when the page has
+   that panel; CSS decides from which width they show. */
+.dfh-titlebar-btn {
+    display: none;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dfh-radius);
+    background: transparent;
+    color: var(--dfh-text-muted);
+    font-size: 16px;
+}
+.dfh-titlebar-btn:hover { background: var(--dfh-bg-hover); color: var(--dfh-text); }
+.dfh-titlebar-btn[aria-expanded="true"] { color: var(--dfh-text); background: var(--dfh-bg-control); }
+.dfh-bottomnav { display: none; }
+.dfh-panel-backdrop { display: none; }
+.dfh-panel-close { display: none; }
+
+/* ---------- ≥1440: room for a wider inspector ---------- */
+@media (min-width: 1440px) {
+    .dfh-inspector--288,
+    .dfh-inspector--300 { width: 340px; }
+}
+
+/* ---------- ≤1279: narrow main, tables drop the Author column first ---------- */
+@media (max-width: 1279.98px) {
+    .dfh-hide-lg { display: none !important; }
+    col.dfh-hide-lg { display: none; }
+    .dfh-titlebar-search { width: min(420px, 34vw); }
+}
+
+/* ---------- ≤1024: inspector becomes a right overlay ---------- */
+@media (max-width: 1024px) {
+    .dfh-titlebar-btn[data-dfh-panel-toggle="inspector"]:not([hidden]) { display: inline-flex; }
+
+    .dfh-inspector {
+        position: fixed;
+        top: var(--dfh-titlebar-h);
+        bottom: var(--dfh-statusbar-h);
+        right: 0;
+        z-index: 1040;
+        width: min(340px, 92vw) !important;
+        box-shadow: var(--dfh-shadow-menu);
+        border-left: 1px solid var(--dfh-border-strong);
+        visibility: hidden;
+        transform: translateX(100%);
+        transition: transform 120ms ease-out, visibility 0s linear 120ms;
+    }
+    .dfh-inspector.is-open {
+        visibility: visible;
+        transform: none;
+        transition: transform 120ms ease-out;
+    }
+    .dfh-inspector > .dfh-panel-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        z-index: 1;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: var(--dfh-radius);
+        background: var(--dfh-bg-panel);
+        color: var(--dfh-text-muted);
+    }
+    .dfh-panel-close:hover { color: var(--dfh-text); background: var(--dfh-bg-hover); }
+    .dfh-inspector > .dfh-panel-header { padding-right: 36px; }
+
+    .dfh-panel-backdrop.is-open {
+        display: block;
+        position: fixed;
+        inset: var(--dfh-titlebar-h) 0 0 0;
+        z-index: 1035;
+        background: rgba(10, 11, 12, 0.7);
+    }
+
+    /* Grids that were side by side. */
+    .dfh-quad { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    .dfh-quad-cell { border-right: 0 !important; border-bottom: 1px solid var(--dfh-border); }
+    .dfh-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- ≤768: tool window becomes a left drawer; tables keep Name / Ver / Modified ---------- */
+@media (max-width: 768px) {
+    .dfh-titlebar-btn[data-dfh-panel-toggle="toolwindow"]:not([hidden]) { display: inline-flex; }
+    .dfh-hide-md { display: none !important; }
+    col.dfh-hide-md { display: none; }
+    .dfh-ws-pill { display: none; }
+
+    .dfh-toolwindow {
+        position: fixed;
+        top: var(--dfh-titlebar-h);
+        bottom: 0;
+        left: 0;
+        z-index: 1040;
+        width: min(310px, 86vw) !important;
+        border-right: 1px solid var(--dfh-border-strong);
+        box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
+        visibility: hidden;
+        transform: translateX(-100%);
+        transition: transform 120ms ease-out, visibility 0s linear 120ms;
+    }
+    .dfh-toolwindow.is-open {
+        visibility: visible;
+        transform: none;
+        transition: transform 120ms ease-out;
+    }
+    .dfh-toolwindow > .dfh-panel-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 3px;
+        right: 6px;
+        z-index: 1;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: var(--dfh-radius);
+        background: var(--dfh-bg-panel);
+        color: var(--dfh-text-muted);
+    }
+    .dfh-toolwindow > .dfh-panel-header:first-of-type { padding-right: 36px; }
+
+    .dfh-titlebar-search { width: min(320px, 40vw); }
+}
+
+/* ---------- <600: mobile ---------- */
+@media (max-width: 599.98px) {
+    :root { --dfh-titlebar-h: 52px; }
+    body { font-size: 14px; }
+
+    body.dfh-shell { grid-template-rows: var(--dfh-titlebar-h) auto minmax(0, 1fr) auto; }
+    .dfh-statusbar, .dfh-rail { display: none; }
+
+    /* App bar: menu · logo · spacer · search · avatar (design 9a). */
+    .dfh-titlebar { gap: 4px; padding: 0 6px; }
+    .dfh-titlebar-btn { width: 44px; height: 44px; font-size: 19px; }
+    .dfh-titlebar-btn--search { display: inline-flex; }
+    .dfh-titlebar-center, .dfh-titlebar-upload, .dfh-wordmark { display: none !important; }
+    .dfh-brand { margin-right: auto; padding: 0 6px; }
+    .dfh-titlebar .dropdown > .dfh-avatar { width: 32px; height: 32px; margin: 0 6px; }
+
+    .dfh-bottomnav {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        background: var(--dfh-bg-panel);
+        border-top: 1px solid var(--dfh-bg);
+    }
+    .dfh-bottomnav-more { display: flex; }
+    .dfh-bottomnav-item {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        min-height: 48px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--dfh-text-muted);
+        font-size: 11px;
+        text-decoration: none;
+    }
+    .dfh-bottomnav-item .bi { font-size: 18px; }
+    .dfh-bottomnav-item.is-active { color: var(--dfh-text); }
+    .dfh-bottomnav-item.is-active .bi { color: var(--dfh-link); }
+    .dfh-bottomnav-item:hover { color: var(--dfh-text); text-decoration: none; }
+
+    .dfh-toast-stack { left: 12px; right: 12px; width: auto; bottom: 76px; }
+
+    /* Overlays fill the screen between the app bar and the bottom bar. */
+    .dfh-toolwindow, .dfh-inspector { bottom: 0; }
+    .dfh-tree-row, .dfh-tree-link, .dfh-nav-item, .dfh-settings-tree a { min-height: 44px; }
+
+    /* One scrolling column: main first, then an inspector that is part of the page (details, team,
+       dashboard activity). The list inspectors (Documents, Projects) are not used: a tap opens the item. */
+    .dfh-workbench { flex-direction: column; overflow-y: auto; }
+    .dfh-main { flex: none; overflow: visible; }
+    .dfh-inspector:not(:has(#dfh-inspector-body)) {
+        position: static;
+        visibility: visible;
+        transform: none;
+        width: auto !important;
+        flex: none;
+        overflow: visible;
+        box-shadow: none;
+        border-left: 0;
+        border-top: 1px solid var(--dfh-bg);
+    }
+    .dfh-inspector:not(:has(#dfh-inspector-body)) .dfh-panel-close { display: none; }
+    .dfh-titlebar-btn[data-dfh-panel-toggle="inspector"] { display: none !important; }
+    .dfh-inspector:has(#dfh-inspector-body) { display: none; }
+
+    /* Fixed-height page columns become normal flow. */
+    .dfh-column, .dfh-fill, .dfh-form-scroll { height: auto; min-height: 0; overflow: visible; }
+
+    /* Toolbars keep one line and scroll sideways; the breadcrumb gives way first. */
+    .dfh-toolbar { overflow-x: auto; scrollbar-width: none; }
+    .dfh-toolbar .dfh-breadcrumb { display: none; }
+
+    /* Document preview placeholder: a short band, not a page (design 9c). */
+    .dfh-preview { flex: none; height: 220px; padding: 12px; }
+    .dfh-preview-page { width: auto; height: 100%; aspect-ratio: auto; padding: 12px; }
+    .dfh-preview-note { display: none; }
+
+    /* Dashboard strip: one panel per row. */
+    .dfh-strip { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .dfh-strip > section + section { border-left: 0; border-top: 1px solid var(--dfh-border); }
+
+    /* Settings: check rows lose the label-column indent. */
+    .dfh-form-check-row { padding-left: 0; }
+
+    /* Touch targets. */
+    .btn, .form-control, .form-select { min-height: 40px; }
+    .btn-sm { min-height: 36px; }
+
+    /* Forms: label column above the control. */
+    .dfh-form-row { grid-template-columns: minmax(0, 1fr) !important; gap: 6px; }
+    .dfh-form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    .dfh-form-footer { position: sticky; bottom: 0; }
+
+    /* Other tables size their columns by content and scroll sideways inside their container
+       (with fixed column widths the Name column collapsed to nothing). */
+    .dfh-table:not([data-dfh-doc-table]) { table-layout: auto; width: auto; min-width: 100%; }
+    .dfh-table:not([data-dfh-doc-table]) .dfh-ellipsis { max-width: 220px; }
+    :has(> .dfh-table:not([data-dfh-doc-table])) { overflow-x: auto; }
+
+    /* Documents table → two-line list, 64px rows (design 9a). */
+    .dfh-table[data-dfh-doc-table] { display: block; min-width: 0; }
+    .dfh-table[data-dfh-doc-table] colgroup,
+    .dfh-table[data-dfh-doc-table] thead { display: none; }
+    .dfh-table[data-dfh-doc-table] tbody { display: block; }
+    .dfh-table[data-dfh-doc-table] tbody tr {
+        display: grid;
+        grid-template-columns: 40px max-content max-content minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        align-content: center;
+        column-gap: 0;
+        row-gap: 2px;
+        min-height: 64px;
+        height: auto;
+        padding: 6px 6px 6px 14px;
+        border-bottom: 1px solid var(--dfh-border-subtle);
+    }
+    .dfh-table[data-dfh-doc-table] tbody td {
+        display: block;
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+    .dfh-table[data-dfh-doc-table] .dfh-check-cell { display: none; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-name { grid-column: 1 / -1; grid-row: 1; font-size: 14px; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-name .dfh-filetype { width: 32px; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-ver { grid-column: 2; grid-row: 2; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-size { grid-column: 3; grid-row: 2; display: block !important; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-modified { grid-column: 4; grid-row: 2; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-ver,
+    .dfh-table[data-dfh-doc-table] td.dfh-col-size,
+    .dfh-table[data-dfh-doc-table] td.dfh-col-modified {
+        font-family: var(--dfh-font-mono);
+        font-size: 12px;
+        color: var(--dfh-text-muted);
+        text-align: left;
+        white-space: nowrap;
+    }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-size::before,
+    .dfh-table[data-dfh-doc-table] td.dfh-col-modified::before { content: "\00a0·\00a0"; }
+    .dfh-table[data-dfh-doc-table] td.dfh-col-ver { grid-column-start: 2; }
+    .dfh-table[data-dfh-doc-table] tbody tr > td.dfh-col-ver { margin-left: 0; }
+    .dfh-table[data-dfh-doc-table] .dfh-row-menu-btn { visibility: visible; width: 44px; height: 44px; margin: -12px -6px -12px auto; }
+    .dfh-table[data-dfh-doc-table] tbody tr.is-selected { background: transparent; }
+    .dfh-bulkbar { flex-wrap: wrap; }
+}

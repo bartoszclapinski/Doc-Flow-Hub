@@ -1,6 +1,8 @@
 using DocFlowHub.Core.Constants;
 using DocFlowHub.Core.Identity;
+using DocFlowHub.Core.Models.Dashboard;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Documents.Browser;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure;
 using DocFlowHub.Infrastructure.Data;
@@ -162,5 +164,191 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
         // The service swallows query errors and returns zeros, so check real numbers.
         statistics.TotalUsers.Should().BeGreaterThanOrEqualTo(2);
         statistics.ActiveUsers.Should().Be(statistics.TotalUsers);
+    }
+    [Theory]
+    [InlineData(DashboardPeriod.Week)]
+    [InlineData(DashboardPeriod.All)]
+    public async Task Dashboard_RunsOnSqliteAndMatchesTheDocumentList(DashboardPeriod period)
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        var result = await Get<IDashboardService>(scope).GetUserDashboardAsync(userId, period);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var dashboard = result.Data!;
+        var list = await Get<IDocumentService>(scope).GetDocumentsAsync(userId, new DocumentFilter { PageSize = 1 });
+        dashboard.Documents.Should().Be(list.Data!.TotalItems);
+        dashboard.Versions.Should().BeGreaterThanOrEqualTo(dashboard.Documents);
+        dashboard.RecentDocuments.Should().NotBeEmpty();
+        dashboard.RecentDocuments.Should().BeInDescendingOrder(d => d.ModifiedAt);
+        dashboard.Storage.Sum(s => s.Count).Should().Be(dashboard.Documents);
+        dashboard.TeamList.Should().NotBeEmpty();
+        dashboard.Activity.Should().BeInDescendingOrder(a => a.At);
+        (period == DashboardPeriod.All).Should().Be(dashboard.VersionsInPeriod == null);
+    }
+
+    [Fact]
+    public async Task AdminOverview_RunsOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+
+        var result = await Get<IDashboardService>(scope).GetAdminOverviewAsync(DashboardPeriod.Month);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var overview = result.Data!;
+        overview.Users.Should().BeGreaterThanOrEqualTo(2);
+        overview.Administrators.Should().BeGreaterThanOrEqualTo(1);
+        overview.RecentUsers.Should().Contain(u => u.Email == DemoAccounts.AdminEmail && u.IsAdministrator);
+        overview.RecentUsers.Should().Contain(u => u.Email == DemoAccounts.UserEmail && !u.IsAdministrator);
+        overview.Documents.Should().BeGreaterThan(0);
+        overview.StorageBytes.Should().BeGreaterThan(0);
+        overview.LargestTeams.Should().NotBeEmpty();
+        overview.Activity.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task DocumentBrowser_RunsOnSqliteAndMatchesTheDocumentList()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+        var browser = Get<IDocumentBrowserService>(scope);
+
+        var tree = await browser.GetTreeAsync(userId);
+        tree.Succeeded.Should().BeTrue(tree.Error);
+        var list = await Get<IDocumentService>(scope).GetDocumentsAsync(userId, new DocumentFilter { PageSize = 1 });
+        tree.Data!.TotalDocuments.Should().Be(list.Data!.TotalItems);
+        tree.Data.Projects.Should().NotBeEmpty();
+        tree.Data.FileTypes.Sum(t => t.Count).Should().Be(tree.Data.TotalDocuments);
+
+        var page = await browser.GetDocumentsAsync(userId, new DocumentListQuery { Sort = DocumentSort.Name, Descending = false });
+        page.Succeeded.Should().BeTrue(page.Error);
+        page.Data!.Total.Should().Be(tree.Data.TotalDocuments);
+        page.Data.Items.Should().HaveCount(Math.Min(25, page.Data.Total));
+        page.Data.Items.Select(r => r.Title.ToLowerInvariant()).Should().BeInAscendingOrder(StringComparer.Ordinal);
+
+        var project = tree.Data.Projects.First(p => p.DocumentCount > 0);
+        var inProject = await browser.GetDocumentsAsync(userId, new DocumentListQuery
+        {
+            ProjectId = project.Id, FileType = "PDF", Owner = DocumentOwnerFilter.Me, Search = "A", CategoryId = 1,
+        });
+        inProject.Succeeded.Should().BeTrue(inProject.Error);
+
+        var first = page.Data.Items[0];
+        var upper = await browser.GetDocumentsAsync(userId, new DocumentListQuery { Search = first.Title.ToUpperInvariant() });
+        upper.Data!.Items.Should().Contain(r => r.Id == first.Id, "search ignores case on SQLite");
+
+        var inspector = await browser.GetInspectorAsync(userId, first.Id);
+        inspector.Succeeded.Should().BeTrue(inspector.Error);
+        inspector.Data!.RecentVersions.Should().NotBeEmpty();
+        inspector.Data.VersionCount.Should().BeGreaterThanOrEqualTo(inspector.Data.RecentVersions.Count);
+    }
+
+    [Fact]
+    public async Task DocumentDetailsAndSeededComparisons_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var context = Get<ApplicationDbContext>(scope);
+        var browser = Get<IDocumentBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        // A document of the demo user with at least two versions (the seed compares consecutive ones).
+        var documentId = await context.Documents
+            .Where(d => d.OwnerId == userId && d.Versions.Count >= 2)
+            .Select(d => d.Id)
+            .FirstAsync();
+
+        var details = await browser.GetDetailsAsync(userId, documentId);
+        details.Succeeded.Should().BeTrue(details.Error);
+        details.Data!.Versions.Should().BeInDescendingOrder(v => v.Number);
+        details.Data.Comparisons.Should().NotBeEmpty("the demo seed saves comparisons of consecutive versions");
+
+        var comparison = await browser.GetComparisonAsync(userId, documentId, null, null);
+        comparison.Succeeded.Should().BeTrue(comparison.Error);
+        comparison.Data!.Comparison.Should().NotBeNull();
+        comparison.Data.Comparison!.Changes.Should().NotBeEmpty();
+        comparison.Data.From.Number.Should().BeLessThan(comparison.Data.To.Number);
+    }
+
+    [Fact]
+    public async Task UserSearch_FiltersByRoleAndStatus()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var users = Get<IUserManagementService>(scope);
+
+        var admins = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Role = "Administrator", PageSize = 50 });
+        admins.Items.Select(u => u.Email).Should().Contain(DemoAccounts.AdminEmail).And.NotContain(DemoAccounts.UserEmail);
+
+        var locked = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Status = Core.Models.Admin.UserStatus.Locked });
+        locked.TotalItems.Should().Be(0, "nobody is locked in the demo");
+        var active = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Status = Core.Models.Admin.UserStatus.Active });
+        active.TotalItems.Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task AdminScreens_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var admin = Get<IAdminBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+        var adminId = await UserIdAsync(scope, DemoAccounts.AdminEmail);
+
+        var nav = await admin.GetNavStatsAsync();
+        nav.Succeeded.Should().BeTrue(nav.Error);
+        nav.Data!.Users.Should().BeGreaterThanOrEqualTo(2);
+
+        var rows = await admin.GetUserRowsAsync(new[] { userId, adminId });
+        rows.Succeeded.Should().BeTrue(rows.Error);
+        rows.Data![adminId].IsAdministrator.Should().BeTrue();
+        rows.Data[userId].StorageBytes.Should().BeGreaterThan(0);
+
+        (await admin.GetUserDetailsAsync(userId)).Succeeded.Should().BeTrue();
+
+        foreach (var days in new[] { 7, 30, 90 })
+        {
+            var analytics = await admin.GetAnalyticsAsync(days);
+            analytics.Succeeded.Should().BeTrue(analytics.Error);
+            analytics.Data!.UploadsPerDay.Should().HaveCount(days);
+        }
+        var ninety = (await admin.GetAnalyticsAsync(90)).Data!;
+        ninety.AiRequests.Should().BeGreaterThan(0);
+        ninety.AiCost.Should().BeGreaterThan(0);
+        ninety.TopStorage.Should().NotBeEmpty();
+
+        (await admin.GetUserAiUsageAsync(userId)).Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WorkspaceScreens_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var workspace = Get<IWorkspaceBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        var projects = await workspace.GetProjectsAsync(userId, archived: false);
+        projects.Succeeded.Should().BeTrue(projects.Error);
+        projects.Data.Should().NotBeEmpty();
+        (await workspace.GetProjectsAsync(userId, archived: true)).Succeeded.Should().BeTrue();
+
+        var project = projects.Data![0];
+        var inspector = await workspace.GetProjectAsync(userId, project.Id);
+        inspector.Succeeded.Should().BeTrue(inspector.Error);
+        inspector.Data!.Folders.Should().HaveCount(project.FolderCount);
+
+        var root = await workspace.GetFolderViewAsync(userId, project.Id, null);
+        root.Succeeded.Should().BeTrue(root.Error);
+        if (inspector.Data.Folders.Count > 0)
+        {
+            var folder = await workspace.GetFolderViewAsync(userId, project.Id, inspector.Data.Folders[0].Id);
+            folder.Succeeded.Should().BeTrue(folder.Error);
+            folder.Data!.Path.Should().NotBeEmpty();
+        }
+
+        var teams = await workspace.GetTeamsAsync(userId);
+        teams.Succeeded.Should().BeTrue(teams.Error);
+        teams.Data.Should().NotBeEmpty();
+        var team = await workspace.GetTeamAsync(userId, teams.Data![0].Id);
+        team.Succeeded.Should().BeTrue(team.Error);
+        team.Data!.Members.Should().Contain(m => m.IsMe);
     }
 }

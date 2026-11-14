@@ -1,0 +1,137 @@
+@page "/Documents/Compare/{id:int}"
+@model DocFlowHub.Web.Pages.Documents.CompareModel
+@using DocFlowHub.Core.Models.Documents.Browser
+@{
+    var v = Model.View;
+    ViewData["Title"] = $"Compare · {v.Title}";
+    ViewData["FullBleed"] = true;
+    var c = v.Comparison;
+    var pair = $"v{v.From.Number} ↔ v{v.To.Number}";
+    var newest = v.Versions[0].Number;
+}
+
+@section Inspector {
+    <aside class="dfh-inspector dfh-inspector--320" aria-label="AI comparison">
+        <div class="dfh-ai-compare-head">
+            <i class="bi bi-stars" aria-hidden="true"></i><span>AI comparison</span>
+            <span class="dfh-mono dfh-muted">@pair</span>
+        </div>
+        @if (c != null)
+        {
+            <div class="dfh-compare-summary">
+                <p>@c.Summary</p>
+                <div class="dfh-chips">
+                    @foreach (var (label, high) in CompareModel.Chips(c))
+                    {
+                        <span class="dfh-compare-chip@(high ? " is-high" : "")">@label</span>
+                    }
+                </div>
+            </div>
+            <div class="dfh-change-label">Changes</div>
+            @if (c.Changes.Count > 0)
+            {
+                <ol class="dfh-change-list">
+                    @foreach (var change in c.Changes)
+                    {
+                        <li><span>@change</span></li>
+                    }
+                </ol>
+            }
+            else
+            {
+                <p class="dfh-insp-note" style="padding: 0 14px">The AI did not list individual changes.</p>
+            }
+            <div class="dfh-toolwindow-spacer"></div>
+            <div class="dfh-insp-footer">
+                <span>@c.Model@(c.TokensUsed is int t ? $" · {(t >= 1000 ? (t / 1000.0).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "k" : t.ToString())} tokens" : "")@(c.Confidence is double conf ? $" · conf. {conf.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}" : "")</span>
+                <span title="@Dfh.Timestamp(c.GeneratedAt)">generated @Dfh.Relative(c.GeneratedAt)</span>
+            </div>
+        }
+        else
+        {
+            <div class="dfh-insp-block">
+                <p class="dfh-insp-note">There is no AI comparison of @pair yet. The AI reads both versions and lists what changed; it uses one AI request and your preferred model from Settings · AI.</p>
+                @if (Model.IsDemo)
+                {
+                    <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — only saved comparisons are shown">
+                        <button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-stars" aria-hidden="true"></i>Compare with AI</button>
+                    </span>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Generate" asp-route-id="@v.DocumentId" data-dfh-busy="Comparing…">
+                        <input type="hidden" name="from" value="@v.From.Number" />
+                        <input type="hidden" name="to" value="@v.To.Number" />
+                        <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-stars" aria-hidden="true"></i>Compare with AI</button>
+                    </form>
+                }
+            </div>
+        }
+    </aside>
+}
+
+<div class="dfh-column">
+    <partial name="_EditorTabs" model='new EditorTabsView(v.Title, v.FileType, v.DocumentId, Icon: "bi-arrow-left-right", Suffix: pair)' />
+
+    <div class="dfh-toolbar dfh-toolbar--bordered">
+        <nav class="dfh-breadcrumb" aria-label="Location">
+            @if (v.Location != null)
+            {
+                foreach (var part in v.Location.Split(" / "))
+                {
+                    <span>@part</span><span class="dfh-breadcrumb-sep" aria-hidden="true">/</span>
+                }
+            }
+            <a asp-page="/Documents/Details" asp-route-id="@v.DocumentId">@(v.Title + v.FileType.ToLowerInvariant())</a>
+        </nav>
+        <span class="dfh-spacer"></span>
+        <a class="btn btn-secondary btn-sm" asp-page="/Documents/Details" asp-route-id="@v.DocumentId"><i class="bi bi-file-earmark" aria-hidden="true"></i>Open document</a>
+    </div>
+
+    @* Version header: two pickers (GET form; the script submits on change) *@
+    <form class="dfh-diff-header" method="get" asp-page="/Documents/Compare" asp-route-id="@v.DocumentId" data-dfh-compare-pickers>
+        @foreach (var (side, version, name, css) in new[] { ("Older", v.From, "from", "is-old"), ("Newer", v.To, "to", "is-new") })
+        {
+            <div class="dfh-diff-side @css">
+                <label class="visually-hidden" for="pick-@name">@side version</label>
+                <select id="pick-@name" name="@name" class="form-select">
+                    @foreach (var option in v.Versions)
+                    {
+                        <option value="@option.Number" selected="@(option.Number == version.Number)">v@(option.Number)</option>
+                    }
+                </select>
+                @if (version.Hash != null)
+                {
+                    <span class="dfh-mono">@version.Hash</span>
+                }
+                <span class="dfh-diff-who" title="@Dfh.Timestamp(version.CreatedAt)">@version.Author · @Dfh.Relative(version.CreatedAt)@(version.Number == newest ? " · current" : "")</span>
+            </div>
+        }
+        <noscript><button type="submit" class="btn btn-secondary btn-sm">Compare</button></noscript>
+    </form>
+
+    <div class="dfh-diff-empty dfh-fill">
+        <div class="dfh-empty dfh-empty--left">
+            <i class="bi bi-file-diff" aria-hidden="true"></i>
+            <span class="dfh-empty-title">Line-by-line diff isn't available yet</span>
+            <p>
+                For now DocFlowHub compares versions with AI: the summary and the list of changes are on the right.
+                To see the exact text, download both versions.
+            </p>
+            <div class="dfh-empty-actions">
+                @foreach (var version in new[] { v.From, v.To })
+                {
+                    <form method="post" asp-page="/Documents/Details" asp-page-handler="Download" asp-route-id="@v.DocumentId">
+                        <input type="hidden" name="versionId" value="@version.Id" />
+                        <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download v@(version.Number)</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/compare.js" asp-append-version="true"></script>
+}

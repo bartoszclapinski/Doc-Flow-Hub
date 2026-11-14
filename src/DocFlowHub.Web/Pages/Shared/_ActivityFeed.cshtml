@@ -1,0 +1,61 @@
+@* Activity tool window content (3a): "who verb what" + mono tag, short hash and time. *@
+@using DocFlowHub.Core.Models.Dashboard
+@model ActivityFeed
+@if (Model.Items.Count == 0)
+{
+    <div class="dfh-empty dfh-empty--inline"><p>No activity in this period.</p></div>
+}
+else
+{
+    <ul class="dfh-activity">
+        @foreach (var item in Model.Items)
+        {
+            var (tag, tagClass) = item.Kind switch
+            {
+                ActivityKind.Created => ("new", "new"),
+                ActivityKind.Version => ("version", "version"),
+                ActivityKind.AiSummary or ActivityKind.AiComparison => ("ai", "ai"),
+                ActivityKind.TeamJoined => ("team", "team"),
+                _ => ("user", "user"),
+            };
+            string? href = !Model.Links ? null
+                : item.DocumentId != null ? $"/Documents/Details/{item.DocumentId}"
+                : item.TeamId != null ? $"/Teams/Details/{item.TeamId}"
+                : null;
+            <li>
+                @if (item.Actor == null)
+                {
+                    <span class="dfh-avatar dfh-avatar--22 dfh-avatar--ai" aria-hidden="true">AI</span>
+                }
+                else
+                {
+                    <span class="dfh-avatar dfh-avatar--22" aria-hidden="true">@Dfh.Initials(item.Actor)</span>
+                }
+                <div>
+                    <div class="dfh-activity-line">
+                        <b>@(item.Actor ?? "AI")</b> @item.Verb
+                        @if (item.Subject != null)
+                        {
+                            if (href != null)
+                            {
+                                <a href="@href">@item.Subject</a>@item.SubjectSuffix
+                            }
+                            else
+                            {
+                                <b>@item.Subject</b>@item.SubjectSuffix
+                            }
+                        }
+                    </div>
+                    <div class="dfh-activity-meta">
+                        <span class="dfh-tag--@tagClass">@tag</span>
+                        @if (item.Hash != null)
+                        {
+                            <span title="File hash">@item.Hash</span>
+                        }
+                        <time datetime="@item.At.ToString("o")" title="@Dfh.Timestamp(item.At)">@Dfh.Relative(item.At)</time>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+}

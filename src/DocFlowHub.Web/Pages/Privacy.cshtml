@@ -1,8 +1,41 @@
 ﻿@page
 @model PrivacyModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = "Privacy Policy";
+    ViewData["Title"] = "Privacy";
+    Layout = User.Identity?.IsAuthenticated == true ? "_Layout" : "_AuthLayout";
 }
-<h1>@ViewData["Title"]</h1>
+@* Decision S15-7: a short, honest description of what this app stores, written from the code. *@
+<article class="dfh-doc-page">
+    <h1 class="dfh-heading">Privacy</h1>
+    <p class="dfh-doc-lead">DocFlowHub is a portfolio project. This page lists what the app stores and where your data goes. It is not a legal policy of a company.</p>
 
-<p>Use this page to detail your site's privacy policy.</p>
+    @if (DemoMode.IsEnabled)
+    {
+        <div class="dfh-banner dfh-banner--ai dfh-doc-note">
+            <i class="bi bi-lock" aria-hidden="true"></i>
+            <span>You are on the read-only demo. The accounts and documents are sample data, nothing you do here is saved, and no document is sent to an AI service: the summaries were written in advance.</span>
+        </div>
+    }
+
+    <h2>What the app stores</h2>
+    <ul>
+        <li><b>Your account</b>: name, e-mail address, the password as a salted hash (ASP.NET Core Identity, never the password itself), and the bio and picture you add on your profile.</li>
+        <li><b>Your documents</b>: every uploaded file and each of its versions, in the storage the operator set up (a disk folder or Azure Blob Storage), with titles, descriptions, categories and the project, folder or team they belong to.</li>
+        <li><b>AI results</b>: the summaries and version comparisons you generate.</li>
+        <li><b>An AI usage log</b>: for each AI request the operation, model, number of tokens, estimated cost and time. Not the document text.</li>
+        <li><b>A log of some actions</b>, such as administrator changes to accounts, with the time.</li>
+    </ul>
+
+    <h2>AI services</h2>
+    <p>When you generate a summary or compare versions, the text of that document is sent to the AI provider the operator configured (OpenAI or Anthropic) and handled under that provider's terms. Without a configured key no text leaves the server.</p>
+
+    <h2>Cookies and browser storage</h2>
+    <p>The app sets a sign-in cookie, a cookie that protects forms against cross-site requests, and a short-lived cookie that carries a message (such as "Saved") to the next page. It keeps your open document tabs and dismissed messages in the browser's session storage. There are no analytics, advertising or tracking scripts.</p>
+
+    <h2>Who can see your documents</h2>
+    <p>A document is private to you until you share it with a team; then every member of that team can open it. Administrators can see accounts and usage figures in the admin area.</p>
+
+    <h2>Deleting your data</h2>
+    <p>You can delete your documents and their versions at any time. To delete your account, ask an administrator.</p>
+</article>

@@ -1,0 +1,110 @@
+/* DocFlowHub design tokens — IDE redesign, dark theme.
+   Source: design handoff "DocFlowHub Design System" (values are final).
+   A light theme later = one [data-bs-theme="light"] block overriding these. */
+
+:root,
+[data-bs-theme="dark"] {
+    /* Surfaces */
+    --dfh-bg: #1e1f22;               /* content, editor, tables */
+    --dfh-bg-panel: #2b2d30;         /* tool windows, title bar, status bar, inspector */
+    --dfh-bg-sunken: #18191b;        /* document preview, empty areas */
+    --dfh-bg-hover: #25262a;         /* row hover, active editor tab */
+    --dfh-bg-control: #393b40;       /* active segment, filter tokens, chips, workspace pill */
+    --dfh-bg-filler: #232427;        /* diff filler, dropzone, preview stripes */
+    --dfh-selection: #253859;        /* selected row / tree node, bulk bar */
+
+    /* Borders */
+    --dfh-border: #393b40;           /* panel dividers, table header borders */
+    --dfh-border-subtle: #2b2d30;    /* row separators */
+    --dfh-border-strong: #43454a;    /* inputs, compact (24px) buttons, kbd */
+    --dfh-border-button: #4e5157;    /* 28px+ secondary buttons, chips, dashed empty states */
+    --dfh-border-check: #5a5d63;     /* unchecked checkbox / radio, dropzone */
+
+    /* Text */
+    --dfh-text: #dfe1e5;
+    --dfh-text-2: #c9ccd2;           /* secondary text, values */
+    --dfh-text-muted: #9a9da4;       /* labels, meta, placeholders */
+    --dfh-text-disabled: #6f737a;    /* idle dots, "no permission" dashes */
+    --dfh-text-on-selection: #b4b8c0;/* icons and counts inside a selected tree row */
+    --dfh-on-accent: #ffffff;
+
+    /* Action */
+    --dfh-accent: #2f6bde;
+    --dfh-accent-hover: #3b68c4;
+    --dfh-accent-50: rgba(47, 107, 222, 0.5);
+    --dfh-link: #7fa6f5;
+    --dfh-focus-ring: rgba(47, 107, 222, 0.6);
+    --dfh-focus-glow: rgba(47, 107, 222, 0.35);
+
+    /* Semantic */
+    --dfh-ai: oklch(0.78 0.12 295);          /* AI features only */
+    --dfh-ai-fill: oklch(0.72 0.13 295);     /* AI bars and progress */
+    --dfh-ai-skeleton: oklch(0.72 0.13 295 / 0.22);
+    --dfh-ai-tint: oklch(0.72 0.13 295 / 0.12);
+    --dfh-ai-tint-border: oklch(0.72 0.13 295 / 0.4);
+    --dfh-success: oklch(0.80 0.11 150);
+    --dfh-success-fill: oklch(0.72 0.13 150);
+    --dfh-warning: oklch(0.80 0.12 80);
+    --dfh-info: oklch(0.80 0.10 250);
+    --dfh-danger: oklch(0.78 0.12 25);
+    --dfh-danger-solid: oklch(0.55 0.17 25);
+    --dfh-danger-border: oklch(0.65 0.15 25); /* invalid input border */
+    --dfh-danger-tint: oklch(0.55 0.17 25 / 0.16);
+    --dfh-danger-tint-border: oklch(0.55 0.17 25 / 0.5);
+
+    /* Diff */
+    --dfh-diff-del: oklch(0.70 0.13 25 / 0.16);
+    --dfh-diff-add: oklch(0.70 0.13 150 / 0.16);
+    --dfh-diff-text: #d2d4d9;
+
+    /* File-type labels (text colour only, never a tile background) */
+    --dfh-ft-pdf: oklch(0.74 0.13 25);
+    --dfh-ft-md: oklch(0.74 0.13 295);
+    --dfh-ft-docx: oklch(0.74 0.13 250);
+    --dfh-ft-xlsx: oklch(0.74 0.13 150);
+    --dfh-ft-txt: oklch(0.78 0.02 260);
+
+    /* Misc */
+    --dfh-skeleton: #2b2d30;
+    --dfh-skeleton-strong: #2f3135;
+    --dfh-avatar-bg: #43454a;
+    --dfh-avatar-me: oklch(0.55 0.09 200);
+    --dfh-logo-ink: #dfe1e5;
+    --dfh-logo-accent: #3574f0;
+
+    /* Elevation: only things above content get a shadow */
+    --dfh-shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --dfh-shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --dfh-backdrop: rgba(10, 11, 12, 0.92);
+
+    /* Type */
+    --dfh-font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --dfh-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    /* Sizes */
+    --dfh-titlebar-h: 40px;
+    --dfh-statusbar-h: 24px;
+    --dfh-rail-w: 40px;
+    --dfh-toolwindow-w: 232px;
+    --dfh-adminnav-w: 208px;
+    --dfh-inspector-w: 288px;
+    --dfh-tabs-h: 34px;
+    --dfh-panel-header-h: 32px;
+    --dfh-toolbar-h: 40px;
+    --dfh-row-h: 32px;
+    --dfh-row-header-h: 28px;
+    --dfh-tree-row-h: 24px;
+    --dfh-control-sm: 24px;
+    --dfh-control: 28px;
+    --dfh-control-lg: 32px;
+
+    /* Radii */
+    --dfh-radius-xs: 2px;
+    --dfh-radius-chip: 3px;
+    --dfh-radius: 4px;
+    --dfh-radius-lg: 6px;
+    --dfh-radius-xl: 8px;
+
+    /* Motion */
+    --dfh-transition: color 0.12s ease-out, background-color 0.12s ease-out, border-color 0.12s ease-out;
+}

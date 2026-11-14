@@ -1,0 +1,55 @@
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
+@* Command palette (design 7k, S15-1) and the keyboard shortcut list (S15-3). palette.js fills the
+   results from /Search?handler=Palette; actions and navigation are listed in the script. *@
+<div class="modal dfh-palette-modal" id="dfh-palette" tabindex="-1" aria-label="Command palette"
+     data-admin="@(User.IsInRole("Administrator") ? "true" : "false")" data-demo="@(DemoMode.IsEnabled ? "true" : "false")">
+    <div class="modal-dialog dfh-palette-dialog">
+        <div class="modal-content dfh-palette">
+            <div class="dfh-palette-input">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="text" id="dfh-palette-q" role="combobox" aria-expanded="true" aria-controls="dfh-palette-list"
+                       aria-autocomplete="list" autocomplete="off" spellcheck="false"
+                       placeholder="Search documents, folders and actions" aria-label="Search documents, folders and actions" />
+                <kbd class="dfh-kbd">Esc</kbd>
+            </div>
+            <div class="dfh-palette-results" id="dfh-palette-list" role="listbox" aria-label="Results"></div>
+            <div class="dfh-palette-footer" aria-hidden="true">
+                <span><kbd class="dfh-kbd">↑</kbd><kbd class="dfh-kbd">↓</kbd> navigate</span>
+                <span><kbd class="dfh-kbd">↵</kbd> open</span>
+                <span><kbd class="dfh-kbd">Ctrl ↵</kbd> new tab</span>
+                <span class="dfh-spacer"></span>
+                <span><kbd class="dfh-kbd">?</kbd> shortcuts</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="dfh-shortcuts" tabindex="-1" aria-labelledby="dfh-shortcuts-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="dfh-shortcuts-title">Keyboard shortcuts</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="dfh-shortcut-list">
+                    <dt><kbd class="dfh-kbd">Ctrl K</kbd></dt><dd>Command palette</dd>
+                    <dt><kbd class="dfh-kbd">/</kbd></dt><dd>Search documents</dd>
+                    <dt><kbd class="dfh-kbd">U</kbd></dt><dd>Upload a document</dd>
+                    <dt><kbd class="dfh-kbd">?</kbd></dt><dd>This list</dd>
+                    <dt><kbd class="dfh-kbd">Esc</kbd></dt><dd>Close a dialog, menu or panel</dd>
+                </dl>
+                <h3 class="dfh-shortcut-head">In the documents table</h3>
+                <dl class="dfh-shortcut-list">
+                    <dt><kbd class="dfh-kbd">↑</kbd> <kbd class="dfh-kbd">↓</kbd></dt><dd>Previous / next row</dd>
+                    <dt><kbd class="dfh-kbd">↵</kbd></dt><dd>Open the document</dd>
+                    <dt><kbd class="dfh-kbd">Space</kbd></dt><dd>Select the row (checkbox)</dd>
+                    <dt><kbd class="dfh-kbd">M</kbd></dt><dd>Move…</dd>
+                    <dt><kbd class="dfh-kbd">F2</kbd></dt><dd>Edit details</dd>
+                    <dt><kbd class="dfh-kbd">Del</kbd></dt><dd>Delete…</dd>
+                    <dt><kbd class="dfh-kbd">Shift F10</kbd></dt><dd>Row menu</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

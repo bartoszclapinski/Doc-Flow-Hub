@@ -1,0 +1,140 @@
+@model FolderBrowserView
+@* Main column of the project / folder pages (design 8b): toolbar, then subfolders above documents. *@
+@{
+    var v = Model.View;
+    var p = v.Project;
+    var folderId = v.Folder?.Id;
+    var demoTip = "Read-only demo — changes are disabled";
+    var placeName = v.Folder?.Name ?? p.Name;
+}
+<div class="dfh-toolbar dfh-toolbar--bordered">
+    <nav class="dfh-breadcrumb" aria-label="Location">
+        @if (v.Folder == null)
+        {
+            <span class="dfh-breadcrumb-current" aria-current="page">@p.Name</span>
+        }
+        else
+        {
+            <a href="@WorkspaceLinks.Project(p.Id)">@p.Name</a>
+            @foreach (var (id, name) in v.Path)
+            {
+                <span class="dfh-breadcrumb-sep" aria-hidden="true">/</span>
+                if (id == folderId)
+                {
+                    <span class="dfh-breadcrumb-current" aria-current="page">@name</span>
+                }
+                else
+                {
+                    <a href="@WorkspaceLinks.Folder(p.Id, id)">@name</a>
+                }
+            }
+        }
+    </nav>
+    <span class="dfh-toolbar-count">@v.Subfolders.Count @Dfh.Noun(v.Subfolders.Count, "folder") · @v.Documents.Count @Dfh.Noun(v.Documents.Count, "document")</span>
+    <span class="dfh-spacer"></span>
+    @if (Model.IsDemo)
+    {
+        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-folder-plus" aria-hidden="true"></i>New folder</button></span>
+        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-primary btn-sm" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload here</button></span>
+    }
+    else
+    {
+        <a class="btn btn-secondary btn-sm" asp-page="/Folders/Create" asp-route-ProjectId="@p.Id" asp-route-ParentFolderId="@folderId"><i class="bi bi-folder-plus" aria-hidden="true"></i>New folder</a>
+        <a class="btn btn-primary btn-sm" asp-page="/Documents/Upload" asp-route-projectId="@p.Id" asp-route-folderId="@folderId"><i class="bi bi-upload" aria-hidden="true"></i>Upload here</a>
+    }
+</div>
+
+@if (v.Subfolders.Count == 0 && v.Documents.Count == 0)
+{
+    @* 7a *@
+    <div class="dfh-fill dfh-fill--pad">
+        <div class="dfh-empty dfh-empty--box">
+            <i class="bi bi-folder2" aria-hidden="true"></i>
+            <span class="dfh-empty-title">This @(v.Folder != null ? "folder" : "project") is empty</span>
+            <p>Upload a document into <span class="dfh-mono">@placeName</span>, or add a folder to organise it.</p>
+            @if (!Model.IsDemo)
+            {
+                <div class="dfh-empty-actions">
+                    <a class="btn btn-primary" asp-page="/Documents/Upload" asp-route-projectId="@p.Id" asp-route-folderId="@folderId"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+                    <a class="btn btn-secondary" asp-page="/Folders/Create" asp-route-ProjectId="@p.Id" asp-route-ParentFolderId="@folderId"><i class="bi bi-folder-plus" aria-hidden="true"></i>New folder</a>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="dfh-fill">
+        <table class="dfh-table" aria-label="Contents of @placeName">
+            <colgroup>
+                <col />
+                <col style="width: 84px" />
+                <col style="width: 96px" />
+                <col style="width: 148px" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col" class="is-num">Size</th>
+                    <th scope="col">Modified</th>
+                    <th scope="col">Last change</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var f in v.Subfolders)
+                {
+                    var href = WorkspaceLinks.Folder(p.Id, f.Id);
+                    <tr data-dfh-href="@href" class="@(f.IsArchived ? "is-archived" : null)">
+                        <td>
+                            <div class="dfh-name-cell">
+                                <span class="dfh-filetype dfh-type-icon"><i class="bi @(f.IsArchived ? "bi-archive" : "bi-folder2")" aria-hidden="true"></i></span>
+                                <a class="dfh-cell-link dfh-ellipsis" href="@href">@f.Name</a>
+                                @if (f.IsArchived)
+                                {
+                                    <span class="dfh-mono dfh-muted">archived</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="is-muted is-num">@(f.ItemCount == 0 ? "empty" : $"{f.ItemCount} {Dfh.Noun(f.ItemCount, "item")}")</td>
+                        <td class="is-muted" title="@Dfh.Timestamp(f.ModifiedAt)">@Dfh.Relative(f.ModifiedAt)</td>
+                        <td>
+                            <span class="dfh-person" title="Created by @f.CreatorName">
+                                <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(f.CreatorName)</span>
+                                <span class="dfh-ellipsis">@f.CreatorName</span>
+                            </span>
+                        </td>
+                    </tr>
+                }
+                @foreach (var d in v.Documents)
+                {
+                    var (label, kind) = Dfh.FileType(d.FileType);
+                    var href = $"/Documents/Details/{d.Id}";
+                    <tr data-dfh-href="@href">
+                        <td>
+                            <div class="dfh-name-cell">
+                                <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                                <a class="dfh-cell-link dfh-ellipsis" href="@href">@d.Title</a>
+                                @if (d.Version != null)
+                                {
+                                    <span class="dfh-mono dfh-muted">v@(d.Version)</span>
+                                }
+                                @if (d.HasSummary)
+                                {
+                                    <i class="bi bi-stars dfh-ai-star" title="AI summary available" aria-label="AI summary available"></i>
+                                }
+                            </div>
+                        </td>
+                        <td class="is-mono is-muted is-num">@Dfh.FileSize(d.FileSize)</td>
+                        <td class="is-muted" title="@Dfh.Timestamp(d.ModifiedAt)">@Dfh.Relative(d.ModifiedAt)</td>
+                        <td>
+                            <span class="dfh-person">
+                                <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(d.LastChangeBy)</span>
+                                <span class="dfh-ellipsis">@d.LastChangeBy</span>
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

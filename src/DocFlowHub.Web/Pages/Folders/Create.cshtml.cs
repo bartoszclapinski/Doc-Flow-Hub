@@ -1,25 +1,26 @@
+using System.ComponentModel.DataAnnotations;
+using DocFlowHub.Core.Models.Projects.Dto;
+using DocFlowHub.Core.Models.Workspace;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
+using DocFlowHub.Web.Ui;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using DocFlowHub.Core.Models.Projects.Dto;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Folders;
 
+/// <summary>New folder in one of the user's projects (decision S13-9).</summary>
 [Authorize]
 public class CreateModel : PageModel
 {
+    private readonly IWorkspaceBrowserService _workspace;
     private readonly IFolderService _folderService;
-    private readonly IProjectService _projectService;
 
-    public CreateModel(IFolderService folderService, IProjectService projectService)
+    public CreateModel(IWorkspaceBrowserService workspace, IFolderService folderService)
     {
+        _workspace = workspace;
         _folderService = folderService;
-        _projectService = projectService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -29,150 +30,73 @@ public class CreateModel : PageModel
     public int? ParentFolderId { get; set; }
 
     [BindProperty]
-    [Required(ErrorMessage = "Folder name is required.")]
-    [StringLength(100, ErrorMessage = "Folder name cannot exceed 100 characters.")]
+    [Required(ErrorMessage = "Enter a name")]
+    [StringLength(100, ErrorMessage = "The name can have at most 100 characters")]
     public string Name { get; set; } = string.Empty;
 
     [BindProperty]
-    [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
+    [StringLength(500, ErrorMessage = "The description can have at most 500 characters")]
     public string? Description { get; set; }
 
-    public ProjectDto? Project { get; set; }
-    public IEnumerable<FolderDto> AvailableParentFolders { get; set; } = new List<FolderDto>();
-    public string? ErrorMessage { get; set; }
+    public ProjectInspector Project { get; private set; } = new();
+    public IReadOnlyList<ProjectFolderRow> Parents => Project.Folders.Where(f => !f.IsArchived).ToList();
+    public string? ErrorMessage { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        if (ProjectId <= 0)
+        var load = await LoadAsync();
+        if (load != null) return load;
+        if (ParentFolderId != null && Parents.All(f => f.Id != ParentFolderId))
         {
-            return RedirectToPage("/Projects/Index");
+            ParentFolderId = null;
         }
-
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return RedirectToPage("/Account/Login");
-        }
-
-        try
-        {
-            // Get project details
-            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, userId);
-            if (!projectResult.Succeeded)
-            {
-                ErrorMessage = "Project not found or access denied.";
-                return RedirectToPage("/Projects/Index");
-            }
-
-            Project = projectResult.Data;
-
-            // Get available parent folders
-            var foldersResult = await _folderService.GetFoldersInProjectAsync(
-                ProjectId, 
-                userId,
-                new FolderFilter { Status = "Active" });
-
-            if (foldersResult.Succeeded)
-            {
-                AvailableParentFolders = foldersResult.Data.Items;
-            }
-
-            // Set parent folder if specified in route
-            if (ParentFolderId.HasValue && ParentFolderId.Value > 0)
-            {
-                var parentFolder = AvailableParentFolders.FirstOrDefault(f => f.Id == ParentFolderId.Value);
-                if (parentFolder == null)
-                {
-                    ErrorMessage = "Specified parent folder not found or access denied.";
-                    return RedirectToPage("/Folders/Index", new { projectId = ProjectId });
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = "An error occurred while loading the page.";
-            // Log the exception in production
-        }
-
         return Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (ProjectId <= 0)
+        var load = await LoadAsync();
+        if (load != null) return load;
+        if (ParentFolderId != null && Parents.All(f => f.Id != ParentFolderId))
         {
-            return RedirectToPage("/Projects/Index");
+            ModelState.AddModelError(nameof(ParentFolderId), "Choose a folder of this project.");
+        }
+        if (!ModelState.IsValid)
+        {
+            ErrorMessage = ModelState[nameof(ParentFolderId)]?.Errors.FirstOrDefault()?.ErrorMessage;
+            return Page();
         }
 
+        var result = await _folderService.CreateFolderAsync(new CreateFolderRequest
+        {
+            Name = Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(),
+            ProjectId = ProjectId,
+            ParentFolderId = ParentFolderId,
+        }, User.GetUserId()!);
+        if (!result.Succeeded || result.Data == null)
+        {
+            ErrorMessage = result.Error ?? "The folder could not be created.";
+            return Page();
+        }
+
+        TempData["ToastSuccess"] = $"Created folder \"{result.Data.Name}\"";
+        return Redirect(WorkspaceLinks.Folder(ProjectId, result.Data.Id));
+    }
+
+    private async Task<IActionResult?> LoadAsync()
+    {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
             return RedirectToPage("/Account/Login");
         }
-
-        try
+        var project = ProjectId > 0 ? await _workspace.GetProjectAsync(userId, ProjectId) : null;
+        if (project == null || !project.Succeeded || project.Data == null)
         {
-            // Validate project access
-            var projectResult = await _projectService.GetProjectByIdAsync(ProjectId, userId);
-            if (!projectResult.Succeeded)
-            {
-                ErrorMessage = "Project not found or access denied.";
-                return RedirectToPage("/Projects/Index");
-            }
-
-            Project = projectResult.Data;
-
-            // Validate parent folder if specified
-            if (ParentFolderId.HasValue && ParentFolderId.Value > 0)
-            {
-                var foldersResult = await _folderService.GetFoldersInProjectAsync(
-                    ProjectId, 
-                    userId,
-                    new FolderFilter { Status = "Active" });
-
-                if (foldersResult.Succeeded)
-                {
-                    AvailableParentFolders = foldersResult.Data.Items;
-                    var parentFolder = AvailableParentFolders.FirstOrDefault(f => f.Id == ParentFolderId.Value);
-                    if (parentFolder == null)
-                    {
-                        ModelState.AddModelError("ParentFolderId", "Specified parent folder not found or access denied.");
-                    }
-                }
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
-
-            // Create folder
-            var createRequest = new CreateFolderRequest
-            {
-                Name = Name.Trim(),
-                Description = Description?.Trim(),
-                ProjectId = ProjectId,
-                ParentFolderId = ParentFolderId
-            };
-
-            var result = await _folderService.CreateFolderAsync(createRequest, userId);
-
-            if (result.Succeeded)
-            {
-                TempData["SuccessMessage"] = $"Folder '{Name}' created successfully.";
-                return RedirectToPage("/Folders/Index", new { projectId = ProjectId });
-            }
-            else
-            {
-                ErrorMessage = result.Error ?? "Failed to create folder.";
-                return Page();
-            }
+            return RedirectToPage("/Projects/Index");
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = "An error occurred while creating the folder.";
-            // Log the exception in production
-            return Page();
-        }
+        Project = project.Data;
+        return null;
     }
-} 
+}

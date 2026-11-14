@@ -1,195 +1,58 @@
 @page "/Teams/Edit/{id:int}"
 @model DocFlowHub.Web.Pages.Teams.EditModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = $"Edit Team - {Model.TeamName}";
+    var t = Model.Team;
+    ViewData["Title"] = $"Settings · {t.Name}";
+    ViewData["FullBleed"] = true;
+    var nameError = ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage;
+    var demo = DemoMode.IsEnabled;
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Dashboard</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="/Teams/Index">Teams</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="/Teams/Details" asp-route-id="@Model.TeamId">@Model.TeamName</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Edit</li>
-        </ol>
-    </nav>
-
-    <!-- Page Header -->
-    <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <h1 class="page-title"><div class="page-icon">✏️</div> Edit Team</h1>
-            <p class="page-subtitle">Update team information or delete the team</p>
-        </div>
-        <a asp-page="/Teams/Details" asp-route-id="@Model.TeamId" class="cancel-btn">
-            <i class="bi bi-arrow-left"></i> Back to Team
-        </a>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="validation-summary" style="display:block;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--success-color);">
-            <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="validation-summary" style="display:block;">
-            <i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage
-        </div>
-    }
-
-    <div class="row g-4">
-        <!-- Edit Team Form -->
-        <div class="col-lg-8">
-            <div class="form-card">
-                <h5 class="section-heading"><i class="bi bi-info-circle"></i> Team Information</h5>
-                <form method="post" asp-page-handler="Update" class="needs-validation" novalidate>
-                    <input asp-for="TeamId" type="hidden" />
-
-                    <div class="form-group full-width">
-                        <label asp-for="Name" class="form-label"><i class="bi bi-tag"></i> Team Name</label>
-                        <input asp-for="Name" class="form-input" placeholder="Enter team name" maxlength="100" required>
-                        <span asp-validation-for="Name" class="validation-message"></span>
-                        <div class="form-hint">Choose a descriptive name for your team (max 100 characters)</div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label asp-for="Description" class="form-label"><i class="bi bi-card-text"></i> Description</label>
-                        <textarea asp-for="Description" class="form-textarea" rows="4"
-                                  placeholder="Enter team description (optional)" maxlength="500"></textarea>
-                        <span asp-validation-for="Description" class="validation-message"></span>
-                        <div class="form-hint">Describe the purpose and goals of your team (max 500 characters)</div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="submit-btn loading-btn">
-                            <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                            <i class="bi bi-check-lg"></i>
-                            <span class="btn-text">Update Team</span>
-                        </button>
-                        <a asp-page="/Teams/Details" asp-route-id="@Model.TeamId" class="cancel-btn">
-                            <i class="bi bi-x-lg"></i> Cancel
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Danger Zone + Info -->
-        <div class="col-lg-4">
-            <div class="content-card danger-zone">
-                <h5 class="section-heading text-danger"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
-                <p class="text-muted small mb-3">
-                    Once you delete a team, there is no going back. This permanently removes the team and all its
-                    data including member relationships.
-                </p>
-                <button type="button" class="btn-modern-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                    <i class="bi bi-trash"></i> Delete Team
-                </button>
-            </div>
-
-            <div class="content-card mt-3">
-                <h6 class="section-heading"><i class="bi bi-info-circle"></i> Team Information</h6>
-                <div class="info-line"><i class="bi bi-person-badge"></i> <span class="text-muted">Owner:</span> <span>You</span></div>
-                <div class="info-line"><i class="bi bi-hash"></i> <span class="text-muted">Team ID:</span> <span class="font-monospace">@Model.TeamId</span></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal (Bootstrap) -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title text-danger">
-                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Team Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-octagon me-2"></i><strong>This action is irreversible!</strong>
-                </div>
-                <p>Are you sure you want to delete <strong>"@Model.TeamName"</strong>?</p>
-                <p class="text-muted small">This will:</p>
-                <ul class="text-muted small">
-                    <li>Permanently delete the team</li>
-                    <li>Remove all team member relationships</li>
-                    <li>Unshare all team documents (documents remain with original owners)</li>
-                    <li>Remove team from all associated activities</li>
-                </ul>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cancel
-                </button>
-                <form method="post" asp-page-handler="Delete" class="d-inline">
-                    <input asp-for="TeamId" type="hidden" />
-                    <button type="submit" class="btn btn-danger loading-btn">
-                        <span class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                        <i class="bi bi-trash me-1"></i>
-                        <span class="btn-text">Delete Team</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Styles {
-<style>
-    /* .section-heading and its .text-danger variant live in components.css */
-    .danger-zone { border-color: rgba(239, 68, 68, 0.4); }
-    .info-line { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-primary); }
-    .info-line i { color: var(--accent-color); }
-    .btn-modern-danger {
-        display: inline-flex; align-items: center; gap: 0.5rem;
-        padding: 0.7rem 1.25rem; border: none; border-radius: 10px;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #fff;
-        font-weight: 600; cursor: pointer; transition: all 0.2s ease;
-    }
-    .btn-modern-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(239,68,68,0.3); color: #fff; }
-</style>
-}
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            function applyLoading(loadingBtn, label) {
-                if (!loadingBtn) return;
-                const spinner = loadingBtn.querySelector('.spinner-border');
-                const btnText = loadingBtn.querySelector('.btn-text');
-                const icon = loadingBtn.querySelector('.bi');
-                if (spinner) spinner.classList.remove('d-none');
-                if (icon) icon.classList.add('d-none');
-                if (btnText) btnText.textContent = label;
-                loadingBtn.disabled = true;
+<div class="dfh-column">
+    <partial name="_EditorTabs" model='new EditorTabsView(t.Name, Icon: "bi-gear", Suffix: "settings")' />
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
-
-            document.querySelectorAll('.needs-validation').forEach(form => {
-                form.addEventListener('submit', function (event) {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    } else {
-                        applyLoading(form.querySelector('.loading-btn'), 'Updating...');
+            <form class="dfh-modal-stack" method="post" asp-page-handler="Update" asp-route-id="@t.Id" data-dfh-busy="Saving…">
+                <partial name="_TeamFields" model="(Model.Name, Model.Description, nameError)" />
+                <div class="dfh-empty-actions">
+                    @if (demo)
+                    {
+                        <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled>Save</button></span>
                     }
-                    form.classList.add('was-validated');
-                });
-            });
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    }
+                    <a class="btn btn-secondary" href="/Teams/Details/@t.Id">Cancel</a>
+                </div>
+            </form>
 
-            const deleteForm = document.querySelector('form[asp-page-handler="Delete"]');
-            if (deleteForm) {
-                deleteForm.addEventListener('submit', function () {
-                    applyLoading(deleteForm.querySelector('.loading-btn'), 'Deleting...');
-                });
-            }
-        });
-    </script>
-}
+            <section class="dfh-form-section dfh-danger-zone" aria-labelledby="danger-title">
+                <h2 class="dfh-form-heading" id="danger-title">Danger zone</h2>
+                <p class="dfh-insp-note m-0">
+                    Deleting the team removes its @t.MemberCount @Dfh.Noun(t.MemberCount, "membership").
+                    @if (t.DocumentCount > 0)
+                    {
+                        <text>The @t.DocumentCount @Dfh.Noun(t.DocumentCount, "document") shared with it stay with their owners and become private.</text>
+                    }
+                </p>
+                <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id"
+                      data-dfh-confirm-title="Delete team “@t.Name”?" data-dfh-confirm="Members lose access to the documents shared with the team; the documents stay with their owners. It can't be undone." data-dfh-confirm-button="Delete team">
+                    @if (demo)
+                    {
+                        <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-outline-danger btn-sm" disabled><i class="bi bi-trash" aria-hidden="true"></i>Delete team</button></span>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash" aria-hidden="true"></i>Delete team</button>
+                    }
+                </form>
+            </section>
+        </div>
+    </div>
+</div>

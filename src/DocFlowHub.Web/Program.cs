@@ -83,8 +83,21 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Error status codes without a body (404, 403 …) get a page in the app's style.
+app.UseStatusCodePagesWithReExecute("/StatusCode/{0}");
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// The UI is English and posts numbers with a dot ("0.7"). Without a fixed culture the form binder
+// used the server's culture, so on a Polish (or German, …) host every decimal field failed validation.
+var english = new System.Globalization.CultureInfo("en-US");
+app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationOptions
+{
+    DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture(english),
+    SupportedCultures = new[] { english },
+    SupportedUICultures = new[] { english },
+});
 
 app.UseRouting();
 

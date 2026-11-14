@@ -1,0 +1,37 @@
+@* Layout without the app chrome: sign in, register and error pages for signed-out visitors.
+   Content is centred on the page background under the logo. *@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DocFlowHub - document management" />
+    <title>@ViewData["Title"] - DocFlowHub</title>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/dfh/fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/bootstrap.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/responsive.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="dfh-auth">
+    <a class="dfh-auth-brand" asp-area="" asp-page="/Index" aria-label="DocFlowHub home">
+        <partial name="_LogoMark" model="32" />
+        <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
+    </a>
+    @RenderBody()
+    <partial name="_AuthFooter" />
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/dfh/shell.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/auth.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

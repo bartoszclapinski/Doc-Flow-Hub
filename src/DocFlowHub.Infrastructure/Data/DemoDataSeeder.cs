@@ -157,7 +157,7 @@ public static class DemoDataSeeder
                     Description = $"{rootName} in {project.Name}",
                     ProjectId = project.Id,
                     Level = 0,
-                    Path = $"/{project.Name}/{rootName}",
+                    Path = $"/{rootName}", // same format as FolderService: the project is not part of the path
                     CreatedByUserId = project.OwnerId,
                     CreatedAt = project.CreatedAt.AddDays(rng.Next(1, 20)),
                 };
@@ -208,7 +208,9 @@ public static class DemoDataSeeder
         const int documentCount = 52;
         for (var i = 0; i < documentCount; i++)
         {
-            var createdAt = now.AddDays(-rng.Next(1, 360)).AddHours(-rng.Next(0, 24));
+            // Skewed towards recent dates so the dashboard's "last 7 days" has activity.
+            var ageDays = 1 + Math.Pow(rng.NextDouble(), 2) * 359;
+            var createdAt = now.AddDays(-ageDays).AddHours(-rng.Next(0, 24));
             var ownerId = owners[rng.Next(owners.Length)];
             var fileType = fileTypes[rng.Next(fileTypes.Length)];
             var title = $"{titleNouns[rng.Next(titleNouns.Length)]} {2024 + rng.Next(0, 2)}-{rng.Next(1, 13):D2}";
@@ -240,11 +242,13 @@ public static class DemoDataSeeder
                 IsDeleted = false,
             };
 
-            // 1–3 versions, dates increasing from the document's creation.
+            // 1–3 versions, dates increasing from the document's creation; none in the future.
             var versionCount = rng.Next(1, 4);
             var versionDate = createdAt;
             for (var v = 1; v <= versionCount; v++)
             {
+                if (versionDate > now) break;
+                doc.UpdatedAt = versionDate;
                 doc.Versions.Add(new DocumentVersion
                 {
                     VersionNumber = v,
@@ -259,8 +263,7 @@ public static class DemoDataSeeder
                     CreatedBy = ownerId,
                     FileHash = Guid.NewGuid().ToString("N"),
                 });
-                versionDate = versionDate.AddDays(rng.Next(3, 40));
-                if (versionDate > now) versionDate = now;
+                versionDate = versionDate.AddDays(rng.Next(1, 40)).AddHours(rng.Next(0, 24));
             }
 
             // 2 distinct categories each (avoid a duplicate join row).
@@ -295,7 +298,46 @@ public static class DemoDataSeeder
                     KeyPoints = keyPointsTemplates[rng.Next(keyPointsTemplates.Length)],
                     AIModel = "claude-haiku-4-5",
                     ConfidenceScore = Math.Round(0.75 + rng.NextDouble() * 0.2, 2),
-                    GeneratedAt = doc.CreatedAt.AddHours(rng.Next(1, 48)),
+                    GeneratedAt = Min(doc.CreatedAt.AddHours(rng.Next(1, 48)), now),
+                });
+            }
+        }
+        await context.SaveChangesAsync();
+
+        // ---- Saved AI comparisons of consecutive versions (decision D4) -------
+        // The demo blocks POSTs, so the Compare page can only show comparisons that already exist.
+        var comparisonTemplates = new[]
+        {
+            ("Figures updated with the latest actuals; the conclusions are unchanged.",
+             "• Revenue table updated with final numbers\n• Totals in the appendix corrected\n• Wording of the summary tightened",
+             ChangeType.ContentModification, ChangeSignificance.Medium),
+            ("A new section was added and an outdated note removed.",
+             "• Added a section on regional results\n• Removed the note about pending estimates\n• Updated the table of contents",
+             ChangeType.ContentAddition | ChangeType.ContentDeletion, ChangeSignificance.High),
+            ("Formatting and structure changes only; the content is the same.",
+             "• Tables reformatted\n• Headings renumbered\n• Typos fixed",
+             ChangeType.StructuralChange, ChangeSignificance.Low),
+        };
+        foreach (var doc in documents)
+        {
+            var ordered = doc.Versions.OrderBy(v => v.VersionNumber).ToList();
+            for (var i = 1; i < ordered.Count; i++)
+            {
+                var (summary, changes, type, significance) = comparisonTemplates[rng.Next(comparisonTemplates.Length)];
+                context.VersionComparisons.Add(new VersionComparison
+                {
+                    DocumentId = doc.Id,
+                    FromVersionId = ordered[i - 1].Id,
+                    ToVersionId = ordered[i].Id,
+                    ChangeSummary = summary,
+                    DetailedChanges = changes,
+                    ChangeType = type,
+                    Significance = significance,
+                    AIModel = "claude-haiku-4-5",
+                    ConfidenceScore = Math.Round(0.8 + rng.NextDouble() * 0.15, 2),
+                    TokensUsed = rng.Next(900, 2400),
+                    ProcessingTimeMs = rng.Next(1200, 4200),
+                    GeneratedAt = Min(ordered[i].CreatedAt.AddMinutes(rng.Next(5, 600)), now),
                 });
             }
         }
@@ -519,4 +561,6 @@ public static class DemoDataSeeder
 
         return user;
     }
+
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
 }

@@ -1,0 +1,35 @@
+@{
+    var page = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    bool Starts(params string[] prefixes) => prefixes.Any(p => page.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+    var items = new[]
+    {
+        (Page: "/Index", Icon: "bi-grid-1x2", Label: "Dashboard", Active: page == "/Index"),
+        (Page: "/Documents/Index", Icon: "bi-files", Label: "Documents", Active: Starts("/Documents")),
+        (Page: "/Projects/Index", Icon: "bi-kanban", Label: "Projects", Active: Starts("/Projects", "/Folders")),
+        (Page: "/Teams/Index", Icon: "bi-people", Label: "Teams", Active: Starts("/Teams")),
+    };
+}
+<nav class="dfh-rail" aria-label="Main">
+    @foreach (var item in items)
+    {
+        <a class="dfh-rail-btn @(item.Active ? "is-active" : "")" asp-area="" asp-page="@item.Page"
+           title="@item.Label" aria-label="@item.Label" aria-current="@(item.Active ? "page" : null)">
+            <i class="bi @item.Icon" aria-hidden="true"></i>
+        </a>
+    }
+    <span class="dfh-rail-spacer"></span>
+    @if (User.IsInRole("Administrator"))
+    {
+        var adminActive = Starts("/Admin");
+        <a class="dfh-rail-btn @(adminActive ? "is-active" : "")" asp-area="" asp-page="/Admin/Index"
+           title="Admin" aria-label="Admin" aria-current="@(adminActive ? "page" : null)">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        </a>
+    }
+    @{ var settingsActive = Starts("/Settings", "/Account/Manage"); }
+    <a class="dfh-rail-btn @(settingsActive ? "is-active" : "")" asp-area="" asp-page="/Settings/AI"
+       title="Settings" aria-label="Settings" aria-current="@(settingsActive ? "page" : null)">
+        <i class="bi bi-gear" aria-hidden="true"></i>
+    </a>
+</nav>

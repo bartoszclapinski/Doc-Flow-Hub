@@ -1,76 +1,61 @@
 @page
 @model DocFlowHub.Web.Pages.Admin.Roles.IndexModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = "Role Management";
-    ViewData["ActivePage"] = "Roles";
-    Layout = "../_AdminLayout";
+    ViewData["Title"] = "Roles";
+    ViewData["FullBleed"] = true;
+    Layout = "_AdminLayout";
+    var roles = Model.Roles.OrderBy(r => r.Name).ToList();
 }
 
-<div class="row mb-4">
-    <div class="col">
-        <h2>@ViewData["Title"]</h2>
-    </div>
-    <div class="col text-end">
-        <a asp-page="./Create" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Create New Role
-        </a>
-    </div>
-</div>
-
-<partial name="_StatusMessage" />
-
-<div class="card">
-    <div class="card-body">
-        @if (!Model.Roles.Any())
+<div class="dfh-column">
+    <header class="dfh-page-header">
+        <h1>Roles</h1>
+        <span class="dfh-mono dfh-muted">@roles.Count</span>
+        <span class="dfh-spacer"></span>
+        @if (DemoMode.IsEnabled)
         {
-            <div class="alert alert-info">
-                No roles have been created yet.
-            </div>
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled><i class="bi bi-plus-lg" aria-hidden="true"></i>New role</button></span>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Users</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var role in Model.Roles)
-                        {
-                            <tr>
-                                <td>@role.Name</td>
-                                <td>@(string.IsNullOrEmpty(role.Description) ? "-" : role.Description)</td>
-                                <td>@role.UsersCount</td>
-                                <td>@role.CreatedAt.ToString("g")</td>
-                                <td>
-                                    <div class="btn-group">
-                                        <a asp-page="./Edit" asp-route-id="@role.Id" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a asp-page="./Delete" asp-route-id="@role.Id" class="btn btn-sm btn-outline-danger @(role.UsersCount > 0 ? "disabled" : "")"
-                                           title="@(role.UsersCount > 0 ? "Cannot delete role with assigned users" : "Delete role")">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                        <a asp-page="./Users" asp-route-id="@role.Id" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-users"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <a class="btn btn-primary" asp-page="/Admin/Roles/Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New role</a>
         }
+    </header>
+    <div class="dfh-fill">
+        <table class="dfh-table" aria-label="Roles">
+            <colgroup>
+                <col />
+                <col style="width: 84px" />
+                <col style="width: 112px" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">Role</th>
+                    <th scope="col" class="is-num">Users</th>
+                    <th scope="col">Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in roles)
+                {
+                    <tr data-dfh-href="/Admin/Roles/Details/@r.Id">
+                        <td>
+                            <span class="dfh-name-cell">
+                                <i class="bi bi-person-badge dfh-muted" aria-hidden="true"></i>
+                                <a class="dfh-cell-link" href="/Admin/Roles/Details/@r.Id">@r.Name</a>
+                                @if (r.Name == "Administrator")
+                                {
+                                    <span class="dfh-chip dfh-chip--warning">protected</span>
+                                }
+                            </span>
+                        </td>
+                        <td class="is-mono is-num">@r.UsersCount</td>
+                        <td class="is-mono is-muted">@r.CreatedAt.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="dfh-table-note">Roles decide what a user can do in the whole app. Today only <b>Administrator</b> changes anything: it opens this admin area. Other roles are labels.</p>
     </div>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-} 
