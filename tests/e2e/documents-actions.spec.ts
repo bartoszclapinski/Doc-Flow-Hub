@@ -120,3 +120,26 @@ test('generate summary reports the outcome (an error toast when no AI key is con
   await expect(page).toHaveURL(/tab=ai/);
   await expect(page.locator('.dfh-toast')).toContainText(/AI summary ready|could not|summary/i);
 });
+
+// Sprint 15: row menu and row shortcuts.
+test('row shortcuts: Del opens delete, M opens move; the row menu deletes', async ({ page }) => {
+  const row = page.locator('tbody tr[data-owner="1"]').first();
+  const id = (await row.getAttribute('data-id'))!;
+  const title = (await row.getAttribute('data-title'))!;
+  await row.click();
+  await page.keyboard.press('m');
+  await expect(page.locator('#dfh-move-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#dfh-move-modal')).toBeHidden();
+  await row.focus();
+  await page.keyboard.press('Delete');
+  await expect(page.locator('#dfh-delete-modal .modal-title')).toHaveText(`Delete “${title}”?`);
+  await page.locator('#dfh-delete-modal [data-bs-dismiss="modal"].btn').click();
+  await expect(page.locator('#dfh-delete-modal')).toBeHidden();
+
+  await row.locator('td').nth(3).click({ button: 'right' });
+  await page.locator('.dfh-menu .dropdown-item', { hasText: 'Delete…' }).click();
+  await page.locator('#dfh-delete-modal button[type="submit"]').click();
+  await expect(page.locator('.dfh-toast')).toContainText(`Deleted "${title}"`);
+  await expect(page.locator(`tbody tr[data-id="${id}"]`)).toHaveCount(0);
+});

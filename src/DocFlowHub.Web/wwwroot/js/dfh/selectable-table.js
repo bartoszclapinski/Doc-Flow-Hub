@@ -95,6 +95,9 @@
             if (row && openUrl) window.location.href = fill(openUrl, row.dataset.id);
         }
 
+        // Other scripts (row menu, shortcuts) select rows through the table element.
+        table.dfhSelect = select;
+
         const tbody = table.tBodies[0];
         tbody.addEventListener('click', function (e) {
             if (e.target.closest('a, button, input, label')) return;

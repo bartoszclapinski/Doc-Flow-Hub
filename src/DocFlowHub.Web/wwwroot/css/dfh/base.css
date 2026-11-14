@@ -34,6 +34,9 @@ code, kbd, pre, samp { font-family: var(--dfh-font-mono); }
     color: var(--dfh-text-muted);
     border: 1px solid var(--dfh-border-strong);
     border-radius: var(--dfh-radius-chip);
+    background: transparent;
+    box-shadow: none;
+    white-space: nowrap;
 }
 
 /* Focus: 2px accent ring with a 2px gap in the background colour. Never remove without a replacement. */

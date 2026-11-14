@@ -337,7 +337,7 @@
     else
     {
         <div class="dfh-fill" data-dfh-doc-scroll>
-            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table
+            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table data-demo="@(Model.IsDemo ? "true" : "false")"
                    data-inspector-url="/Documents?handler=Inspector&id={id}" data-open-url="/Documents/Details/{id}"
                    aria-label="Documents" aria-multiselectable="true">
                 <colgroup>
@@ -370,6 +370,7 @@
                         var first = i == 0;
                         <tr class="@(first ? "is-selected" : null)" data-id="@doc.Id" data-title="@doc.Title" data-ext="@label" data-kind="@kind"
                             data-location="@(doc.Location ?? "No project")" data-owner="@(doc.IsOwner ? "1" : "0")"
+                            data-version="@(doc.Version ?? 0)" data-ai="@(doc.HasSummary ? "1" : "0")" data-size="@Dfh.FileSize(doc.FileSize)@(doc.Version != null ? $" · v{doc.Version}" : "")"
                             tabindex="@(first ? "0" : "-1")" aria-selected="@(first ? "true" : "false")">
                             <td class="dfh-check-cell">
                                 <input type="checkbox" class="form-check-input dfh-check dfh-row-check" value="@doc.Id" aria-label="Select @doc.Title" />
@@ -382,6 +383,7 @@
                                     {
                                         <i class="bi bi-stars dfh-ai-star" title="AI summary available" aria-label="AI summary available"></i>
                                     }
+                                    <button type="button" class="dfh-row-menu-btn" data-dfh-row-menu aria-haspopup="menu" aria-label="Actions for @doc.Title" tabindex="-1"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                                 </div>
                             </td>
                             <td class="is-muted">
@@ -439,4 +441,6 @@
     <script src="~/js/dfh/selectable-table.js" asp-append-version="true"></script>
     <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/documents.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/menu.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/document-menu.js" asp-append-version="true"></script>
 }

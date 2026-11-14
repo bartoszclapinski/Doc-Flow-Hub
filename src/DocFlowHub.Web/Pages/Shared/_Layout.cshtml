@@ -88,6 +88,11 @@
 
     @await Component.InvokeAsync("StatusBar")
 
+    @if (signedIn)
+    {
+        <partial name="_Palette" />
+    }
+
     <div id="dfh-toast-stack" class="dfh-toast-stack" aria-live="polite"></div>
     @if (serverToasts.Count > 0)
     {
@@ -100,6 +105,10 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/dfh/shell.js" asp-append-version="true"></script>
+    @if (signedIn)
+    {
+        <script src="~/js/dfh/palette.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

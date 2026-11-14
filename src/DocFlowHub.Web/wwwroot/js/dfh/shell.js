@@ -1,4 +1,5 @@
-// Shell behaviour for the IDE redesign: toasts, Ctrl K, opt-in busy forms, server messages.
+// Shell behaviour for the IDE redesign: toasts, confirm dialog, opt-in busy forms, server messages.
+// The command palette and keyboard shortcuts live in palette.js.
 (function () {
     'use strict';
 
@@ -255,15 +256,4 @@
         }
     });
 
-    // Ctrl K / Cmd K: jump to the global search (the command palette arrives in Sprint 15).
-    document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-            const search = document.getElementById('dfh-global-search');
-            if (search) {
-                e.preventDefault();
-                search.focus();
-                search.select();
-            }
-        }
-    });
 })();
