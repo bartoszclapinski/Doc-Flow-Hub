@@ -98,6 +98,14 @@ public class EditModel : PageModel
                 return NotFound();
             }
 
+            // The app authorizes the admin area by the "Administrator" name: renaming it would lock every admin out.
+            if (existingRole.Name == "Administrator" && Input.Name != "Administrator")
+            {
+                ModelState.AddModelError("Input.Name", "The Administrator role can't be renamed.");
+                await LoadRoleDataById(Input.Id);
+                return Page();
+            }
+
             // Check if new name conflicts with existing role (unless it's the same role)
             if (existingRole.Name != Input.Name)
             {

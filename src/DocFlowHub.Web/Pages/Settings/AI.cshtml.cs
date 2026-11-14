@@ -1,392 +1,141 @@
+using System.ComponentModel.DataAnnotations;
+using DocFlowHub.Core.Models.Admin.Browser;
 using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.ComponentModel.DataAnnotations;
 
 namespace DocFlowHub.Web.Pages.Settings;
 
+/// <summary>
+/// Settings · AI (design 3f, decision S14-10). Every stored preference stays editable, but only the
+/// preferred model and the summary / comparison switches change what the app does today; the others
+/// carry a "Saved, not applied yet" note. Usage: this month and the last 14 days from the AI log.
+/// </summary>
 [Authorize]
 public class AIModel : PageModel
 {
-    private readonly IAISettingsService _aiSettingsService;
-    private readonly IAIUsageTrackingService _usageTrackingService;
+    private readonly IAISettingsService _settings;
+    private readonly IAIUsageTrackingService _usage;
+    private readonly IAdminBrowserService _browser;
 
-    public AIModel(IAISettingsService aiSettingsService, IAIUsageTrackingService usageTrackingService)
+    public AIModel(IAISettingsService settings, IAIUsageTrackingService usage, IAdminBrowserService browser)
     {
-        _aiSettingsService = aiSettingsService;
-        _usageTrackingService = usageTrackingService;
+        _settings = settings;
+        _usage = usage;
+        _browser = browser;
     }
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
 
-    public AISettings? CurrentSettings { get; set; }
-    public UserUsageStatistics? UsageStatistics { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? TestResult { get; set; }
+    public UserAiUsage Usage { get; private set; } = new();
+    public int DailyLimit { get; private set; }
+    public string? ErrorMessage { get; private set; }
 
     public class InputModel
     {
-        [Display(Name = "Preferred AI Model")]
-        public Core.Models.AI.AIModel PreferredModel { get; set; } = Core.Models.AI.AIModelHelper.GetDefaultModel();
+        public Core.Models.AI.AIModel PreferredModel { get; set; } = AIModelHelper.GetDefaultModel();
 
-        [Display(Name = "Custom OpenAI API Key")]
-        [StringLength(500, ErrorMessage = "API key cannot exceed 500 characters")]
+        [StringLength(500, ErrorMessage = "The key can have at most 500 characters")]
         public string? CustomApiKey { get; set; }
 
-        [Display(Name = "Use Custom API Key")]
         public bool UseCustomApiKey { get; set; }
-
-        [Display(Name = "Enable AI Summarization")]
         public bool SummarizationEnabled { get; set; } = true;
-
-        [Display(Name = "Enable Version Comparison")]
         public bool VersionComparisonEnabled { get; set; } = true;
-
-        [Display(Name = "Auto-generate summaries on upload")]
         public bool AutoSummarizeOnUpload { get; set; } = true;
 
-        [Display(Name = "Quality Preference")]
-        [Range(0.1, 1.0, ErrorMessage = "Quality must be between 0.1 and 1.0")]
+        [Range(0.1, 1.0, ErrorMessage = "Between 0.1 and 1.0")]
         public double QualityPreference { get; set; } = 0.7;
 
-        [Display(Name = "Max Tokens per Operation")]
-        [Range(100, 10000, ErrorMessage = "Token limit must be between 100 and 10000")]
+        [Range(100, 10000, ErrorMessage = "Between 100 and 10,000")]
         public int MaxTokensPerOperation { get; set; } = 2000;
 
-        [Display(Name = "Comparison Sensitivity")]
-        [Range(0.1, 1.0, ErrorMessage = "Sensitivity must be between 0.1 and 1.0")]
+        [Range(0.1, 1.0, ErrorMessage = "Between 0.1 and 1.0")]
         public double ComparisonSensitivity { get; set; } = 0.5;
 
-        [Display(Name = "Cache Duration (hours)")]
-        [Range(1, 48, ErrorMessage = "Cache duration must be between 1 and 48 hours")]
+        public bool EnableCaching { get; set; } = true;
+
+        [Range(1, 48, ErrorMessage = "Between 1 and 48 hours")]
         public int CacheDurationHours { get; set; } = 24;
     }
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
+        var userId = User.GetUserId()!;
+        var settings = await _settings.GetUserSettingsAsync(userId);
+        if (settings.Succeeded && settings.Data != null)
         {
-            return NotFound("User not found.");
+            var s = settings.Data;
+            Input = new InputModel
+            {
+                PreferredModel = s.PreferredModel,
+                CustomApiKey = s.CustomApiKey,
+                UseCustomApiKey = s.UseCustomApiKey,
+                SummarizationEnabled = s.SummarizationEnabled,
+                VersionComparisonEnabled = s.VersionComparisonEnabled,
+                AutoSummarizeOnUpload = s.AutoSummarizeOnUpload,
+                QualityPreference = s.QualityPreference,
+                MaxTokensPerOperation = s.MaxTokensPerOperation,
+                ComparisonSensitivity = s.ComparisonSensitivity,
+                EnableCaching = s.EnableCaching,
+                CacheDurationHours = s.CacheDurationHours,
+            };
         }
-
-        try
+        else
         {
-            // Load AI settings
-            var settingsResult = await _aiSettingsService.GetUserSettingsAsync(userId);
-            if (settingsResult.Succeeded && settingsResult.Data != null)
-            {
-                CurrentSettings = settingsResult.Data;
-                Input = new InputModel
-                {
-                    PreferredModel = settingsResult.Data.PreferredModel,
-                    CustomApiKey = settingsResult.Data.CustomApiKey,
-                    UseCustomApiKey = settingsResult.Data.UseCustomApiKey,
-                    SummarizationEnabled = settingsResult.Data.SummarizationEnabled,
-                    VersionComparisonEnabled = settingsResult.Data.VersionComparisonEnabled,
-                    AutoSummarizeOnUpload = settingsResult.Data.AutoSummarizeOnUpload,
-                    QualityPreference = settingsResult.Data.QualityPreference,
-                    MaxTokensPerOperation = settingsResult.Data.MaxTokensPerOperation,
-                    ComparisonSensitivity = settingsResult.Data.ComparisonSensitivity,
-                    CacheDurationHours = settingsResult.Data.CacheDurationHours
-                };
-            }
-            else
-            {
-                ErrorMessage = settingsResult.Error ?? "Unable to load AI settings.";
-            }
-
-            // Load usage statistics
-            var usageResult = await _usageTrackingService.GetUserUsageStatisticsAsync(userId, DateTime.UtcNow.AddDays(-30));
-            if (usageResult.Succeeded && usageResult.Data != null)
-            {
-                UsageStatistics = usageResult.Data;
-            }
+            ErrorMessage = settings.Error ?? "Your AI settings could not be loaded.";
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error loading settings: {ex.Message}";
-        }
-
+        await LoadUsageAsync(userId);
         return Page();
     }
 
     public async Task<IActionResult> OnPostSaveSettingsAsync()
     {
+        var userId = User.GetUserId()!;
         if (!ModelState.IsValid)
         {
-            await LoadCurrentSettingsAsync();
+            await LoadUsageAsync(userId);
             return Page();
         }
 
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
+        var result = await _settings.UpdateUserSettingsAsync(userId, new AISettings
         {
-            return NotFound("User not found.");
-        }
-
-        try
-        {
-            var settings = new AISettings
-            {
-                UserId = userId,
-                PreferredModel = Input.PreferredModel,
-                CustomApiKey = Input.CustomApiKey,
-                UseCustomApiKey = Input.UseCustomApiKey,
-                SummarizationEnabled = Input.SummarizationEnabled,
-                VersionComparisonEnabled = Input.VersionComparisonEnabled,
-                AutoSummarizeOnUpload = Input.AutoSummarizeOnUpload,
-                QualityPreference = Input.QualityPreference,
-                MaxTokensPerOperation = Input.MaxTokensPerOperation,
-                ComparisonSensitivity = Input.ComparisonSensitivity,
-                CacheDurationHours = Input.CacheDurationHours,
-                IsActive = true,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            var result = await _aiSettingsService.UpdateUserSettingsAsync(userId, settings);
-            if (result.Succeeded)
-            {
-                TempData["StatusMessage"] = "AI settings have been saved successfully.";
-                return RedirectToPage();
-            }
-            else
-            {
-                ErrorMessage = result.Error ?? "Failed to save settings.";
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error saving settings: {ex.Message}";
-        }
-
-        await LoadCurrentSettingsAsync();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostTestApiKeyAsync()
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(Input.CustomApiKey))
-        {
-            return new JsonResult(new { 
-                success = false, 
-                message = "Invalid API key or user.",
-                details = "Please provide a valid API key starting with 'sk-'"
-            });
-        }
-
-        // Basic format validation
-        if (!Input.CustomApiKey.StartsWith("sk-") || Input.CustomApiKey.Length < 20)
-        {
-            return new JsonResult(new { 
-                success = false, 
-                message = "Invalid API key format.",
-                details = "OpenAI API keys should start with 'sk-' and be at least 20 characters long."
-            });
-        }
-
-        try
-        {
-            var result = await _aiSettingsService.ValidateApiKeyAsync(Input.CustomApiKey);
-            if (result.Succeeded && result.Data)
-            {
-                // Get available models from the actual enum
-                var availableModels = GetAvailableModels()
-                    .Select(m => new { 
-                        name = m.Model.ToApiString(), 
-                        displayName = m.Name, 
-                        description = m.Description,
-                        isRecommended = m.Model == Core.Models.AI.AIModel.ClaudeHaiku45 || m.Model == Core.Models.AI.AIModel.ClaudeSonnet5
-                    })
-                    .ToList();
-
-                return new JsonResult(new { 
-                    success = true, 
-                    message = "API key is valid and working!",
-                    details = "Connection to OpenAI established successfully.",
-                    connectionStatus = "Connected",
-                    modelCount = availableModels.Count,
-                    availableModels = availableModels,
-                    timestamp = DateTime.UtcNow.ToString("HH:mm:ss")
-                });
-            }
-            else
-            {
-                return new JsonResult(new { 
-                    success = false, 
-                    message = result.Error ?? "API key validation failed.",
-                    details = "Please verify your API key and ensure it has proper permissions.",
-                    connectionStatus = "Failed"
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { 
-                success = false, 
-                message = $"Connection error: {ex.Message}",
-                details = "Unable to connect to OpenAI API. Please check your internet connection and API key.",
-                connectionStatus = "Error"
-            });
-        }
+            UserId = userId,
+            PreferredModel = Input.PreferredModel,
+            CustomApiKey = string.IsNullOrWhiteSpace(Input.CustomApiKey) ? null : Input.CustomApiKey.Trim(),
+            UseCustomApiKey = Input.UseCustomApiKey,
+            SummarizationEnabled = Input.SummarizationEnabled,
+            VersionComparisonEnabled = Input.VersionComparisonEnabled,
+            AutoSummarizeOnUpload = Input.AutoSummarizeOnUpload,
+            QualityPreference = Input.QualityPreference,
+            MaxTokensPerOperation = Input.MaxTokensPerOperation,
+            ComparisonSensitivity = Input.ComparisonSensitivity,
+            EnableCaching = Input.EnableCaching,
+            CacheDurationHours = Input.CacheDurationHours,
+            IsActive = true,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        if (result.Succeeded) TempData["ToastSuccess"] = "AI settings saved";
+        else TempData["ToastError"] = result.Error ?? "The settings could not be saved.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostResetToDefaultsAsync()
     {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return NotFound("User not found.");
-        }
-
-        try
-        {
-            var result = await _aiSettingsService.ResetToDefaultsAsync(userId);
-            if (result.Succeeded)
-            {
-                TempData["StatusMessage"] = "AI settings have been reset to defaults.";
-                return RedirectToPage();
-            }
-            else
-            {
-                ErrorMessage = result.Error ?? "Failed to reset settings.";
-            }
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error resetting settings: {ex.Message}";
-        }
-
-        await LoadCurrentSettingsAsync();
-        return Page();
+        var result = await _settings.ResetToDefaultsAsync(User.GetUserId()!);
+        if (result.Succeeded) TempData["ToastSuccess"] = "AI settings reset to the defaults";
+        else TempData["ToastError"] = result.Error ?? "The settings could not be reset.";
+        return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnGetUsageTrendsAsync(int days = 30)
+    private async Task LoadUsageAsync(string userId)
     {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return new JsonResult(new { success = false, message = "User not found." });
-        }
-
-        try
-        {
-            var result = await _usageTrackingService.GetUsageTrendsAsync(userId, days);
-            if (result.Succeeded && result.Data != null)
-            {
-                return new JsonResult(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        labels = result.Data.TrendLabels.ToArray(),
-                        datasets = new object[]
-                        {
-                            new
-                            {
-                                label = "API Calls",
-                                data = result.Data.DailyOperations.Values.ToArray(),
-                                borderColor = "rgb(75, 192, 192)",
-                                backgroundColor = "rgba(75, 192, 192, 0.2)",
-                                tension = 0.1
-                            },
-                            new
-                            {
-                                label = "Daily Cost ($)",
-                                data = result.Data.DailyCosts.Values.ToArray(),
-                                borderColor = "rgb(255, 99, 132)",
-                                backgroundColor = "rgba(255, 99, 132, 0.2)",
-                                tension = 0.1,
-                                yAxisID = "y1"
-                            }
-                        }
-                    }
-                });
-            }
-            else
-            {
-                return new JsonResult(new { success = false, message = result.Error ?? "Failed to load usage trends." });
-            }
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, message = $"Error: {ex.Message}" });
-        }
+        var usage = await _browser.GetUserAiUsageAsync(userId);
+        if (usage.Succeeded && usage.Data != null) Usage = usage.Data;
+        var limits = await _usage.GetUserRateLimitsAsync(userId);
+        DailyLimit = limits.Succeeded && limits.Data != null ? limits.Data.DailyOperationLimit : 0;
     }
-
-    public async Task<IActionResult> OnGetCostBreakdownAsync(int days = 30)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return new JsonResult(new { success = false, message = "User not found." });
-        }
-
-        try
-        {
-            var result = await _usageTrackingService.GetUserCostBreakdownAsync(userId, DateTime.UtcNow.AddDays(-days));
-            if (result.Succeeded && result.Data != null)
-            {
-                return new JsonResult(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        labels = result.Data.CostByOperationType.Keys.ToArray(),
-                        datasets = new object[]
-                        {
-                            new
-                            {
-                                data = result.Data.CostByOperationType.Values.ToArray(),
-                                backgroundColor = new[]
-                                {
-                                    "rgba(255, 99, 132, 0.8)",
-                                    "rgba(54, 162, 235, 0.8)",
-                                    "rgba(255, 205, 86, 0.8)",
-                                    "rgba(75, 192, 192, 0.8)",
-                                    "rgba(153, 102, 255, 0.8)"
-                                },
-                                borderWidth = 1
-                            }
-                        }
-                    },
-                    totalCost = result.Data.TotalCost,
-                    period = $"Last {days} days"
-                });
-            }
-            else
-            {
-                return new JsonResult(new { success = false, message = result.Error ?? "Failed to load cost breakdown." });
-            }
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, message = $"Error: {ex.Message}" });
-        }
-    }
-
-    private async Task LoadCurrentSettingsAsync()
-    {
-        var userId = User.GetUserId();
-        if (!string.IsNullOrEmpty(userId))
-        {
-            var settingsResult = await _aiSettingsService.GetUserSettingsAsync(userId);
-            if (settingsResult.Succeeded)
-            {
-                CurrentSettings = settingsResult.Data;
-            }
-        }
-    }
-
-    public static List<(Core.Models.AI.AIModel Model, string Name, string Description)> GetAvailableModels()
-    {
-        return AIModelHelper.GetAllModels()
-            .Select(model => (model, model.ToDisplayName(), model.GetCostDescription()))
-            .ToList();
-    }
-} 
+}

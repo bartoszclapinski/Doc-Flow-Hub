@@ -1,352 +1,228 @@
+using DocFlowHub.Core.Identity;
+using DocFlowHub.Core.Models.Admin;
+using DocFlowHub.Core.Models.Admin.Browser;
+using DocFlowHub.Core.Models.Common;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
-using DocFlowHub.Core.Identity;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Core.Models.Admin;
-using DocFlowHub.Core.Models.Common;
-using DocFlowHub.Web.Extensions;
-using System.ComponentModel.DataAnnotations;
 
 namespace DocFlowHub.Web.Pages.Admin.Users;
 
+/// <summary>
+/// Admin · Users (design 3e, decision S14-3): search with status / role filters, a table with
+/// multi-select and a bulk bar, quick actions per row. Results are toasts after a redirect.
+/// </summary>
 [Authorize(Roles = "Administrator")]
 public class IndexModel : PageModel
 {
-    private readonly IUserManagementService _userManagementService;
-    private readonly IUserActivityService _userActivityService;
-    private readonly IUserSecurityService _userSecurityService;
-    private readonly IUserCommunicationService _userCommunicationService;
+    private const int PageSize = 25;
+
+    // Operations an admin may not run on their own account.
+    private static readonly HashSet<BulkOperationType> NotOnSelf = new()
+    {
+        BulkOperationType.Deactivate, BulkOperationType.Delete, BulkOperationType.LockAccount, BulkOperationType.RemoveRole,
+    };
+
+    private readonly IUserManagementService _users;
+    private readonly IUserCommunicationService _messages;
+    private readonly IAdminBrowserService _admin;
+    private readonly IDemoModeService _demoMode;
     private readonly ILogger<IndexModel> _logger;
 
-    public IndexModel(
-        IUserManagementService userManagementService,
-        IUserActivityService userActivityService,
-        IUserSecurityService userSecurityService,
-        IUserCommunicationService userCommunicationService,
-        ILogger<IndexModel> logger)
+    public IndexModel(IUserManagementService users, IUserCommunicationService messages, IAdminBrowserService admin,
+        IDemoModeService demoMode, ILogger<IndexModel> logger)
     {
-        _userManagementService = userManagementService;
-        _userActivityService = userActivityService;
-        _userSecurityService = userSecurityService;
-        _userCommunicationService = userCommunicationService;
+        _users = users;
+        _messages = messages;
+        _admin = admin;
+        _demoMode = demoMode;
         _logger = logger;
     }
 
-    // Properties for the UI
-    public PagedResult<ApplicationUser> Users { get; set; } = new();
-    public UserManagementStatistics Statistics { get; set; } = new();
-    public List<string> AvailableRoles { get; set; } = new();
-    
-    [BindProperty]
-    public UserManagementFilter Filter { get; set; } = new();
-    
-    [BindProperty]
-    public BulkUserOperation BulkOperation { get; set; } = new();
-    
-    [BindProperty]
-    public string? SendMessageSubject { get; set; }
-    
-    [BindProperty]
-    public string? SendMessageContent { get; set; }
+    [BindProperty(SupportsGet = true, Name = "q")]
+    public string? Search { get; set; }
 
-    [TempData]
-    public string? StatusMessage { get; set; }
+    /// <summary>active, locked, unconfirmed or inactive (no sign-in for 30 days).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Status { get; set; }
 
-    public async Task<IActionResult> OnGetAsync(
-        string? searchTerm = null,
-        UserStatus? status = null,
-        string? role = null,
-        DateTime? registeredAfter = null,
-        DateTime? registeredBefore = null,
-        ActivityLevel? activityLevel = null,
-        string? sortBy = "Name",
-        bool sortDescending = false,
-        int page = 1,
-        int pageSize = 20)
+    [BindProperty(SupportsGet = true)]
+    public string? Role { get; set; }
+
+    /// <summary>Bound from the query in OnGetAsync: a "page" property would bind Razor Pages' own route value.</summary>
+    public int PageNumber { get; private set; } = 1;
+
+    public PagedResult<ApplicationUser> Users { get; private set; } = new();
+    public Dictionary<string, AdminUserRow> Rows { get; private set; } = new();
+    public List<string> AvailableRoles { get; private set; } = new();
+    public bool IsDemo => _demoMode.IsEnabled;
+    public string? CurrentUserId => User.GetUserId();
+
+    public static readonly (string Value, string Label, UserStatus Status)[] Statuses =
     {
-        // Set up filter from query parameters
-        Filter = new UserManagementFilter
+        ("active", "Active", UserStatus.Active),
+        ("locked", "Locked", UserStatus.Locked),
+        ("unconfirmed", "E-mail not confirmed", UserStatus.EmailNotConfirmed),
+        ("inactive", "No sign-in for 30 days", UserStatus.Inactive),
+    };
+
+    public async Task<IActionResult> OnGetAsync([FromQuery] int? page)
+    {
+        PageNumber = Math.Max(1, page ?? 1);
+        var status = Statuses.Where(s => s.Value == Status).Select(s => (UserStatus?)s.Status).FirstOrDefault();
+        Status = status == null ? null : Status;
+        AvailableRoles = await _users.GetAvailableRolesAsync();
+        Role = AvailableRoles.Contains(Role ?? string.Empty) ? Role : null;
+
+        Users = await _users.SearchUsersAsync(new UserManagementFilter
         {
-            SearchTerm = searchTerm,
+            SearchTerm = string.IsNullOrWhiteSpace(Search) ? null : Search.Trim(),
             Status = status,
-            Role = role,
-            RegisteredAfter = registeredAfter,
-            RegisteredBefore = registeredBefore,
-            ActivityLevel = activityLevel,
-            SortBy = sortBy ?? "Name",
-            SortDescending = sortDescending,
-            Page = page,
-            PageSize = pageSize
+            Role = Role,
+            SortBy = "Name",
+            Page = PageNumber,
+            PageSize = PageSize,
+        });
+
+        var rows = await _admin.GetUserRowsAsync(Users.Items.Select(u => u.Id).ToList());
+        if (rows.Succeeded && rows.Data != null) Rows = rows.Data;
+        return Page();
+    }
+
+    /// <summary>Runs one operation on the checked users.</summary>
+    public async Task<IActionResult> OnPostBulkAsync(string operation, List<string> userIds, string? role,
+        string? subject, string? message, string? returnUrl)
+    {
+        var adminId = User.GetUserId()!;
+        if (!Enum.TryParse<BulkOperationType>(operation, out var type))
+        {
+            return Back(returnUrl, error: "Unknown operation.");
+        }
+
+        var ids = userIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        if (NotOnSelf.Contains(type) && ids.Remove(adminId))
+        {
+            TempData["ToastError"] = "Your own account was left out: you can't lock, delete or demote yourself.";
+        }
+        if (ids.Count == 0)
+        {
+            return Back(returnUrl, error: TempData.Peek("ToastError") as string ?? "Select at least one user.");
+        }
+
+        if (type == BulkOperationType.SendMessage)
+        {
+            if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(message))
+            {
+                return Back(returnUrl, error: "Enter a subject and a message.");
+            }
+            var sent = await _messages.SendBulkMessageAsync(ids, adminId, subject.Trim(), message.Trim());
+            return sent.Succeeded
+                ? Back(returnUrl, success: $"Message sent to {ids.Count} {(ids.Count == 1 ? "user" : "users")}")
+                : Back(returnUrl, error: sent.Error ?? "The message could not be sent.");
+        }
+
+        if (type is BulkOperationType.AssignRole or BulkOperationType.RemoveRole && string.IsNullOrWhiteSpace(role))
+        {
+            return Back(returnUrl, error: "Choose a role.");
+        }
+
+        var result = await _users.ExecuteBulkOperationAsync(new BulkUserOperation
+        {
+            Operation = type,
+            UserIds = ids,
+            NewRole = role,
+        }, adminId);
+        if (!result.Succeeded || result.Data == null)
+        {
+            return Back(returnUrl, error: result.Error ?? "The operation failed.");
+        }
+
+        var r = result.Data;
+        var done = $"{Verb(type)} {r.SuccessfulOperations} {(r.SuccessfulOperations == 1 ? "user" : "users")}";
+        if (r.FailedOperations > 0)
+        {
+            _logger.LogWarning("Bulk {Operation}: {Failed} failed: {Errors}", type, r.FailedOperations, string.Join("; ", r.Errors));
+            return Back(returnUrl, success: r.SuccessfulOperations > 0 ? done : null,
+                error: $"{r.FailedOperations} failed: {string.Join("; ", r.Errors.Take(2))}");
+        }
+        return Back(returnUrl, success: done);
+    }
+
+    /// <summary>One action on one user (row menu, user page).</summary>
+    public async Task<IActionResult> OnPostQuickAsync(string userId, string action, string? returnUrl)
+    {
+        var adminId = User.GetUserId()!;
+        if (userId == adminId && action is "deactivate" or "lock")
+        {
+            return Back(returnUrl, error: "You can't lock your own account.");
+        }
+
+        var ids = new List<string> { userId };
+        ServiceResult result = action switch
+        {
+            "activate" => await _users.ActivateUsersAsync(ids, adminId),
+            "deactivate" => await _users.DeactivateUsersAsync(ids, adminId),
+            "lock" => await _users.LockUsersAsync(ids, adminId),
+            "unlock" => await _users.UnlockUsersAsync(ids, adminId),
+            "reset-password" => await _users.ResetUserPasswordAsync(userId, adminId),
+            "confirm-email" => await _users.ConfirmUserEmailAsync(userId, adminId),
+            _ => ServiceResult.Failure("Unknown action."),
         };
-
-        await LoadDataAsync();
-        return Page();
+        var label = action switch
+        {
+            "activate" => "User activated",
+            "deactivate" => "User locked",
+            "lock" => "User locked",
+            "unlock" => "User unlocked",
+            "reset-password" => "Password reset requested",
+            "confirm-email" => "E-mail marked as confirmed",
+            _ => "Done",
+        };
+        return result.Succeeded ? Back(returnUrl, success: label) : Back(returnUrl, error: result.Error ?? "The action failed.");
     }
 
-    public async Task<IActionResult> OnPostSearchAsync()
+    /// <summary>The list URL with one value changed (filters are kept, the page resets).</summary>
+    public string Link(string? q = "\0", string? status = "\0", string? role = "\0", int? page = null)
     {
-        await LoadDataAsync();
-        return Page();
+        var query = new Dictionary<string, string?>
+        {
+            ["q"] = q == "\0" ? Search : q,
+            ["status"] = status == "\0" ? Status : status,
+            ["role"] = role == "\0" ? Role : role,
+            ["page"] = page is > 1 ? page.ToString() : null,
+        };
+        var parts = query.Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value!)}");
+        var qs = string.Join("&", parts);
+        return "/Admin/Users" + (qs.Length > 0 ? "?" + qs : "");
     }
 
-    public async Task<IActionResult> OnPostBulkOperationAsync()
+    private static string Verb(BulkOperationType type) => type switch
     {
-        _logger.LogInformation("Processing bulk operation request");
-        _logger.LogDebug("ModelState validation status: {IsValid}", ModelState.IsValid);
-        _logger.LogDebug("Bulk operation type: {Operation}", BulkOperation?.Operation.ToString() ?? "null");
-        _logger.LogDebug("Target user count: {Count}", BulkOperation?.UserIds?.Count ?? 0);
+        BulkOperationType.Activate => "Activated",
+        BulkOperationType.Deactivate => "Locked",
+        BulkOperationType.Delete => "Deleted",
+        BulkOperationType.AssignRole => "Gave the role to",
+        BulkOperationType.RemoveRole => "Removed the role from",
+        BulkOperationType.LockAccount => "Locked",
+        BulkOperationType.UnlockAccount => "Unlocked",
+        BulkOperationType.SendPasswordReset => "Sent a password reset to",
+        _ => "Updated",
+    };
 
-        // Custom validation for SendMessage operation
-        if (BulkOperation?.Operation == BulkOperationType.SendMessage)
-        {
-            if (string.IsNullOrWhiteSpace(SendMessageSubject))
-                ModelState.AddModelError(nameof(SendMessageSubject), "Subject is required for sending messages.");
-            if (string.IsNullOrWhiteSpace(SendMessageContent))
-                ModelState.AddModelError(nameof(SendMessageContent), "Message content is required for sending messages.");
-        }
-
-        // Remove validation errors for message fields if not sending messages
-        if (BulkOperation?.Operation != BulkOperationType.SendMessage)
-        {
-            ModelState.Remove(nameof(SendMessageSubject));
-            ModelState.Remove(nameof(SendMessageContent));
-        }
-
-        // Remove any potential "Page" validation error
-        ModelState.Remove("Page");
-
-        if (!ModelState.IsValid)
-        {
-            foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-            {
-                _logger.LogWarning("ModelState validation error: {Error}", error.ErrorMessage);
-            }
-            await LoadDataAsync();
-            return Page();
-        }
-
-        try
-        {
-            var adminId = User.GetUserId();
-            
-            // Debug logging
-            _logger.LogInformation("Bulk operation: {Operation}, UserIds count: {Count}, UserIds: {UserIds}", 
-                BulkOperation.Operation, BulkOperation.UserIds.Count, string.Join(", ", BulkOperation.UserIds));
-
-            if (BulkOperation.UserIds.Count == 0)
-            {
-                StatusMessage = "Error: No users selected for bulk operation.";
-                await LoadDataAsync();
-                return Page();
-            }
-
-            var result = await _userManagementService.ExecuteBulkOperationAsync(BulkOperation, adminId);
-
-            if (result.Succeeded)
-            {
-                var bulkResult = result.Data;
-                StatusMessage = $"Bulk operation completed: {bulkResult.SuccessfulOperations} successful, {bulkResult.FailedOperations} failed.";
-                
-                if (bulkResult.Errors.Count > 0)
-                {
-                    StatusMessage += $" Errors: {string.Join("; ", bulkResult.Errors.Take(3))}";
-                    if (bulkResult.Errors.Count > 3)
-                        StatusMessage += "...";
-                }
-
-                _logger.LogInformation("Bulk operation result: Success={Success}, Failed={Failed}, Errors={Errors}", 
-                    bulkResult.SuccessfulOperations, bulkResult.FailedOperations, string.Join(", ", bulkResult.Errors));
-            }
-            else
-            {
-                StatusMessage = $"Error: {result.Error}";
-                _logger.LogError("Bulk operation failed: {Error}", result.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error executing bulk operation");
-            StatusMessage = "An error occurred while executing the bulk operation.";
-        }
-
-        // Clear the bulk operation for next use
-        BulkOperation = new BulkUserOperation();
-        
-        await LoadDataAsync();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostSendMessageAsync()
+    private IActionResult Back(string? returnUrl, string? success = null, string? error = null)
     {
-        if (string.IsNullOrWhiteSpace(SendMessageSubject) || string.IsNullOrWhiteSpace(SendMessageContent))
-        {
-            StatusMessage = "Error: Subject and message content are required.";
-            await LoadDataAsync();
-            return Page();
-        }
-
-        if (!BulkOperation.UserIds.Any())
-        {
-            StatusMessage = "Error: No users selected for messaging.";
-            await LoadDataAsync();
-            return Page();
-        }
-
-        try
-        {
-            var adminId = User.GetUserId();
-            var result = await _userCommunicationService.SendBulkMessageAsync(
-                BulkOperation.UserIds, adminId, SendMessageSubject, SendMessageContent);
-
-            if (result.Succeeded)
-            {
-                StatusMessage = $"Message sent successfully to {BulkOperation.UserIds.Count} users.";
-            }
-            else
-            {
-                StatusMessage = $"Error sending message: {result.Error}";
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending bulk message");
-            StatusMessage = "An error occurred while sending the message.";
-        }
-
-        // Clear form data
-        SendMessageSubject = string.Empty;
-        SendMessageContent = string.Empty;
-        BulkOperation = new BulkUserOperation();
-
-        await LoadDataAsync();
-        return Page();
+        if (success != null) TempData["ToastSuccess"] = success;
+        if (error != null) TempData["ToastError"] = error;
+        return LocalRedirect(!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/Admin/Users");
     }
+}
 
-    public async Task<IActionResult> OnGetUserDetailsAsync(string userId)
-    {
-        try
-        {
-            var userResult = await _userManagementService.GetUserByIdAsync(userId);
-            if (!userResult.Succeeded)
-            {
-                return new JsonResult(new { success = false, error = userResult.Error });
-            }
+/// <summary>Model of the account fields partial of the Create / Edit user forms.</summary>
+public record UserFieldsView(
+    string? Email, string? FirstName, string? LastName, bool EmailConfirmed, bool PasswordRequired,
+    IReadOnlyList<string> AvailableRoles, IReadOnlyList<string> SelectedRoles, bool IsMe);
 
-            var user = userResult.Data;
-            var activityReport = await _userActivityService.GetUserActivityReportAsync(userId);
-            var securityStatus = await _userSecurityService.GetUserSecurityStatusAsync(userId);
-
-            return new JsonResult(new
-            {
-                success = true,
-                user = new
-                {
-                    id = user.Id,
-                    email = user.Email,
-                    firstName = user.FirstName,
-                    lastName = user.LastName,
-                    createdAt = user.CreatedAt,
-                    lastLoginAt = user.LastLoginAt,
-                    emailConfirmed = user.EmailConfirmed,
-                    twoFactorEnabled = user.TwoFactorEnabled,
-                    isLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow
-                },
-                activityMetrics = activityReport.ActivityMetrics,
-                usageStatistics = activityReport.UsageStatistics,
-                securityStatus = securityStatus,
-                recentActivities = activityReport.RecentActivities.Take(10)
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user details for {UserId}", userId);
-            return new JsonResult(new { success = false, error = "Error loading user details" });
-        }
-    }
-
-    public async Task<IActionResult> OnPostQuickActionAsync(string userId, string action)
-    {
-        try
-        {
-            var adminId = User.GetUserId();
-            ServiceResult result;
-
-            switch (action.ToLower())
-            {
-                case "activate":
-                    result = await _userManagementService.ActivateUsersAsync(new List<string> { userId }, adminId);
-                    break;
-                case "deactivate":
-                    result = await _userManagementService.DeactivateUsersAsync(new List<string> { userId }, adminId);
-                    break;
-                case "lock":
-                    result = await _userManagementService.LockUsersAsync(new List<string> { userId }, adminId);
-                    break;
-                case "unlock":
-                    result = await _userManagementService.UnlockUsersAsync(new List<string> { userId }, adminId);
-                    break;
-                case "reset-password":
-                    result = await _userManagementService.ResetUserPasswordAsync(userId, adminId);
-                    break;
-                case "confirm-email":
-                    result = await _userManagementService.ConfirmUserEmailAsync(userId, adminId);
-                    break;
-                default:
-                    return new JsonResult(new { success = false, error = "Unknown action" });
-            }
-
-            if (result.Succeeded)
-            {
-                return new JsonResult(new { success = true, message = $"Action '{action}' completed successfully" });
-            }
-            else
-            {
-                return new JsonResult(new { success = false, error = result.Error });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error executing quick action {Action} for user {UserId}", action, userId);
-            return new JsonResult(new { success = false, error = "Error executing action" });
-        }
-    }
-
-    public async Task<IActionResult> OnGetStatisticsAsync()
-    {
-        try
-        {
-            var statistics = await _userManagementService.GetUserStatisticsAsync();
-            return new JsonResult(new { success = true, data = statistics });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting user statistics");
-            return new JsonResult(new { success = false, error = "Error loading statistics" });
-        }
-    }
-
-    private async Task LoadDataAsync()
-    {
-        try
-        {
-            // Load users with current filter
-            Users = await _userManagementService.SearchUsersAsync(Filter);
-            
-            // Load statistics
-            Statistics = await _userManagementService.GetUserStatisticsAsync();
-            
-            // Load available roles
-            AvailableRoles = await _userManagementService.GetAvailableRolesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading user management data");
-            Users = new PagedResult<ApplicationUser>();
-            Statistics = new UserManagementStatistics();
-            AvailableRoles = new List<string>();
-        }
-    }
-} 
+/// <summary>Model of the quick-actions partial (row menu and user page).</summary>
+public record UserQuickActionsView(string UserId, AdminUserRow? Row, bool IsMe, string ReturnUrl);

@@ -1,0 +1,70 @@
+@model DocFlowHub.Web.Pages.Admin.Users.UserFieldsView
+@* Account fields of the admin Create / Edit user forms ("Input." prefix, like the page models). *@
+@{
+    string? Error(string key) => ViewData.ModelState[$"Input.{key}"]?.Errors.FirstOrDefault()?.ErrorMessage;
+}
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Account</legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field">
+            <span class="dfh-field-label">First name</span>
+            <input name="Input.FirstName" value="@Model.FirstName" class="form-control" maxlength="50" />
+        </label>
+        <label class="dfh-field">
+            <span class="dfh-field-label">Last name</span>
+            <input name="Input.LastName" value="@Model.LastName" class="form-control" maxlength="50" />
+        </label>
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">E-mail</span>
+            <input name="Input.Email" type="email" value="@Model.Email" class="form-control" required />
+            @if (Error("Email") is string emailError)
+            {
+                <span class="field-validation-error">@emailError</span>
+            }
+        </label>
+        <label class="dfh-check-row is-wide">
+            <input type="checkbox" class="form-check-input" name="Input.EmailConfirmed" value="true" checked="@Model.EmailConfirmed" />
+            <input type="hidden" name="Input.EmailConfirmed" value="false" />
+            <span>E-mail confirmed<small>Unconfirmed users can still sign in; it is shown in the users list.</small></span>
+        </label>
+    </div>
+</fieldset>
+
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">@(Model.PasswordRequired ? "Password" : "New password") <span class="dfh-muted">· at least 8 characters with a digit, an upper-case letter and a symbol@(Model.PasswordRequired ? "" : "; leave empty to keep the current one")</span></legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field">
+            <span class="dfh-field-label">Password</span>
+            <input name="Input.@(Model.PasswordRequired ? "Password" : "NewPassword")" type="password" class="form-control" autocomplete="new-password" required="@Model.PasswordRequired" />
+            @if (Error(Model.PasswordRequired ? "Password" : "NewPassword") is string pwError)
+            {
+                <span class="field-validation-error">@pwError</span>
+            }
+        </label>
+        <label class="dfh-field">
+            <span class="dfh-field-label">Confirm password</span>
+            <input name="Input.ConfirmPassword" type="password" class="form-control" autocomplete="new-password" required="@Model.PasswordRequired" />
+            @if (Error("ConfirmPassword") is string confirmError)
+            {
+                <span class="field-validation-error">@confirmError</span>
+            }
+        </label>
+    </div>
+</fieldset>
+
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Roles</legend>
+    <div class="dfh-toggle-chips" role="group" aria-label="Roles">
+        @foreach (var role in Model.AvailableRoles)
+        {
+            <label class="dfh-toggle-chip">
+                <input type="checkbox" name="Input.SelectedRoles" value="@role" checked="@Model.SelectedRoles.Contains(role)" />
+                <span>@role</span>
+            </label>
+        }
+    </div>
+    @if (Model.IsMe)
+    {
+        <p class="dfh-insp-note m-0">This is your account: keep the Administrator role, or you lose access to this area.</p>
+    }
+</fieldset>

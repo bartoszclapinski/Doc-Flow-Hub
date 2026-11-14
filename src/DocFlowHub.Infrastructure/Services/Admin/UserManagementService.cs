@@ -70,6 +70,14 @@ public class UserManagementService : IUserManagementService
                 }
             }
 
+            // Role filter (it used to be ignored).
+            if (!string.IsNullOrWhiteSpace(filter.Role))
+            {
+                var role = filter.Role;
+                query = query.Where(u => _context.UserRoles.Any(ur => ur.UserId == u.Id &&
+                    _context.Roles.Any(r => r.Id == ur.RoleId && r.Name == role)));
+            }
+
             // Apply date range filters
             if (filter.RegisteredAfter.HasValue)
             {

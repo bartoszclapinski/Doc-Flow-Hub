@@ -1,0 +1,37 @@
+@model string
+@* Settings tree tool window (designs 3f / 8e, decision S14-9). Model = the active leaf: profile, password or ai. *@
+@{
+    var groups = new (string Label, (string Key, string Href, string Text)[] Items)[]
+    {
+        ("Account", new[] { ("profile", "/Account/Manage", "Profile"), ("password", "/Account/Manage/ChangePassword", "Password") }),
+        ("AI", new[] { ("ai", "/Settings/AI", "Models & features") }),
+    };
+}
+<aside class="dfh-toolwindow dfh-settings-tree" aria-label="Settings">
+    <label class="dfh-search dfh-search--tree">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" class="dfh-search-input" placeholder="Search settings" aria-label="Search settings" autocomplete="off" data-dfh-settings-filter />
+    </label>
+    <ul class="dfh-tree" aria-label="Settings">
+        @foreach (var (label, items) in groups)
+        {
+            <li aria-expanded="true">
+                <div class="dfh-tree-row" style="--level: 0">
+                    <button type="button" class="dfh-tree-toggle" data-dfh-tree-toggle aria-label="Expand or collapse @label"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    <span class="dfh-tree-name">@label</span>
+                </div>
+                <ul role="group">
+                    @foreach (var (key, href, text) in items)
+                    {
+                        var active = key == Model;
+                        <li data-dfh-settings-item="@text.ToLowerInvariant() @label.ToLowerInvariant()">
+                            <a class="dfh-tree-row dfh-tree-row--leaf@(active ? " is-selected" : "")" href="@href" aria-current="@(active ? "page" : null)" style="--level: 1">
+                                <span class="dfh-tree-name">@text</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </li>
+        }
+    </ul>
+</aside>

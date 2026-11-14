@@ -55,7 +55,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(
         string? q, string? type, string? owner, int? category, int? project, int? folder, int? team,
-        string? sort, string? dir, int? page)
+        string? sort, string? dir, [FromQuery] int? page)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))

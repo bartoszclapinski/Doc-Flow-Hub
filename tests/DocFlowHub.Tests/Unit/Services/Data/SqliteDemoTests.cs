@@ -271,6 +271,54 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
     }
 
     [Fact]
+    public async Task UserSearch_FiltersByRoleAndStatus()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var users = Get<IUserManagementService>(scope);
+
+        var admins = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Role = "Administrator", PageSize = 50 });
+        admins.Items.Select(u => u.Email).Should().Contain(DemoAccounts.AdminEmail).And.NotContain(DemoAccounts.UserEmail);
+
+        var locked = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Status = Core.Models.Admin.UserStatus.Locked });
+        locked.TotalItems.Should().Be(0, "nobody is locked in the demo");
+        var active = await users.SearchUsersAsync(new Core.Models.Admin.UserManagementFilter { Status = Core.Models.Admin.UserStatus.Active });
+        active.TotalItems.Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task AdminScreens_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var admin = Get<IAdminBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+        var adminId = await UserIdAsync(scope, DemoAccounts.AdminEmail);
+
+        var nav = await admin.GetNavStatsAsync();
+        nav.Succeeded.Should().BeTrue(nav.Error);
+        nav.Data!.Users.Should().BeGreaterThanOrEqualTo(2);
+
+        var rows = await admin.GetUserRowsAsync(new[] { userId, adminId });
+        rows.Succeeded.Should().BeTrue(rows.Error);
+        rows.Data![adminId].IsAdministrator.Should().BeTrue();
+        rows.Data[userId].StorageBytes.Should().BeGreaterThan(0);
+
+        (await admin.GetUserDetailsAsync(userId)).Succeeded.Should().BeTrue();
+
+        foreach (var days in new[] { 7, 30, 90 })
+        {
+            var analytics = await admin.GetAnalyticsAsync(days);
+            analytics.Succeeded.Should().BeTrue(analytics.Error);
+            analytics.Data!.UploadsPerDay.Should().HaveCount(days);
+        }
+        var ninety = (await admin.GetAnalyticsAsync(90)).Data!;
+        ninety.AiRequests.Should().BeGreaterThan(0);
+        ninety.AiCost.Should().BeGreaterThan(0);
+        ninety.TopStorage.Should().NotBeEmpty();
+
+        (await admin.GetUserAiUsageAsync(userId)).Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task WorkspaceScreens_RunOnSqlite()
     {
         using var scope = _fixture.Services.CreateScope();
