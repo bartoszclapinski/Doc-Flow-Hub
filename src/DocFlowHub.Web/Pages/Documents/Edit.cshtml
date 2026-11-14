@@ -1,303 +1,164 @@
 @page "/Documents/Edit/{id:int}"
 @model DocFlowHub.Web.Pages.Documents.EditModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = $"Edit - {Model.Document?.Title ?? "Document"}";
+    var d = Model.Doc;
+    ViewData["Title"] = $"Edit · {d.Title}";
+    ViewData["FullBleed"] = true;
+    var (label, kind) = Dfh.FileType(d.FileType);
+    var current = d.Current;
+    var next = (current?.Number ?? 0) + 1;
+    var types = string.Join(" ", Model.AllowedTypes.Select(t => t.TrimStart('.')));
+    var demo = DemoMode.IsEnabled;
+    var demoTip = "Read-only demo — changes are disabled";
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="./Index">Documents</a></li>
-            @if (Model.Document != null)
+@section Inspector {
+    <aside class="dfh-inspector dfh-inspector--320" aria-label="Document">
+        <div class="dfh-panel-header is-inspector"><span class="dfh-panel-title">Document</span></div>
+        <div class="dfh-insp-section">
+            <div class="dfh-insp-identity">
+                <span class="dfh-filetype dfh-filetype--lg dfh-filetype--@kind">@label</span>
+                <h2 class="dfh-insp-title">@d.Title</h2>
+                <span class="dfh-insp-path">@(d.Location ?? "No project")</span>
+            </div>
+            <dl class="dfh-kv dfh-kv--side">
+                <dt>Owner</dt>
+                <dd>@d.OwnerName@(d.IsOwner ? " (you)" : "")</dd>
+                <dt>Workspace</dt>
+                <dd>@(d.TeamName ?? "Private")</dd>
+                <dt>Version</dt>
+                <dd class="dfh-mono">@(current != null ? $"v{current.Number}" : "—")@(current?.Hash != null ? $" · {current.Hash}" : "")</dd>
+                <dt>Size</dt>
+                <dd class="dfh-mono">@Dfh.FileSize(d.FileSize)</dd>
+                <dt>Modified</dt>
+                <dd title="@Dfh.Timestamp(d.ModifiedAt)">@Dfh.Relative(d.ModifiedAt)</dd>
+            </dl>
+        </div>
+        <section class="dfh-version-list" aria-label="History">
+            <div class="dfh-version-head"><span class="dfh-version-title">History</span></div>
+            <ol class="dfh-versions">
+                @for (var i = 0; i < Math.Min(4, d.Versions.Count); i++)
+                {
+                    var v = d.Versions[i];
+                    var message = v.Message ?? (v.Number == 1 ? "Initial upload" : "No description");
+                    <li class="@(i == 0 ? "is-current" : null)">
+                        <span class="dfh-dot @(i == 0 ? "dfh-dot--accent" : "dfh-dot--past")" aria-hidden="true"></span>
+                        <span class="dfh-mono">v@(v.Number)</span>
+                        <span class="dfh-ellipsis@(v.Message == null ? " dfh-muted" : "")" title="@message · @v.Author">@message</span>
+                        <span class="dfh-muted" title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span>
+                    </li>
+                }
+            </ol>
+        </section>
+    </aside>
+}
+
+<div class="dfh-column">
+    <partial name="_EditorTabs" model='new EditorTabsView(d.Title, d.FileType, d.Id, Icon: "bi-pencil", Suffix: "edit")' />
+
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
             {
-                <li class="breadcrumb-sep">/</li>
-                <li><a asp-page="./Details" asp-route-id="@Model.Document.Id">@Model.Document.Title</a></li>
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Edit</li>
-        </ol>
-    </nav>
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title"><div class="page-icon">✏️</div> Edit Document</h1>
-        <p class="page-subtitle">Update document information or upload a new version</p>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="alert alert-danger" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            @Model.ErrorMessage
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-    {
-        <div class="alert alert-success" role="alert">
-            <i class="bi bi-check-circle-fill"></i>
-            @Model.SuccessMessage
-        </div>
-    }
-
-    @if (Model.Document != null)
-    {
-        <div class="row">
-            <!-- Document Metadata Edit -->
-            <div class="col-lg-8">
-                <div class="form-card mb-4">
-                    <h5 class="section-heading"><i class="bi bi-pencil-square"></i> Edit Document Information</h5>
-                    <form method="post" asp-page-handler="UpdateMetadata" data-dfh-busy="Saving…">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="mb-3">
-                                        <label asp-for="Title" class="form-label">Title *</label>
-                                        <input asp-for="Title" class="form-control" placeholder="Enter document title">
-                                        <span asp-validation-for="Title" class="text-danger"></span>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label asp-for="Description" class="form-label">Description</label>
-                                        <textarea asp-for="Description" class="form-control" rows="4" 
-                                                  placeholder="Enter document description"></textarea>
-                                        <span asp-validation-for="Description" class="text-danger"></span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Current File Info</label>
-                                        <div class="info-panel">
-                                            <p class="mb-1">
-                                                <strong>Type:</strong>
-                                                <span class="badge bg-info">@Model.Document.FileType.ToUpper()</span>
-                                            </p>
-                                            <p class="mb-1">
-                                                <strong>Size:</strong> @FormatFileSize(Model.Document.FileSize)
-                                            </p>
-                                            <p class="mb-0">
-                                                <strong>Modified:</strong> @((Model.Document.UpdatedAt ?? Model.Document.CreatedAt).ToString("MMM dd, yyyy"))
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Categories</label>
-                                <div class="row">
-                                    @foreach (var category in Model.AvailableCategories.Where(c => c.ParentId == null))
-                                    {
-                                        <div class="col-md-6 mb-2">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" 
-                                                       name="SelectedCategoryIds" value="@category.Id"
-                                                       checked="@Model.SelectedCategoryIds.Contains(category.Id)"
-                                                       id="category_@category.Id">
-                                                <label class="form-check-label fw-bold" for="category_@category.Id">
-                                                    @category.Name
-                                                </label>
-                                            </div>
-                                            @foreach (var subcategory in Model.AvailableCategories.Where(c => c.ParentId == category.Id))
-                                            {
-                                                <div class="form-check ms-3">
-                                                    <input class="form-check-input" type="checkbox" 
-                                                           name="SelectedCategoryIds" value="@subcategory.Id"
-                                                           checked="@Model.SelectedCategoryIds.Contains(subcategory.Id)"
-                                                           id="category_@subcategory.Id">
-                                                    <label class="form-check-label" for="category_@subcategory.Id">
-                                                        @subcategory.Name
-                                                    </label>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-check-lg"></i> Update Information
-                                    </button>
-                                    <a asp-page="./Details" asp-route-id="@Model.Document.Id" class="btn btn-secondary">
-                                        <i class="bi bi-arrow-left"></i> Back to Details
-                                    </a>
-                                </div>
-                            </div>
-                        </form>
-                </div>
-
-                <!-- Upload New Version -->
-                <div class="form-card">
-                    <h5 class="section-heading section-heading-success"><i class="bi bi-cloud-upload"></i> Upload New Version</h5>
-                        <form method="post" asp-page-handler="UploadNewVersion" enctype="multipart/form-data" data-dfh-busy="Uploading…">
-                            <div class="mb-3">
-                                <label asp-for="NewVersionFile" class="form-label">Select New File *</label>
-                                <input asp-for="NewVersionFile" class="form-control" type="file" 
-                                       accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif">
-                                <div class="form-text">
-                                    Supported formats: PDF, DOC, DOCX, TXT, MD, JPG, PNG, GIF (max 30MB)
-                                </div>
-                                <span asp-validation-for="NewVersionFile" class="text-danger"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="ChangeSummary" class="form-label">Change Summary</label>
-                                <textarea asp-for="ChangeSummary" class="form-control" rows="3" 
-                                          placeholder="Describe what changed in this version..."></textarea>
-                                <span asp-validation-for="ChangeSummary" class="text-danger"></span>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-upload"></i> Upload New Version
-                                </button>
-                                <small class="text-muted align-self-center">
-                                    This will create a new version while keeping the old one
-                                </small>
-                            </div>
-                        </form>
-                </div>
-            </div>
-
-            <!-- Sidebar with Current Categories and Version Info -->
-            <div class="col-lg-4">
-                <div class="content-card mb-4">
-                    <h5 class="section-heading"><i class="bi bi-tags"></i> Current Categories</h5>
-                        @if (Model.CurrentCategories.Any())
+            <form class="dfh-form-section" method="post" asp-page-handler="UpdateMetadata" asp-route-id="@d.Id" data-dfh-busy="Saving…">
+                <h2 class="dfh-form-heading">Details</h2>
+                <div class="dfh-form-grid">
+                    <label class="dfh-field is-wide">
+                        <span class="dfh-field-label">Title</span>
+                        <input asp-for="Title" class="form-control" maxlength="200" />
+                        @if (Model.FailedForm == "details")
                         {
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var category in Model.CurrentCategories)
-                                {
-                                    <span class="badge bg-secondary">
-                                        <i class="bi bi-tag-fill"></i>
-                                        @category.Name
-                                    </span>
-                                }
-                            </div>
+                            <span asp-validation-for="Title" class="field-validation-error"></span>
                         }
-                        else
+                    </label>
+                    <label class="dfh-field is-wide">
+                        <span class="dfh-field-label">Description</span>
+                        <textarea asp-for="Description" class="form-control" rows="3" maxlength="1000" placeholder="Optional. What is this document about?"></textarea>
+                        @if (Model.FailedForm == "details")
                         {
-                            <p class="text-muted mb-0">No categories assigned</p>
+                            <span asp-validation-for="Description" class="field-validation-error"></span>
                         }
-                </div>
-
-                <div class="content-card">
-                    <h5 class="section-heading"><i class="bi bi-info-circle"></i> Document Information</h5>
-                        <dl class="row">
-                            <dt class="col-sm-5">Created</dt>
-                            <dd class="col-sm-7">@Model.Document.CreatedAt.ToString("MMM dd, yyyy")</dd>
-                            
-                            <dt class="col-sm-5">Owner</dt>
-                            <dd class="col-sm-7">
-                                <i class="bi bi-person-circle"></i>
-                                @Model.Document.OwnerName
-                            </dd>
-                            
-                            @if (Model.Document.TeamId.HasValue)
+                    </label>
+                    <div class="dfh-field is-wide">
+                        <span class="dfh-field-label" id="categories-label">Categories</span>
+                        <div class="dfh-toggle-chips" role="group" aria-labelledby="categories-label">
+                            @foreach (var category in Model.Categories)
                             {
-                                <dt class="col-sm-5">Team</dt>
-                                <dd class="col-sm-7">
-                                    <i class="bi bi-people-fill text-primary"></i>
-                                    Shared
-                                </dd>
+                                <label class="dfh-toggle-chip">
+                                    <input type="checkbox" name="SelectedCategoryIds" value="@category.Id" checked="@Model.SelectedCategoryIds.Contains(category.Id)" />
+                                    <span>@category.Name</span>
+                                </label>
                             }
-                        </dl>
-
-                        <div class="mt-3">
-                            <a asp-page="./Details" asp-route-id="@Model.Document.Id" class="btn btn-outline-primary btn-sm w-100">
-                                <i class="bi bi-eye"></i> View Details & History
-                            </a>
                         </div>
+                    </div>
                 </div>
-            </div>
+                <div class="dfh-empty-actions">
+                    @if (demo)
+                    {
+                        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-primary" disabled>Save details</button></span>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary">Save details</button>
+                    }
+                    <a class="btn btn-secondary" asp-page="/Documents/Details" asp-route-id="@d.Id">Cancel</a>
+                </div>
+            </form>
+
+            <form id="new-version" class="dfh-form-section" method="post" enctype="multipart/form-data" asp-page-handler="UploadNewVersion" asp-route-id="@d.Id"
+                  data-dfh-upload-form data-dfh-busy="Uploading…" data-max-bytes="@Model.MaxFileBytes" data-types="@string.Join(",", Model.AllowedTypes)">
+                <h2 class="dfh-form-heading">New version <span class="dfh-muted">· becomes v@(next)</span></h2>
+                <label class="dfh-dropzone" data-dfh-dropzone>
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span class="dfh-dropzone-text">
+                        <span>Drop the new file here or <span class="dfh-dropzone-link">browse</span></span>
+                        <span class="dfh-mono">@types · max @(Model.MaxFileBytes / 1024 / 1024) MB</span>
+                    </span>
+                    <input type="file" name="NewVersionFile" class="dfh-file-input" accept="@string.Join(",", Model.AllowedTypes)" data-dfh-file />
+                </label>
+                @if (Model.FailedForm == "version")
+                {
+                    <span asp-validation-for="NewVersionFile" class="field-validation-error"></span>
+                }
+                <ul class="dfh-upload-list" data-dfh-file-list hidden>
+                    <li class="dfh-upload-row">
+                        <span class="dfh-filetype" data-dfh-file-ext></span>
+                        <span class="dfh-ellipsis" data-dfh-file-name></span>
+                        <span class="dfh-mono" data-dfh-file-size></span>
+                        <span class="dfh-upload-status" data-dfh-file-status></span>
+                        <button type="button" class="dfh-icon-action" data-dfh-file-remove aria-label="Remove the file"><i class="bi bi-x" aria-hidden="true"></i></button>
+                    </li>
+                </ul>
+                <label class="dfh-field">
+                    <span class="dfh-field-label">What changed</span>
+                    <input asp-for="ChangeSummary" class="form-control" maxlength="500" placeholder="For example: Updated the totals for September" />
+                    @if (Model.FailedForm == "version")
+                    {
+                        <span asp-validation-for="ChangeSummary" class="field-validation-error"></span>
+                    }
+                </label>
+                <div class="dfh-empty-actions">
+                    @if (demo)
+                    {
+                        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-primary" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload version</button></span>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary" data-dfh-upload-submit disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload v@(next)</button>
+                    }
+                    <span class="dfh-mono dfh-muted" data-dfh-upload-summary>No file chosen</span>
+                </div>
+                <p class="dfh-insp-note">The previous versions stay available in the document's history. The AI summary is refreshed for the new version.</p>
+            </form>
         </div>
-    }
-    else
-    {
-        <div class="content-card text-center py-5">
-            <h3>Document not found</h3>
-            <p class="text-muted">The requested document could not be found or you don't have permission to edit it.</p>
-            <a asp-page="./Index" class="btn btn-primary">
-                <i class="bi bi-arrow-left"></i> Back to Documents
-            </a>
-        </div>
-    }
+    </div>
 </div>
 
-@functions {
-    private static string FormatFileSize(long bytes)
-    {
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        int counter = 0;
-        decimal number = bytes;
-        while (Math.Round(number / 1024) >= 1)
-        {
-            number /= 1024;
-            counter++;
-        }
-        return $"{number:n1} {suffixes[counter]}";
-    }
-}
-
-@section Styles {
-<style>
-    /* .section-heading / .section-heading-success live in components.css */
-    .info-panel {
-        border: 1px solid var(--border-color); border-radius: 10px;
-        background: var(--surface-secondary); padding: 0.85rem 1rem; color: var(--text-primary);
-    }
-    .info-panel p { color: var(--text-primary); }
-</style>
-}
-
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        // File upload validation
-        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const maxSize = 30 * 1024 * 1024; // 30MB
-                const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif'];
-                
-                if (file.size > maxSize) {
-                    alert('File size must be less than 30MB');
-                    e.target.value = '';
-                    return;
-                }
-                
-                const extension = '.' + file.name.split('.').pop().toLowerCase();
-                if (!allowedTypes.includes(extension)) {
-                    alert('File type not supported. Please select a PDF, DOC, DOCX, TXT, MD, JPG, PNG, or GIF file.');
-                    e.target.value = '';
-                    return;
-                }
-            }
-        });
-
-        // Auto-hide success messages
-        setTimeout(function() {
-            const successAlert = document.querySelector('.alert-success');
-            if (successAlert) {
-                successAlert.style.transition = 'opacity 0.5s';
-                successAlert.style.opacity = '0';
-                setTimeout(() => successAlert.remove(), 500);
-            }
-        }, 5000);
-
-        // Confirm new version upload
-        document.querySelector('form[asp-page-handler="UploadNewVersion"]').addEventListener('submit', function(e) {
-            const fileInput = document.querySelector('input[type="file"]');
-            if (fileInput.files.length > 0) {
-                if (!confirm('Are you sure you want to upload a new version? This will create a new version of the document.')) {
-                    e.preventDefault();
-                }
-            }
-        });
-    </script>
-} 
+    <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/upload.js" asp-append-version="true"></script>
+}

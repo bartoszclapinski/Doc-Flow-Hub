@@ -13,4 +13,7 @@ public class CreateDocumentRequest
     public string OwnerId { get; set; } = string.Empty;
     public int? ProjectId { get; set; }
     public int? FolderId { get; set; }
+
+    /// <summary>Generate an AI summary in the background after the upload (the uploader's choice).</summary>
+    public bool GenerateSummary { get; set; } = true;
 } 

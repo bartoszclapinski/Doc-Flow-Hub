@@ -197,3 +197,62 @@ test('demo: a blocked AJAX move reports the read-only message', async ({ page })
   expect(result.readOnly).toBe(true);
   expect(result.message).toContain('read-only');
 });
+
+// Sprint 12: details, compare, upload.
+async function documentWithVersions(page: import('@playwright/test').Page): Promise<string> {
+  await page.goto('/Documents?sort=name');
+  const row = page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[2-9]$/ }) }).first();
+  return (await row.getAttribute('data-id'))!;
+}
+
+test('details: inspector tabs switch and survive a reload', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithVersions(page);
+  await page.goto(`/Documents/Details/${id}`);
+  await expect(page.locator('#panel-info')).toBeVisible();
+  await page.locator('[data-dfh-tabs] [data-tab="versions"]').click();
+  await expect(page.locator('#panel-versions')).toBeVisible();
+  await expect(page.locator('#panel-info')).toBeHidden();
+  await expect(page).toHaveURL(/tab=versions/);
+  await page.reload();
+  await expect(page.locator('#panel-versions')).toBeVisible();
+  expect(await page.locator('.dfh-version-row').count()).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('.dfh-statusbar-path')).toContainText(' / ');
+});
+
+test('compare: the seeded AI comparison shows, the pickers change the pair', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithVersions(page);
+  await page.goto(`/Documents/Compare/${id}`);
+  await expect(page.locator('.dfh-compare-summary p')).not.toBeEmpty();
+  expect(await page.locator('.dfh-change-list li').count()).toBeGreaterThan(0);
+  const to = page.locator('#pick-to');
+  const newest = await to.inputValue();
+  await page.locator('#pick-from').selectOption({ index: 0 }); // the newest version: the page swaps it into "to"
+  await expect(page).toHaveURL(new RegExp(`from=${newest}`));
+  await expect(page.locator('.dfh-editor-tab.is-active')).toContainText('↔');
+});
+
+test('editor tabs: opened documents stay as tabs until closed', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?sort=name');
+  const ids = await page.locator('[data-dfh-doc-table] tbody tr').evaluateAll((rows) => rows.slice(0, 2).map((r) => r.getAttribute('data-id')));
+  await page.goto(`/Documents/Details/${ids[0]}`);
+  await page.goto(`/Documents/Details/${ids[1]}`);
+  const tabs = page.locator('.dfh-editor-tabs .dfh-editor-tab');
+  await expect(tabs).toHaveCount(2);
+  await tabs.first().locator('[data-dfh-tab-close]').click();
+  await expect(tabs).toHaveCount(1);
+  await page.reload();
+  await expect(tabs).toHaveCount(1);
+});
+
+test('upload: the form checks the file type before uploading', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'tool.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('MZ') });
+  await expect(page.locator('[data-dfh-file-status]')).toHaveText('.exe not allowed');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello\n') });
+  await expect(page.locator('[data-dfh-file-status]')).toHaveText('ready');
+  await expect(page.locator('#Title')).toHaveValue('notes');
+});

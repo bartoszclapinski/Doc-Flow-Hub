@@ -282,6 +282,205 @@ public class DocumentBrowserService : IDocumentBrowserService
         }
     }
 
+    public async Task<ServiceResult<DocumentDetails>> GetDetailsAsync(string userId, int documentId)
+    {
+        try
+        {
+            var doc = await Visible(userId)
+                .Where(d => d.Id == documentId)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.Title,
+                    d.Description,
+                    d.FileType,
+                    d.FileSize,
+                    d.CreatedAt,
+                    Modified = d.UpdatedAt ?? d.CreatedAt,
+                    d.ProjectId,
+                    d.FolderId,
+                    d.OwnerId,
+                    d.Owner.FirstName,
+                    d.Owner.LastName,
+                    d.Owner.Email,
+                    d.TeamId,
+                    TeamName = d.Team != null ? d.Team.Name : null,
+                    ProjectName = d.Project != null ? d.Project.Name : null,
+                    FolderPath = d.Folder != null ? d.Folder.Path : null,
+                    Categories = d.Categories.OrderBy(c => c.Name).Select(c => c.Name).ToList(),
+                })
+                .FirstOrDefaultAsync();
+            if (doc == null)
+            {
+                return ServiceResult<DocumentDetails>.Failure("Document not found.");
+            }
+
+            var summary = await _context.DocumentSummaries
+                .Where(s => s.DocumentId == documentId)
+                .OrderByDescending(s => s.GeneratedAt)
+                .Select(s => new { s.Summary, s.KeyPoints, s.AIModel, s.ConfidenceScore, s.GeneratedAt })
+                .FirstOrDefaultAsync();
+
+            var versions = await VersionsAsync(documentId);
+            var byId = versions.ToDictionary(v => v.Id, v => v.Number);
+            var pairs = await _context.VersionComparisons
+                .Where(c => c.DocumentId == documentId)
+                .Select(c => new { c.FromVersionId, c.ToVersionId })
+                .ToListAsync();
+
+            return ServiceResult<DocumentDetails>.Success(new DocumentDetails
+            {
+                Id = doc.Id,
+                Title = doc.Title,
+                Description = doc.Description ?? string.Empty,
+                FileType = doc.FileType,
+                FileSize = doc.FileSize,
+                CreatedAt = doc.CreatedAt,
+                ModifiedAt = doc.Modified,
+                ProjectId = doc.ProjectId,
+                FolderId = doc.FolderId,
+                Location = DisplayFormat.Location(doc.ProjectName, doc.FolderPath),
+                OwnerName = DisplayFormat.PersonName(doc.FirstName, doc.LastName, doc.Email),
+                IsOwner = doc.OwnerId == userId,
+                TeamId = doc.TeamId,
+                TeamName = doc.TeamName,
+                Categories = doc.Categories,
+                Summary = summary == null || string.IsNullOrWhiteSpace(summary.Summary) ? null : new DocumentDetailsSummary
+                {
+                    Text = summary.Summary,
+                    KeyPoints = Lines(summary.KeyPoints),
+                    Model = summary.AIModel,
+                    Confidence = summary.ConfidenceScore,
+                    GeneratedAt = summary.GeneratedAt,
+                },
+                Versions = versions,
+                Comparisons = pairs
+                    .Where(p => byId.ContainsKey(p.FromVersionId) && byId.ContainsKey(p.ToVersionId))
+                    .Select(p => (Math.Min(byId[p.FromVersionId], byId[p.ToVersionId]), Math.Max(byId[p.FromVersionId], byId[p.ToVersionId])))
+                    .Distinct()
+                    .OrderByDescending(p => p.Item2)
+                    .ThenByDescending(p => p.Item1)
+                    .ToList(),
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load details of document {DocumentId} for user {UserId}", documentId, userId);
+            return ServiceResult<DocumentDetails>.Failure("The document could not be loaded.");
+        }
+    }
+
+    public async Task<ServiceResult<DocumentComparisonView>> GetComparisonAsync(string userId, int documentId, int? fromVersion, int? toVersion)
+    {
+        try
+        {
+            var doc = await Visible(userId)
+                .Where(d => d.Id == documentId)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.Title,
+                    d.FileType,
+                    ProjectName = d.Project != null ? d.Project.Name : null,
+                    FolderPath = d.Folder != null ? d.Folder.Path : null,
+                })
+                .FirstOrDefaultAsync();
+            if (doc == null)
+            {
+                return ServiceResult<DocumentComparisonView>.Failure("Document not found.");
+            }
+
+            var versions = await VersionsAsync(documentId);
+            if (versions.Count < 2)
+            {
+                return ServiceResult<DocumentComparisonView>.Failure("This document has only one version, so there is nothing to compare.");
+            }
+
+            // Newest first. "to" defaults to the newest, "from" to the version before "to".
+            var to = versions.FirstOrDefault(v => v.Number == toVersion) ?? versions[0];
+            var from = versions.FirstOrDefault(v => v.Number == fromVersion && v.Number != to.Number)
+                       ?? versions.FirstOrDefault(v => v.Number < to.Number)
+                       ?? versions.First(v => v.Number != to.Number);
+            if (from.Number > to.Number)
+            {
+                (from, to) = (to, from);
+            }
+
+            var comparison = await _context.VersionComparisons
+                .Where(c => (c.FromVersionId == from.Id && c.ToVersionId == to.Id) ||
+                            (c.FromVersionId == to.Id && c.ToVersionId == from.Id))
+                .OrderByDescending(c => c.GeneratedAt)
+                .Select(c => new
+                {
+                    c.ChangeSummary, c.DetailedChanges, c.ChangeType, c.Significance, c.AIModel,
+                    c.ConfidenceScore, c.TokensUsed, c.GeneratedAt,
+                })
+                .FirstOrDefaultAsync();
+
+            return ServiceResult<DocumentComparisonView>.Success(new DocumentComparisonView
+            {
+                DocumentId = doc.Id,
+                Title = doc.Title,
+                FileType = doc.FileType,
+                Location = DisplayFormat.Location(doc.ProjectName, doc.FolderPath),
+                Versions = versions,
+                From = from,
+                To = to,
+                Comparison = comparison == null ? null : new DocumentComparisonResult
+                {
+                    Summary = comparison.ChangeSummary,
+                    Changes = Lines(comparison.DetailedChanges),
+                    ChangeType = comparison.ChangeType,
+                    Significance = comparison.Significance,
+                    Model = comparison.AIModel,
+                    Confidence = comparison.ConfidenceScore,
+                    TokensUsed = comparison.TokensUsed,
+                    GeneratedAt = comparison.GeneratedAt,
+                },
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load the comparison of document {DocumentId} for user {UserId}", documentId, userId);
+            return ServiceResult<DocumentComparisonView>.Failure("The comparison could not be loaded.");
+        }
+    }
+
+    /// <summary>All versions of a document, newest first, with author names.</summary>
+    private async Task<List<DocumentDetailsVersion>> VersionsAsync(int documentId)
+    {
+        var rows = await _context.DocumentVersions
+            .Where(v => v.DocumentId == documentId)
+            .OrderByDescending(v => v.VersionNumber)
+            .Select(v => new { v.Id, v.VersionNumber, v.ChangeSummary, v.CreatedAt, v.UserId, v.FileSize, v.FileType, v.FileHash })
+            .ToListAsync();
+        var authorIds = rows.Select(v => v.UserId).Distinct().ToList();
+        var authors = await _context.Users
+            .Where(u => authorIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FirstName, u.LastName, u.Email })
+            .ToDictionaryAsync(u => u.Id, u => DisplayFormat.PersonName(u.FirstName, u.LastName, u.Email));
+
+        return rows.Select(v => new DocumentDetailsVersion
+        {
+            Id = v.Id,
+            Number = v.VersionNumber,
+            Message = string.IsNullOrWhiteSpace(v.ChangeSummary) ? null : v.ChangeSummary.Trim(),
+            CreatedAt = v.CreatedAt,
+            Author = authors.GetValueOrDefault(v.UserId) ?? "Unknown",
+            FileSize = v.FileSize,
+            FileType = v.FileType,
+            Hash = DisplayFormat.ShortHash(v.FileHash),
+        }).ToList();
+    }
+
+    /// <summary>Splits an AI list ("• a\n- b") into items without bullets.</summary>
+    private static List<string> Lines(string? text) =>
+        (text ?? string.Empty)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.TrimStart('•', '-', '*', '–', '—', ' ').Trim())
+            .Where(line => line.Length > 0)
+            .ToList();
+
     private static IQueryable<Document> Filter(IQueryable<Document> docs, string userId, DocumentListQuery query)
     {
         var search = query.Search?.Trim();

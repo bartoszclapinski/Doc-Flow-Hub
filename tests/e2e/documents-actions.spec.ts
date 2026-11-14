@@ -63,3 +63,60 @@ test('delete removes one document after confirmation', async ({ page }) => {
   await expect(page.locator('.dfh-toast')).toContainText(`Deleted "${title}"`);
   await expect(page.locator(`tbody tr[data-id="${id}"]`)).toHaveCount(0);
 });
+
+// Sprint 12: upload, edit, new version, delete a version, sharing.
+test('upload, edit, new version, delete the old version, share and unshare', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-upload.txt', mimeType: 'text/plain', buffer: Buffer.from('First version\n') });
+  const project = page.locator('[data-dfh-project]');
+  const projectName = (await project.locator('option').nth(1).textContent())!.trim();
+  await project.selectOption({ index: 1 });
+  await page.locator('input[name="GenerateSummary"][type="checkbox"]').uncheck();
+  await page.locator('[data-dfh-upload-submit]').click();
+
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded "e2e-upload"');
+  await expect(page.locator('.dfh-breadcrumb')).toContainText(projectName);
+
+  await page.locator('a', { hasText: 'New version' }).click();
+  await page.locator('#Title').fill('E2E upload renamed');
+  await page.locator('button', { hasText: 'Save details' }).click();
+  await expect(page.locator('.dfh-toast')).toContainText('Details saved');
+  await expect(page.locator('#panel-info .dfh-insp-title')).toHaveText('E2E upload renamed');
+
+  await page.locator('a', { hasText: 'New version' }).click();
+  await page.locator('#new-version [data-dfh-file]').setInputFiles({ name: 'e2e-upload.txt', mimeType: 'text/plain', buffer: Buffer.from('Second version\n') });
+  await page.locator('#ChangeSummary').fill('Second draft');
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded v2');
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(2);
+
+  await page.locator('[data-dfh-version-delete]').click();
+  await page.locator('#dfh-version-delete-modal button[type="submit"]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Version deleted');
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(1);
+
+  await page.locator('[data-dfh-tabs] [data-tab="sharing"]').click();
+  const team = page.locator('#panel-sharing select[name="teamId"]');
+  if ((await team.locator('option').count()) > 1) {
+    await team.selectOption({ index: 1 });
+    await page.locator('#panel-sharing button[type="submit"]').click();
+    await expect(page.locator('.dfh-toast')).toContainText('Shared with');
+    await team.selectOption({ index: 0 });
+    await page.locator('#panel-sharing button[type="submit"]').click();
+    await expect(page.locator('.dfh-toast')).toContainText('private again');
+  }
+});
+
+test('generate summary reports the outcome (an error toast when no AI key is configured)', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-summary.txt', mimeType: 'text/plain', buffer: Buffer.from('Text to summarize\n') });
+  await page.locator('input[name="GenerateSummary"][type="checkbox"]').uncheck();
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+
+  await page.locator('[data-dfh-tabs] [data-tab="ai"]').click();
+  await page.locator('#panel-ai button[type="submit"]', { hasText: 'Generate summary' }).click();
+  await expect(page).toHaveURL(/tab=ai/);
+  await expect(page.locator('.dfh-toast')).toContainText(/AI summary ready|could not|summary/i);
+});

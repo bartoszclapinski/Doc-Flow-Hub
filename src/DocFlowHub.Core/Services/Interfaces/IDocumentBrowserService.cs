@@ -17,4 +17,13 @@ public interface IDocumentBrowserService
 
     /// <summary>Inspector data for one document, or a failure when the user cannot see it.</summary>
     Task<ServiceResult<DocumentInspector>> GetInspectorAsync(string userId, int documentId);
+
+    /// <summary>The Details page: the document, all versions, AI summary with key points, saved comparisons.</summary>
+    Task<ServiceResult<DocumentDetails>> GetDetailsAsync(string userId, int documentId);
+
+    /// <summary>
+    /// The Compare page for two version numbers (order does not matter; null = the two newest). Reads
+    /// the saved AI comparison only, it never calls the AI.
+    /// </summary>
+    Task<ServiceResult<DocumentComparisonView>> GetComparisonAsync(string userId, int documentId, int? fromVersion, int? toVersion);
 }

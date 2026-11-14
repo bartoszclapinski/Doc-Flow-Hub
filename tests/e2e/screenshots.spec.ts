@@ -88,6 +88,28 @@ test('documents screens', async ({ page }) => {
   }
 });
 
+// Details (3b), Compare (3i), Upload (3c), Edit. A document with at least two versions is picked from the list.
+test('document screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?sort=name');
+  const first = await page.locator('[data-dfh-doc-table] tbody tr').first().getAttribute('data-id');
+  const multi = await page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[2-9]$/ }) }).first().getAttribute('data-id');
+  await page.goto(`/Documents/Details/${first}`);
+  await page.goto(`/Documents/Details/${multi}`);
+  await page.screenshot({ path: `${dir}/details-info.png` });
+  for (const tab of ['ai', 'versions', 'sharing']) {
+    await page.locator(`[data-dfh-tabs] [data-tab="${tab}"]`).click();
+    await page.screenshot({ path: `${dir}/details-${tab}.png` });
+  }
+  await page.goto(`/Documents/Compare/${multi}`);
+  await page.screenshot({ path: `${dir}/compare.png` });
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'q3-financial-report.txt', mimeType: 'text/plain', buffer: Buffer.from('Quarterly report\n') });
+  await page.screenshot({ path: `${dir}/upload.png` });
+  await page.goto(`/Documents/Edit/${multi}`);
+  await page.screenshot({ path: `${dir}/edit.png` });
+});
+
 test('admin screens', async ({ page }) => {
   await signIn(page, DEMO_ADMIN);
   for (const [name, path] of ADMIN_PAGES) {
