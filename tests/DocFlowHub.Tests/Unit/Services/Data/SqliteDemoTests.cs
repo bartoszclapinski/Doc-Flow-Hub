@@ -269,4 +269,38 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
         comparison.Data.Comparison!.Changes.Should().NotBeEmpty();
         comparison.Data.From.Number.Should().BeLessThan(comparison.Data.To.Number);
     }
+
+    [Fact]
+    public async Task WorkspaceScreens_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var workspace = Get<IWorkspaceBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        var projects = await workspace.GetProjectsAsync(userId, archived: false);
+        projects.Succeeded.Should().BeTrue(projects.Error);
+        projects.Data.Should().NotBeEmpty();
+        (await workspace.GetProjectsAsync(userId, archived: true)).Succeeded.Should().BeTrue();
+
+        var project = projects.Data![0];
+        var inspector = await workspace.GetProjectAsync(userId, project.Id);
+        inspector.Succeeded.Should().BeTrue(inspector.Error);
+        inspector.Data!.Folders.Should().HaveCount(project.FolderCount);
+
+        var root = await workspace.GetFolderViewAsync(userId, project.Id, null);
+        root.Succeeded.Should().BeTrue(root.Error);
+        if (inspector.Data.Folders.Count > 0)
+        {
+            var folder = await workspace.GetFolderViewAsync(userId, project.Id, inspector.Data.Folders[0].Id);
+            folder.Succeeded.Should().BeTrue(folder.Error);
+            folder.Data!.Path.Should().NotBeEmpty();
+        }
+
+        var teams = await workspace.GetTeamsAsync(userId);
+        teams.Succeeded.Should().BeTrue(teams.Error);
+        teams.Data.Should().NotBeEmpty();
+        var team = await workspace.GetTeamAsync(userId, teams.Data![0].Id);
+        team.Succeeded.Should().BeTrue(team.Error);
+        team.Data!.Members.Should().Contain(m => m.IsMe);
+    }
 }

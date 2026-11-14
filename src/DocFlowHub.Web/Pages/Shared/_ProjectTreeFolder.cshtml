@@ -1,0 +1,36 @@
+@model ProjectTreeFolderNode
+@{
+    var folder = Model.Folder;
+    var view = Model.View;
+    var selected = view.FolderId == folder.Id;
+    var hasChildren = folder.Children.Count > 0;
+    var open = hasChildren && view.Open.Contains(folder.Id);
+}
+<li role="treeitem" aria-selected="@(selected ? "true" : "false")" aria-expanded="@(hasChildren ? (open ? "true" : "false") : null)">
+    <div class="dfh-tree-row@(selected ? " is-selected" : "")" style="--level: @Model.Level"
+         draggable="@(view.Movable ? "true" : null)" data-dfh-drag-folder="@(view.Movable ? folder.Id : null)" data-project="@Model.ProjectId"
+         data-dfh-drop-project="@Model.ProjectId" data-dfh-drop-folder="@folder.Id">
+        @if (hasChildren)
+        {
+            <button type="button" class="dfh-tree-toggle" data-dfh-tree-toggle aria-label="Expand or collapse @folder.Name"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        }
+        else
+        {
+            <span class="dfh-tree-toggle" aria-hidden="true"></span>
+        }
+        <a class="dfh-tree-link" href="@WorkspaceLinks.Folder(Model.ProjectId, folder.Id)" aria-current="@(selected ? "page" : null)" draggable="false">
+            <i class="bi @(selected || open ? "bi-folder2-open" : "bi-folder2") dfh-tree-icon" aria-hidden="true"></i>
+            <span class="dfh-tree-name">@folder.Name</span>
+            <span class="dfh-tree-count">@folder.DocumentCount</span>
+        </a>
+    </div>
+    @if (hasChildren)
+    {
+        <ul role="group">
+            @foreach (var child in folder.Children)
+            {
+                <partial name="_ProjectTreeFolder" model="Model with { Folder = child, Level = Model.Level + 1 }" />
+            }
+        </ul>
+    }
+</li>

@@ -256,3 +256,43 @@ test('upload: the form checks the file type before uploading', async ({ page }) 
   await expect(page.locator('[data-dfh-file-status]')).toHaveText('ready');
   await expect(page.locator('#Title')).toHaveValue('notes');
 });
+
+// Sprint 13: projects, folders, teams.
+test('projects: table with inspector, archived tab, filter', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Projects');
+  const rows = page.locator('#projects-table tbody tr[data-id]');
+  expect(await rows.count()).toBeGreaterThan(0);
+  const name = (await rows.first().locator('.dfh-two-line-text a').textContent())!.trim();
+  await expect(page.locator('#dfh-inspector-body .dfh-insp-title')).toHaveText(name);
+  await page.locator('[data-dfh-row-filter]').fill('zzz-no-such-project');
+  await expect(page.locator('.dfh-filter-empty')).toBeVisible();
+  await page.locator('.dfh-segmented a', { hasText: 'Archived' }).click();
+  await expect(page).toHaveURL(/status=archived/);
+  await expect(page.locator('.dfh-segmented a.is-active')).toHaveText('Archived');
+});
+
+test('project and folder pages: tree, subfolders, settings', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Projects');
+  const id = await page.locator('#projects-table tbody tr[data-id]').first().getAttribute('data-id');
+  await page.goto(`/Projects/Details/${id}`);
+  await expect(page.locator('.dfh-tree-row.is-selected')).toHaveCount(1);
+  const folder = page.locator('.dfh-table tbody tr[data-dfh-href*="/Folders/Details"]').first();
+  const folderName = (await folder.locator('a').textContent())!.trim();
+  await folder.locator('a').click();
+  await expect(page.locator('.dfh-breadcrumb-current')).toHaveText(folderName);
+  await expect(page.locator('#Name')).toHaveValue(folderName);
+  await expect(page.locator('.dfh-statusbar-path')).toContainText(folderName);
+});
+
+test('team page: members, real permission matrix, documents link', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Teams');
+  await page.locator('#teams-table tbody tr[data-dfh-href]').first().click();
+  await expect(page).toHaveURL(/\/Teams\/Details\/\d+/);
+  await expect(page.locator('.dfh-perm-matrix tbody tr')).toHaveCount(6);
+  await expect(page.locator('.dfh-perm-matrix thead')).not.toContainText('Viewer');
+  await expect(page.locator('.dfh-table--members')).toContainText('you');
+  await expect(page.locator('.dfh-viewtab', { hasText: 'Documents' })).toHaveAttribute('href', /\/Documents\?team=\d+/);
+});

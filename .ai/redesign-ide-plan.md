@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprints 11–12 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprints 11–13 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the

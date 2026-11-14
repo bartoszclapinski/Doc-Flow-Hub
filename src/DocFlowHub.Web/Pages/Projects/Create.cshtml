@@ -1,210 +1,34 @@
 @page
 @model DocFlowHub.Web.Pages.Projects.CreateModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = "Create Project";
+    ViewData["Title"] = "New project";
+    ViewData["FullBleed"] = true;
+    var nameError = ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage;
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="./Index">Projects</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Create</li>
-        </ol>
-    </nav>
-
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">
-            <div class="page-icon">📁</div>
-            Create New Project
-        </h1>
-        <p class="page-subtitle">Organize your documents into a new project workspace</p>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="validation-summary" style="display:block;">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
-        </div>
-    }
-
-    <div class="row justify-content-center">
-        <div class="col-lg-9">
-            <div class="form-card">
-                <form method="post" id="create-project-form">
-                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-
-                    <div class="form-row">
-                        <div class="form-group full-width" style="grid-column: span 1;">
-                            <label asp-for="Name" class="form-label">
-                                <i class="bi bi-card-text"></i> Project Name *
-                            </label>
-                            <input asp-for="Name" class="form-input" placeholder="Enter project name..." autofocus />
-                            <span asp-validation-for="Name" class="validation-message"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label asp-for="Color" class="form-label">
-                                <i class="bi bi-palette"></i> Project Color
-                            </label>
-                            <div class="d-flex align-items-center gap-2">
-                                <input asp-for="Color" type="color" class="color-swatch" />
-                                <input type="text" id="ColorText" name="ColorText" class="form-input flex-grow-1" placeholder="#0d6efd" />
-                            </div>
-                            <span asp-validation-for="Color" class="validation-message"></span>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label asp-for="Description" class="form-label">
-                            <i class="bi bi-card-list"></i> Description
-                        </label>
-                        <textarea asp-for="Description" class="form-textarea" rows="3"
-                                  placeholder="Enter a brief description of your project..."></textarea>
-                        <span asp-validation-for="Description" class="validation-message"></span>
-                    </div>
-
-                    <!-- Icon Selection -->
-                    <div class="form-group full-width">
-                        <label asp-for="Icon" class="form-label">
-                            <i class="bi bi-emoji-smile"></i> Project Icon
-                        </label>
-                        <div class="icon-selection">
-                            @foreach (var (value, isChecked) in new[] {
-                                ("kanban", true), ("folder", false), ("briefcase", false), ("building", false),
-                                ("diagram-3", false), ("gear", false), ("lightbulb", false), ("star", false) })
-                            {
-                                <input type="radio" class="btn-check" name="Icon" value="@value" id="icon-@value" checked="@isChecked" />
-                                <label class="icon-option" for="icon-@value">
-                                    <i class="bi bi-@value"></i>
-                                </label>
-                            }
-                        </div>
-                        <span asp-validation-for="Icon" class="validation-message"></span>
-                    </div>
-
-                    <!-- Project Preview -->
-                    <div class="form-group full-width">
-                        <label class="form-label"><i class="bi bi-eye"></i> Preview</label>
-                        <div class="project-preview">
-                            <div class="project-icon">
-                                <i id="preview-icon" class="bi bi-kanban" style="color:#0d6efd;font-size:2rem;"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-1" id="preview-name">Project Name</h5>
-                                <p class="text-muted mb-0" id="preview-description">Project description will appear here...</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="form-actions justify-content-between">
-                        <a asp-page="./Index" class="cancel-btn">
-                            <i class="bi bi-arrow-left"></i> Cancel
-                        </a>
-                        <button type="submit" class="submit-btn">
-                            <i class="bi bi-plus-circle"></i> Create Project
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Styles {
-<style>
-    /* Page-specific bits that build on components.css (theme-aware) */
-    .color-swatch {
-        width: 48px;
-        height: 46px;
-        padding: 4px;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--surface-secondary);
-        cursor: pointer;
-    }
-
-    .icon-selection { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-
-    .icon-option {
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--surface-secondary);
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .icon-option:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-
-    .btn-check:checked + .icon-option {
-        border-color: var(--accent-color);
-        color: var(--accent-color);
-        background: var(--accent-light);
-    }
-
-    .project-preview {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1.25rem;
-        background: var(--surface-secondary);
-        border: 2px dashed var(--border-color);
-        border-radius: 12px;
-    }
-
-    .project-preview h5 { color: var(--text-primary); }
-</style>
-}
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const nameInput = document.getElementById('Name');
-            const descriptionInput = document.getElementById('Description');
-            const colorInput = document.querySelector('input[name="Color"]');
-            const colorTextInput = document.getElementById('ColorText');
-            const iconInputs = document.querySelectorAll('input[name="Icon"]');
-
-            const previewName = document.getElementById('preview-name');
-            const previewDescription = document.getElementById('preview-description');
-            const previewIcon = document.getElementById('preview-icon');
-
-            function updatePreview() {
-                previewName.textContent = nameInput.value || 'Project Name';
-                previewDescription.textContent = descriptionInput.value || 'Project description will appear here...';
-                previewIcon.style.color = colorInput.value;
-                const selectedIcon = document.querySelector('input[name="Icon"]:checked');
-                if (selectedIcon) {
-                    previewIcon.className = `bi bi-${selectedIcon.value}`;
-                }
+<form class="dfh-column" method="post" data-dfh-busy="Creating…">
+    <partial name="_EditorTabs" model='new EditorTabsView("New project", Icon: "bi-kanban")' />
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
-
-            colorInput.addEventListener('input', function () {
-                colorTextInput.value = this.value;
-                updatePreview();
-            });
-            colorTextInput.addEventListener('input', function () {
-                colorInput.value = this.value;
-                updatePreview();
-            });
-            nameInput.addEventListener('input', updatePreview);
-            descriptionInput.addEventListener('input', updatePreview);
-            iconInputs.forEach(input => input.addEventListener('change', updatePreview));
-
-            updatePreview();
-        });
-    </script>
-}
+            <partial name="_ProjectFields" model="new ProjectFieldsView(Model.Name, Model.Description, Model.Color, nameError)" />
+            <p class="dfh-insp-note">After creating the project you can add folders and upload documents into it.</p>
+        </div>
+    </div>
+    <div class="dfh-form-footer">
+        <span class="dfh-mono"></span>
+        <a class="btn btn-secondary" asp-page="/Projects/Index">Cancel</a>
+        @if (DemoMode.IsEnabled)
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled>Create project</button></span>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary">Create project</button>
+        }
+    </div>
+</form>

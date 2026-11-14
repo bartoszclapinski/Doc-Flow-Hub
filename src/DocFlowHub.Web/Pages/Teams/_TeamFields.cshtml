@@ -1,0 +1,19 @@
+@model (string? Name, string? Description, string? NameError)
+@* Name and description of a team (Create and Edit). *@
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Team</legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Name</span>
+            <input name="Name" value="@Model.Name" class="form-control" minlength="3" maxlength="100" required autofocus />
+            @if (Model.NameError != null)
+            {
+                <span class="field-validation-error">@Model.NameError</span>
+            }
+        </label>
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Description</span>
+            <textarea name="Description" class="form-control" rows="2" maxlength="500" placeholder="Optional. What does this team work on?">@Model.Description</textarea>
+        </label>
+    </div>
+</fieldset>

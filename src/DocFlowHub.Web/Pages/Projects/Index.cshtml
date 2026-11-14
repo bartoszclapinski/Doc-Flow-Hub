@@ -1,1094 +1,130 @@
 @page
-@using DocFlowHub.Web.Extensions
 @model DocFlowHub.Web.Pages.Projects.IndexModel
 @{
     ViewData["Title"] = "Projects";
+    ViewData["FullBleed"] = true;
+    var rows = Model.Projects;
 }
 
-<div class="projects-container">
-    <!-- Modern Page Header -->
-    <div class="projects-page-header">
-        <div class="page-header-content">
-            <div class="page-header-info">
-                <h1 class="page-title">
-                    <div class="page-icon">📋</div>
-                    Projects
-                </h1>
-                <p class="page-subtitle">Organize your documents into projects</p>
-            </div>
-            <div class="page-header-actions">
-                <a asp-page="./Create" class="modern-btn modern-btn-primary">
-                    <i class="bi bi-plus-lg"></i>
-                    <span>New Project</span>
-                </a>
-            </div>
+@section Inspector {
+    <aside class="dfh-inspector dfh-inspector--300" aria-label="Project">
+        <div class="dfh-panel-header is-inspector"><span class="dfh-panel-title">Project</span></div>
+        <div class="dfh-inspector-body dfh-inspector-body--fill" id="dfh-inspector-body" aria-live="polite"
+             data-id="@Model.Selected?.Id" data-return-url="@Model.ReturnUrl">
+            @if (Model.Selected != null)
+            {
+                <partial name="_ProjectInspector" model="new ProjectInspectorView(Model.Selected, Model.IsDemo, false, Model.ReturnUrl)" />
+            }
+            else
+            {
+                <div class="dfh-empty dfh-empty--inline">
+                    <span class="dfh-empty-title">Nothing selected</span>
+                    <p>Select a project to see its folders and storage.</p>
+                </div>
+            }
         </div>
-    </div>
+    </aside>
+}
 
-    <!-- Alert Messages -->
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+<div class="dfh-column">
+    <header class="dfh-page-header">
+        <h1>Projects</h1>
+        <span class="dfh-mono dfh-muted">@rows.Count</span>
+        <nav class="dfh-segmented" aria-label="Project state">
+            <a href="/Projects" class="@(!Model.Archived ? "is-active" : null)" aria-current="@(!Model.Archived ? "page" : null)">Active</a>
+            <a href="/Projects?status=archived" class="@(Model.Archived ? "is-active" : null)" aria-current="@(Model.Archived ? "page" : null)">Archived</a>
+        </nav>
+        <span class="dfh-spacer"></span>
+        @if (rows.Count > 0)
+        {
+            <label class="dfh-search dfh-search--240">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" class="dfh-search-input" placeholder="Filter projects" aria-label="Filter projects" autocomplete="off" data-dfh-row-filter="#projects-table" />
+            </label>
+        }
+        @if (Model.IsDemo)
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled><i class="bi bi-plus-lg" aria-hidden="true"></i>New project</button></span>
+        }
+        else
+        {
+            <a class="btn btn-primary" asp-page="/Projects/Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New project</a>
+        }
+    </header>
+
+    @if (Model.ErrorMessage != null)
     {
-        <div class="modern-alert modern-alert-danger">
-            <div class="alert-icon">⚠️</div>
-            <div class="alert-content">@Model.ErrorMessage</div>
-            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+        <div class="dfh-empty dfh-fill">
+            <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+            <span class="dfh-empty-title">The projects could not be loaded</span>
+            <p>@Model.ErrorMessage</p>
         </div>
     }
-
-    @if (TempData["SuccessMessage"] != null)
+    else if (rows.Count == 0)
     {
-        <div class="modern-alert modern-alert-success">
-            <div class="alert-icon">✅</div>
-            <div class="alert-content">@TempData["SuccessMessage"]</div>
-            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
-        </div>
-    }
-
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="modern-alert modern-alert-danger">
-            <div class="alert-icon">❌</div>
-            <div class="alert-content">@TempData["ErrorMessage"]</div>
-            <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
-        </div>
-    }
-
-    <!-- Modern Filter Panel -->
-    <div class="projects-filter-panel">
-        <div class="filter-header">
-            <h3 class="filter-title">
-                <i class="bi bi-funnel"></i>
-                Filter Projects
-            </h3>
-        </div>
-        <form method="get" class="filter-form">
-            <div class="filter-grid">
-                <!-- Search -->
-                <div class="filter-group">
-                    <label asp-for="Filter.SearchTerm" class="filter-label">
-                        <i class="bi bi-search"></i>
-                        Search
-                    </label>
-                    <input asp-for="Filter.SearchTerm" class="filter-input" 
-                           placeholder="Search by name, description...">
-                </div>
-
-                <!-- Status Filter -->
-                <div class="filter-group">
-                    <label asp-for="Filter.IsActive" class="filter-label">
-                        <i class="bi bi-toggle-on"></i>
-                        Status
-                    </label>
-                    <select asp-for="Filter.IsActive" class="filter-select">
-                        <option value="">All Projects</option>
-                        <option value="true" selected="@(Model.Filter.IsActive == true)">Active</option>
-                        <option value="false" selected="@(Model.Filter.IsActive == false)">Archived</option>
-                    </select>
-                </div>
-
-                <!-- Date Range -->
-                <div class="filter-group">
-                    <label asp-for="Filter.CreatedAfter" class="filter-label">
-                        <i class="bi bi-calendar3"></i>
-                        Created After
-                    </label>
-                    <input asp-for="Filter.CreatedAfter" type="date" class="filter-input">
-                </div>
-
-                <!-- Filter Actions -->
-                <div class="filter-actions">
-                    <button type="submit" class="filter-btn filter-btn-primary">
-                        <i class="bi bi-search"></i>
-                        Apply
-                    </button>
-                    <a asp-page="./Index" class="filter-btn filter-btn-secondary">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        Clear
-                    </a>
-                </div>
+        <div class="dfh-fill dfh-fill--pad">
+            <div class="dfh-empty dfh-empty--box">
+                <i class="bi @(Model.Archived ? "bi-archive" : "bi-kanban")" aria-hidden="true"></i>
+                <span class="dfh-empty-title">@(Model.Archived ? "No archived projects" : "No projects yet")</span>
+                <p>@(Model.Archived ? "Projects you archive are kept here, out of the lists and the tree." : "A project groups documents into folders. Create one, then upload documents into it.")</p>
+                @if (!Model.Archived && !Model.IsDemo)
+                {
+                    <a class="btn btn-primary" asp-page="/Projects/Create"><i class="bi bi-plus-lg" aria-hidden="true"></i>New project</a>
+                }
             </div>
-        </form>
-    </div>
-
-    <!-- Projects Section -->
-    @if (!Model.Projects.Items.Any())
-    {
-        <div class="projects-empty-state">
-            <div class="empty-icon">📋</div>
-            <h3>No projects found</h3>
-            <p>Create your first project to organize your documents</p>
-            <a asp-page="./Create" class="empty-action-btn">
-                <i class="bi bi-plus-lg"></i>
-                Create Project
-            </a>
         </div>
     }
     else
     {
-        <!-- Results Bar -->
-        <div class="projects-results-bar">
-            <div class="results-info">
-                <span class="results-count">@Model.Projects.TotalItems</span> projects found
-                <span class="results-page">• Page @Model.Projects.PageNumber of @Model.Projects.TotalPages</span>
-            </div>
-            <div class="results-sort">
-                <span class="sort-label">Sort by:</span>
-                <div class="sort-buttons">
-                    <a href="@Model.GetSortUrl("name", "asc")" 
-                       class="sort-btn @(ViewData["NameSortClass"]?.ToString() == "sort-asc" || ViewData["NameSortClass"]?.ToString() == "sort-desc" ? "active" : "")">
-                        Name
-                        @if (ViewData["NameSortClass"]?.ToString() == "sort-asc")
-                        {
-                            <i class="bi bi-caret-up-fill"></i>
-                        }
-                        else if (ViewData["NameSortClass"]?.ToString() == "sort-desc")
-                        {
-                            <i class="bi bi-caret-down-fill"></i>
-                        }
-                    </a>
-                    <a href="@Model.GetSortUrl("createdat", "desc")" 
-                       class="sort-btn @(ViewData["CreatedSortClass"]?.ToString() == "sort-asc" || ViewData["CreatedSortClass"]?.ToString() == "sort-desc" ? "active" : "")">
-                        Created
-                        @if (ViewData["CreatedSortClass"]?.ToString() == "sort-asc")
-                        {
-                            <i class="bi bi-caret-up-fill"></i>
-                        }
-                        else if (ViewData["CreatedSortClass"]?.ToString() == "sort-desc")
-                        {
-                            <i class="bi bi-caret-down-fill"></i>
-                        }
-                    </a>
-                    <a href="@Model.GetSortUrl("updatedat", "desc")" 
-                       class="sort-btn @(ViewData["UpdatedSortClass"]?.ToString() == "sort-asc" || ViewData["UpdatedSortClass"]?.ToString() == "sort-desc" ? "active" : "")">
-                        Modified
-                        @if (ViewData["UpdatedSortClass"]?.ToString() == "sort-asc")
-                        {
-                            <i class="bi bi-caret-up-fill"></i>
-                        }
-                        else if (ViewData["UpdatedSortClass"]?.ToString() == "sort-desc")
-                        {
-                            <i class="bi bi-caret-down-fill"></i>
-                        }
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Projects Grid -->
-        <div class="projects-grid">
-            @foreach (var project in Model.Projects.Items)
-            {
-                <div class="project-card">
-                    <!-- Card Header -->
-                    <div class="project-card-header">
-                        <div class="project-info">
-                            <div class="project-icon-wrapper" style="--project-color: @(project.Color ?? "#059669")">
-                                @if (!string.IsNullOrEmpty(project.Icon))
-                                {
-                                    <i class="bi bi-@(project.Icon)"></i>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-kanban"></i>
-                                }
-                            </div>
-                            <div class="project-title-section">
-                                <a asp-page="./Details" asp-route-id="@project.Id" class="project-title">
-                                    @project.Name
-                                </a>
-                                <div class="project-badges">
-                                    @if (project.IsActive)
-                                    {
-                                        <span class="status-badge active">Active</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="status-badge archived">Archived</span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Actions Dropdown -->
-                        <div class="dropdown">
-                            <button class="project-actions-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                <li>
-                                    <a class="dropdown-item" asp-page="./Details" asp-route-id="@project.Id">
-                                        <i class="bi bi-eye"></i>View Details
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" asp-page="./Edit" asp-route-id="@project.Id">
-                                        <i class="bi bi-pencil"></i>Edit
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                @if (project.IsActive)
-                                {
-                                    <li>
-                                        <form method="post" asp-page-handler="Archive" asp-route-projectId="@project.Id" class="d-inline">
-                                            <button type="submit" class="dropdown-item" 
-                                                    onclick="return confirm('Are you sure you want to archive this project?')">
-                                                <i class="bi bi-archive"></i>Archive
-                                            </button>
-                                        </form>
-                                    </li>
-                                }
-                                else
-                                {
-                                    <li>
-                                        <form method="post" asp-page-handler="Restore" asp-route-projectId="@project.Id" class="d-inline">
-                                            <button type="submit" class="dropdown-item">
-                                                <i class="bi bi-arrow-counterclockwise"></i>Restore
-                                            </button>
-                                        </form>
-                                    </li>
-                                }
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="post" asp-page-handler="Delete" asp-route-projectId="@project.Id" class="d-inline">
-                                        <button type="submit" class="dropdown-item text-danger" 
-                                                onclick="return confirm('Are you sure you want to delete this project? This action cannot be undone.')">
-                                            <i class="bi bi-trash"></i>Delete
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Card Body -->
-                    <div class="project-card-body">
-                        @if (!string.IsNullOrEmpty(project.Description))
-                        {
-                            <p class="project-description">@project.Description</p>
-                        }
-                        else
-                        {
-                            <p class="project-description no-description">No description provided</p>
-                        }
-
-                        <!-- Project Stats -->
-                        <div class="project-stats">
-                            <div class="stat-item">
-                                <div class="stat-icon blue">📄</div>
-                                <div class="stat-info">
-                                    <span class="stat-value">@project.DocumentCount</span>
-                                    <span class="stat-label">Documents</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-icon yellow">📁</div>
-                                <div class="stat-info">
-                                    <span class="stat-value">@project.FolderCount</span>
-                                    <span class="stat-label">Folders</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-icon green">📊</div>
-                                <div class="stat-info">
-                                    <span class="stat-value">@(project.DocumentCount + project.FolderCount)</span>
-                                    <span class="stat-label">Total Items</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card Footer -->
-                    <div class="project-card-footer">
-                        <div class="footer-date">
-                            <i class="bi bi-calendar3"></i>
-                            <span>Created @project.CreatedAt.ToString("MMM d, yyyy")</span>
-                        </div>
-                        @if (project.UpdatedAt.HasValue)
-                        {
-                            <div class="footer-date">
-                                <i class="bi bi-pencil"></i>
-                                <span>@project.UpdatedAt.Value.ToString("MMM d, yyyy")</span>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- View Details Link -->
-                    <a asp-page="./Details" asp-route-id="@project.Id" class="project-card-link">
-                        <span>View Project</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
-            }
-        </div>
-
-        <!-- Modern Pagination -->
-        @if (Model.Projects.TotalPages > 1)
-        {
-            <div class="projects-pagination">
-                @if (Model.Projects.PageNumber > 1)
-                {
-                    <a href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", Model.Projects.PageNumber - 1)" class="pagination-btn">
-                        <i class="bi bi-chevron-left"></i>
-                        <span>Previous</span>
-                    </a>
-                }
-
-                <div class="pagination-numbers">
-                    @for (int i = Math.Max(1, Model.Projects.PageNumber - 2); i <= Math.Min(Model.Projects.TotalPages, Model.Projects.PageNumber + 2); i++)
+        <div class="dfh-fill">
+            <table class="dfh-table dfh-table--select dfh-table--tall" id="projects-table" data-dfh-select-table
+                   data-inspector-url="/Projects?handler=Inspector&id={id}" data-open-url="/Projects/Details/{id}" aria-label="Projects">
+                <colgroup>
+                    <col />
+                    <col style="width: 76px" />
+                    <col style="width: 72px" />
+                    <col style="width: 84px" />
+                    <col style="width: 100px" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col">Project</th>
+                        <th scope="col" class="is-num">Folders</th>
+                        <th scope="col" class="is-num">Docs</th>
+                        <th scope="col" class="is-num">Size</th>
+                        <th scope="col">Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < rows.Count; i++)
                     {
-                        <a href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", i)" 
-                           class="pagination-number @(i == Model.Projects.PageNumber ? "active" : "")">@i</a>
+                        var p = rows[i];
+                        var first = i == 0;
+                        <tr class="@(first ? "is-selected" : null)" data-id="@p.Id" data-filter="@($"{p.Name} {p.Description}".ToLowerInvariant())"
+                            tabindex="@(first ? "0" : "-1")" aria-selected="@(first ? "true" : "false")">
+                            <td>
+                                <div class="dfh-two-line">
+                                    <span class="dfh-swatch dfh-swatch--10" style="background: @Dfh.ProjectColor(p.Color, p.Id)" aria-hidden="true"></span>
+                                    <span class="dfh-two-line-text">
+                                        <a class="dfh-cell-link dfh-ellipsis" href="/Projects/Details/@p.Id">@p.Name</a>
+                                        <span class="dfh-ellipsis">@(string.IsNullOrWhiteSpace(p.Description) ? "No description" : p.Description)</span>
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="is-mono is-muted is-num">@p.FolderCount</td>
+                            <td class="is-mono is-num">@p.DocumentCount</td>
+                            <td class="is-mono is-muted is-num">@Dfh.FileSize(p.Bytes)</td>
+                            <td class="is-muted" title="@Dfh.Timestamp(p.UpdatedAt)">@Dfh.Relative(p.UpdatedAt)</td>
+                        </tr>
                     }
-                </div>
-
-                @if (Model.Projects.PageNumber < Model.Projects.TotalPages)
-                {
-                    <a href="@Model.GetSortUrl(Model.Filter.SortBy, Model.Filter.SortDescending ? "desc" : "asc", Model.Projects.PageNumber + 1)" class="pagination-btn">
-                        <span>Next</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                }
-            </div>
-        }
+                    <tr class="dfh-filter-empty" hidden><td colspan="5">No project matches the filter.</td></tr>
+                </tbody>
+            </table>
+        </div>
     }
 </div>
 
-@section Styles {
-<style>
-    /* ===== PROJECTS PAGE STYLES ===== */
-    
-    /* Container */
-    .projects-container {
-        padding: 2rem;
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-    
-    /* Page Header */
-    .projects-page-header {
-        margin-bottom: 2rem;
-    }
-    
-    .projects-page-header .page-header-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-    }
-    
-    .projects-page-header .page-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin: 0;
-    }
-    
-    .projects-page-header .page-icon {
-        font-size: 2.5rem;
-    }
-    
-    .projects-page-header .page-subtitle {
-        color: var(--text-secondary);
-        margin: 0.5rem 0 0 0;
-        font-size: 1.1rem;
-    }
-    
-    .projects-page-header .modern-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .projects-page-header .modern-btn-primary {
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-        color: white;
-        border: none;
-    }
-    
-    .projects-page-header .modern-btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
-        color: white;
-    }
-    
-    /* Modern Alerts */
-    .modern-alert {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 1.25rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        backdrop-filter: blur(20px);
-    }
-    
-    .modern-alert-success {
-        background: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-        color: #16a34a;
-    }
-    
-    .modern-alert-danger {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #dc2626;
-    }
-    
-    .modern-alert .alert-icon {
-        font-size: 1.25rem;
-    }
-    
-    .modern-alert .alert-content {
-        flex: 1;
-        font-weight: 500;
-    }
-    
-    .modern-alert .alert-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        opacity: 0.6;
-        line-height: 1;
-    }
-    
-    .modern-alert .alert-close:hover {
-        opacity: 1;
-    }
-    
-    /* Filter Panel */
-    .projects-filter-panel {
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        backdrop-filter: blur(20px);
-    }
-    
-    .filter-header {
-        margin-bottom: 1.25rem;
-    }
-    
-    .filter-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0;
-    }
-    
-    .filter-title i {
-        color: var(--accent-color);
-    }
-    
-    .filter-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr auto;
-        gap: 1rem;
-        align-items: end;
-    }
-    
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .filter-label {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-    }
-    
-    .filter-input,
-    .filter-select {
-        padding: 0.65rem 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--surface-secondary);
-        color: var(--text-primary);
-        font-size: 0.9rem;
-        transition: all 0.2s ease;
-    }
-    
-    .filter-input:focus,
-    .filter-select:focus {
-        outline: none;
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
-    }
-    
-    .filter-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .filter-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.65rem 1rem;
-        border-radius: 10px;
-        font-weight: 500;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        border: none;
-        cursor: pointer;
-    }
-    
-    .filter-btn-primary {
-        background: var(--accent-color);
-        color: white;
-    }
-    
-    .filter-btn-primary:hover {
-        background: rgba(2, 132, 199, 0.9);
-        color: white;
-    }
-    
-    .filter-btn-secondary {
-        background: var(--surface-secondary);
-        color: var(--text-secondary);
-        border: 1px solid var(--border-color);
-    }
-    
-    .filter-btn-secondary:hover {
-        background: var(--surface-primary);
-        color: var(--text-primary);
-    }
-    
-    /* Results Bar */
-    .projects-results-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-    
-    .results-info {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-    
-    .results-count {
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-    
-    .results-page {
-        opacity: 0.7;
-    }
-    
-    .results-sort {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .sort-label {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-    }
-    
-    .sort-buttons {
-        display: flex;
-        gap: 0.25rem;
-    }
-    
-    .sort-btn {
-        padding: 0.4rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        text-decoration: none;
-        background: var(--surface-secondary);
-        border: 1px solid var(--border-color);
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    
-    .sort-btn:hover {
-        background: var(--surface-primary);
-        color: var(--text-primary);
-    }
-    
-    .sort-btn.active {
-        background: var(--accent-color);
-        color: white;
-        border-color: var(--accent-color);
-    }
-    
-    /* Projects Grid */
-    .projects-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    /* Project Card */
-    .project-card {
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(20px);
-        display: flex;
-        flex-direction: column;
-        position: relative;
-    }
-    
-    .project-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-glass);
-        border-color: var(--accent-color);
-    }
-    
-    .project-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        padding: 1.25rem 1.25rem 0;
-    }
-    
-    .project-info {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-    
-    .project-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        color: var(--project-color);
-        background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(2, 132, 199, 0.05) 100%);
-        flex-shrink: 0;
-    }
-    
-    .project-title-section {
-        min-width: 0;
-    }
-    
-    .project-title {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        text-decoration: none;
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        transition: color 0.2s ease;
-    }
-    
-    .project-title:hover {
-        color: var(--accent-color);
-    }
-    
-    .project-badges {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.35rem;
-    }
-    
-    .status-badge {
-        font-size: 0.7rem;
-        font-weight: 500;
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
-    }
-    
-    .status-badge.active {
-        background: rgba(34, 197, 94, 0.15);
-        color: #16a34a;
-    }
-    
-    .status-badge.archived {
-        background: rgba(107, 114, 128, 0.15);
-        color: #6b7280;
-    }
-    
-    .project-actions-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
-        background: transparent;
-        color: var(--text-tertiary);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .project-actions-btn:hover {
-        background: var(--surface-secondary);
-        color: var(--text-primary);
-    }
-    
-    .modern-dropdown {
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        background: var(--surface-primary);
-        box-shadow: var(--shadow-glass);
-        padding: 0.5rem;
-    }
-    
-    .modern-dropdown .dropdown-item {
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: var(--text-primary);
-    }
-    
-    .modern-dropdown .dropdown-item:hover {
-        background: var(--surface-secondary);
-    }
-    
-    .modern-dropdown .dropdown-divider {
-        margin: 0.35rem 0;
-        border-color: var(--border-color);
-    }
-    
-    .project-card-body {
-        padding: 1rem 1.25rem;
-        flex: 1;
-    }
-    
-    .project-description {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin: 0 0 1rem 0;
-        line-height: 1.5;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-    
-    .project-description.no-description {
-        font-style: italic;
-        opacity: 0.6;
-    }
-    
-    /* Project Stats */
-    .project-stats {
-        display: flex;
-        gap: 0.75rem;
-    }
-    
-    .stat-item {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.6rem;
-        background: var(--surface-secondary);
-        border-radius: 10px;
-    }
-    
-    .stat-icon {
-        font-size: 1rem;
-    }
-    
-    .stat-info {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .stat-value {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        line-height: 1.1;
-    }
-    
-    .stat-label {
-        font-size: 0.65rem;
-        color: var(--text-tertiary);
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-    
-    .project-card-footer {
-        display: flex;
-        justify-content: space-between;
-        padding: 0 1.25rem 0.75rem;
-    }
-    
-    .footer-date {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.75rem;
-        color: var(--text-tertiary);
-    }
-    
-    .project-card-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 0.85rem;
-        background: var(--surface-secondary);
-        color: var(--accent-color);
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.2s ease;
-        border-top: 1px solid var(--border-color);
-    }
-    
-    .project-card-link:hover {
-        background: var(--accent-color);
-        color: white;
-    }
-    
-    .project-card-link i {
-        transition: transform 0.2s ease;
-    }
-    
-    .project-card-link:hover i {
-        transform: translateX(3px);
-    }
-    
-    /* Empty State */
-    .projects-empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 4rem 2rem;
-        text-align: center;
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-    }
-    
-    .projects-empty-state .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 1.5rem;
-        opacity: 0.6;
-    }
-    
-    .projects-empty-state h3 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin: 0 0 0.5rem 0;
-    }
-    
-    .projects-empty-state p {
-        font-size: 0.95rem;
-        color: var(--text-secondary);
-        margin: 0 0 1.5rem 0;
-    }
-    
-    .empty-action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: white;
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(2, 132, 199, 0.8) 100%);
-        border-radius: 12px;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    
-    .empty-action-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
-        color: white;
-    }
-    
-    /* Pagination */
-    .projects-pagination {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 1rem 0;
-    }
-    
-    .pagination-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        text-decoration: none;
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        transition: all 0.2s ease;
-    }
-    
-    .pagination-btn:hover {
-        background: var(--surface-secondary);
-        color: var(--text-primary);
-    }
-    
-    .pagination-numbers {
-        display: flex;
-        gap: 0.25rem;
-    }
-    
-    .pagination-number {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        text-decoration: none;
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        transition: all 0.2s ease;
-    }
-    
-    .pagination-number:hover {
-        background: var(--surface-secondary);
-        color: var(--text-primary);
-    }
-    
-    .pagination-number.active {
-        background: var(--accent-color);
-        color: white;
-        border-color: var(--accent-color);
-    }
-    
-    /* ===== RESPONSIVE DESIGN ===== */
-    @@media (max-width: 1200px) {
-        .projects-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .filter-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-        
-        .filter-actions {
-            grid-column: span 2;
-        }
-    }
-    
-    @@media (max-width: 768px) {
-        .projects-container {
-            padding: 1rem;
-        }
-        
-        .projects-page-header .page-header-content {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .projects-page-header .page-title {
-            font-size: 1.5rem;
-        }
-        
-        .filter-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .filter-actions {
-            grid-column: 1;
-        }
-        
-        .projects-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .projects-results-bar {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .project-stats {
-            flex-wrap: wrap;
-        }
-        
-        .stat-item {
-            flex: 1 1 calc(50% - 0.375rem);
-        }
-    }
-    
-    /* ===== DARK THEME ADJUSTMENTS ===== */
-    [data-theme="dark"] .projects-filter-panel {
-        background: var(--container-bg);
-    }
-    
-    [data-theme="dark"] .project-card {
-        background: var(--container-bg);
-    }
-    
-    [data-theme="dark"] .project-card:hover {
-        background: rgba(55, 55, 55, 0.9);
-    }
-    
-    [data-theme="dark"] .stat-item {
-        background: var(--surface-secondary);
-    }
-    
-    [data-theme="dark"] .project-card-link {
-        background: var(--surface-secondary);
-    }
-    
-    [data-theme="dark"] .project-card-link:hover {
-        background: var(--accent-color);
-    }
-    
-    [data-theme="dark"] .modern-dropdown {
-        background: var(--container-bg-solid);
-    }
-    
-    [data-theme="dark"] .modern-alert-success {
-        background: rgba(34, 197, 94, 0.15);
-    }
-    
-    [data-theme="dark"] .modern-alert-danger {
-        background: rgba(239, 68, 68, 0.15);
-    }
-    
-    [data-theme="dark"] .projects-empty-state {
-        background: var(--container-bg);
-    }
-</style>
-} 
+@section Scripts {
+    <script src="~/js/dfh/selectable-table.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/row-filter.js" asp-append-version="true"></script>
+}

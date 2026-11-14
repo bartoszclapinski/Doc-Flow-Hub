@@ -337,7 +337,9 @@
     else
     {
         <div class="dfh-fill" data-dfh-doc-scroll>
-            <table class="dfh-table dfh-table--select" data-dfh-doc-table aria-label="Documents" aria-multiselectable="true">
+            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table
+                   data-inspector-url="/Documents?handler=Inspector&id={id}" data-open-url="/Documents/Details/{id}"
+                   aria-label="Documents" aria-multiselectable="true">
                 <colgroup>
                     <col class="dfh-col-check" />
                     <col />
@@ -433,6 +435,8 @@
 <partial name="_DocumentDialogs" model="new DocumentDialogsView(returnUrl, tree)" />
 
 @section Scripts {
+    <script src="~/js/dfh/tree.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/selectable-table.js" asp-append-version="true"></script>
     <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/documents.js" asp-append-version="true"></script>
 }

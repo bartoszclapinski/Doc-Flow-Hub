@@ -1,0 +1,24 @@
+@model DocFlowHub.Web.Ui.ProjectFieldsView
+@* Name, description and colour of a project (Create and Edit). *@
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Project</legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Name</span>
+            <input name="Name" value="@Model.Name" class="form-control" maxlength="100" required autofocus />
+            @if (Model.NameError != null)
+            {
+                <span class="field-validation-error">@Model.NameError</span>
+            }
+        </label>
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Description</span>
+            <textarea name="Description" class="form-control" rows="2" maxlength="500" placeholder="Optional. What goes in this project?">@Model.Description</textarea>
+        </label>
+        <div class="dfh-field is-wide">
+            <span class="dfh-field-label" id="color-label">Colour</span>
+            <partial name="_ProjectColorPicker" model="Model.Color" />
+            <span class="form-text">Shown as a small square next to the project in the tree and the lists.</span>
+        </div>
+    </div>
+</fieldset>

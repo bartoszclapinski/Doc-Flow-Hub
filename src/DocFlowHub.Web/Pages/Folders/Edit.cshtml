@@ -1,235 +1,34 @@
 @page
 @model DocFlowHub.Web.Pages.Folders.EditModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = $"Edit Folder: {Model.Folder?.Name}";
+    ViewData["Title"] = $"Edit · {Model.Folder.Name}";
+    ViewData["FullBleed"] = true;
+    var nameError = ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage;
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="/Projects/Index">Projects</a></li>
-            @if (Model.Project != null)
+<form class="dfh-column" method="post" asp-route-Id="@Model.Id" data-dfh-busy="Saving…">
+    <partial name="_EditorTabs" model='new EditorTabsView(Model.Folder.Name, Icon: "bi-pencil", Suffix: "edit")' />
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
             {
-                <li class="breadcrumb-sep">/</li>
-                <li><a asp-page="/Projects/Details" asp-route-id="@Model.Project.Id">@Model.Project.Name</a></li>
-                <li class="breadcrumb-sep">/</li>
-                <li><a asp-page="/Folders/Index" asp-route-projectId="@Model.Project.Id">Folders</a></li>
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
-            @if (Model.Folder != null)
-            {
-                <li class="breadcrumb-sep">/</li>
-                <li><a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id">@Model.Folder.Name</a></li>
-            }
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Edit</li>
-        </ol>
-    </nav>
-
-    @if (Model.Folder == null)
-    {
-        <div class="content-card text-center py-5">
-            <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
-            <h4 class="text-muted mt-3 mb-2">Folder not found</h4>
-            <p class="text-muted mb-4">The folder you're trying to edit doesn't exist or you don't have access to it.</p>
-            <a asp-page="/Projects/Index" class="submit-btn d-inline-flex"><i class="bi bi-arrow-left"></i> Back to Projects</a>
+            <partial name="_FolderFields" model="new FolderFieldsView(Model.Project.Name, Model.Name, Model.Description, Model.ParentFolderId, Model.Parents, nameError)" />
+            <p class="dfh-insp-note">Moving a folder moves its subfolders and documents with it. You can also drag it in the project tree.</p>
         </div>
-    }
-    else
-    {
-        <!-- Page Header -->
-        <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <h1 class="page-title"><div class="page-icon">✏️</div> Edit Folder</h1>
-                <p class="page-subtitle">Updating folder <strong>@Model.Folder.Name</strong></p>
-            </div>
-            <a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id" class="cancel-btn">
-                <i class="bi bi-arrow-left"></i> Back to Folder
-            </a>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="form-card">
-                    <h5 class="section-heading"><i class="bi bi-folder"></i> Folder Details</h5>
-                    <form method="post" id="editFolderForm">
-                        <input type="hidden" asp-for="Id" />
-
-                        <div class="form-group full-width">
-                            <label asp-for="Name" class="form-label"><i class="bi bi-card-text"></i> Folder Name *</label>
-                            <input asp-for="Name" class="form-input" placeholder="Enter folder name..." maxlength="100" required />
-                            <span asp-validation-for="Name" class="validation-message"></span>
-                            <div class="form-hint">Choose a descriptive name for your folder (max 100 characters).</div>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label asp-for="Description" class="form-label"><i class="bi bi-card-list"></i> Description</label>
-                            <textarea asp-for="Description" class="form-textarea" rows="3"
-                                      placeholder="Optional description of this folder..." maxlength="500"></textarea>
-                            <span asp-validation-for="Description" class="validation-message"></span>
-                            <div class="form-hint">Provide additional context about this folder (max 500 characters).</div>
-                        </div>
-
-                        @if (Model.AvailableParentFolders.Any())
-                        {
-                            <div class="form-group full-width">
-                                <label class="form-label"><i class="bi bi-diagram-3"></i> Parent Folder</label>
-                                <div class="parent-picker">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="parentFolderSelection"
-                                               id="noParent" value="none" @(Model.ParentFolderId == null ? "checked" : "") />
-                                        <label class="form-check-label" for="noParent"><i class="bi bi-folder me-1"></i>Move to root level</label>
-                                    </div>
-                                    @foreach (var folder in Model.AvailableParentFolders)
-                                    {
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="parentFolderSelection"
-                                                   id="parent_@folder.Id" value="@folder.Id" @(Model.ParentFolderId == folder.Id ? "checked" : "") />
-                                            <label class="form-check-label" for="parent_@folder.Id">
-                                                <i class="bi bi-folder me-1"></i>@folder.Name
-                                                @if (!string.IsNullOrEmpty(folder.Description))
-                                                {
-                                                    <small class="text-muted d-block ms-4">@folder.Description</small>
-                                                }
-                                            </label>
-                                        </div>
-                                    }
-                                </div>
-                                <div class="form-hint">Select where to move this folder in the hierarchy.</div>
-                            </div>
-                        }
-
-                        <div class="form-actions">
-                            <button type="submit" class="submit-btn"><i class="bi bi-check-circle"></i> Save Changes</button>
-                            <a asp-page="/Folders/Details" asp-route-id="@Model.Folder.Id" class="cancel-btn">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="content-card">
-                    <h5 class="section-heading"><i class="bi bi-eye"></i> Preview</h5>
-                    <div id="folderPreview">
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-folder display-4"></i>
-                            <p class="mt-2">Enter folder details to see preview</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-card mt-3">
-                    <h5 class="section-heading"><i class="bi bi-info-circle"></i> Current Information</h5>
-                    <dl class="info-dl mb-0">
-                        <dt>Name</dt><dd>@Model.Folder.Name</dd>
-                        <dt>Description</dt><dd>@(string.IsNullOrEmpty(Model.Folder.Description) ? "No description" : Model.Folder.Description)</dd>
-                        <dt>Created</dt><dd>@Model.Folder.CreatedAt.ToString("MMM dd, yyyy")</dd>
-                        <dt>Modified</dt><dd>@(Model.Folder.UpdatedAt?.ToString("MMM dd, yyyy") ?? "Never")</dd>
-                        <dt>Level</dt><dd>@Model.Folder.Level</dd>
-                        <dt>Documents</dt><dd>@Model.Folder.DocumentCount</dd>
-                    </dl>
-                </div>
-
-                @if (Model.Project != null)
-                {
-                    <div class="content-card mt-3">
-                        <h5 class="section-heading"><i class="bi bi-kanban"></i> Project Information</h5>
-                        <div class="d-flex align-items-center mb-3">
-                            <i class="bi bi-@Model.Project.Icon me-3" style="color:@Model.Project.Color;font-size:1.5rem;"></i>
-                            <div>
-                                <h6 class="mb-0">@Model.Project.Name</h6>
-                                <small class="text-muted">@Model.Project.Description</small>
-                            </div>
-                        </div>
-                        <div class="row text-center">
-                            <div class="col-6 border-end">
-                                <div class="h5 mb-0" style="color:var(--accent-color);">@Model.Project.DocumentCount</div>
-                                <small class="text-muted">Documents</small>
-                            </div>
-                            <div class="col-6">
-                                <div class="h5 mb-0" style="color:var(--info-color);">@Model.Project.FolderCount</div>
-                                <small class="text-muted">Folders</small>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
-</div>
-
-@section Styles {
-<style>
-    /* .section-heading and .parent-picker live in components.css */
-    .folder-preview { padding: 1rem; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-secondary); color: var(--text-primary); }
-    .info-dl { display: grid; grid-template-columns: 40% 60%; row-gap: 0.5rem; font-size: 0.9rem; }
-    .info-dl dt { font-weight: 600; color: var(--text-primary); }
-    .info-dl dd { margin: 0; color: var(--text-secondary); }
-</style>
-}
-
-@section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const nameInput = document.getElementById('Name');
-            const descriptionInput = document.getElementById('Description');
-            const previewDiv = document.getElementById('folderPreview');
-            const parentFolderSelection = document.querySelectorAll('input[name="parentFolderSelection"]');
-            const parentFolderIdInput = document.getElementById('ParentFolderId');
-
-            if (!nameInput) return; // not-found state
-
-            function updatePreview() {
-                const name = nameInput.value.trim();
-                const description = descriptionInput.value.trim();
-                const selectedParent = document.querySelector('input[name="parentFolderSelection"]:checked');
-
-                if (name) {
-                    let previewHtml = `
-                        <div class="folder-preview">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-folder-fill text-warning me-2" style="font-size: 1.2rem;"></i>
-                                <strong>${name}</strong>
-                            </div>`;
-                    if (description) {
-                        previewHtml += `<p class="text-muted small mb-2">${description}</p>`;
-                    }
-                    if (selectedParent && selectedParent.value !== 'none') {
-                        const parentLabel = selectedParent.nextElementSibling.textContent.trim();
-                        previewHtml += `<div class="alert alert-info small mb-0"><i class="bi bi-arrow-up me-1"></i>Will be moved to: <strong>${parentLabel}</strong></div>`;
-                    } else {
-                        previewHtml += `<div class="alert alert-success small mb-0"><i class="bi bi-check-circle me-1"></i>Will be at root level</div>`;
-                    }
-                    previewHtml += '</div>';
-                    previewDiv.innerHTML = previewHtml;
-                } else {
-                    previewDiv.innerHTML = `
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-folder display-4"></i>
-                            <p class="mt-2">Enter folder details to see preview</p>
-                        </div>`;
-                }
-            }
-
-            nameInput.addEventListener('input', updatePreview);
-            descriptionInput.addEventListener('input', updatePreview);
-            parentFolderSelection.forEach(radio => {
-                radio.addEventListener('change', function () {
-                    if (parentFolderIdInput) parentFolderIdInput.value = this.value === 'none' ? '' : this.value;
-                    updatePreview();
-                });
-            });
-            updatePreview();
-
-            document.getElementById('editFolderForm').addEventListener('submit', function (e) {
-                if (!nameInput.value.trim()) {
-                    e.preventDefault();
-                    nameInput.focus();
-                    return false;
-                }
-            });
-        });
-    </script>
-}
+    </div>
+    <div class="dfh-form-footer">
+        <span class="dfh-mono"></span>
+        <a class="btn btn-secondary" href="@WorkspaceLinks.Folder(Model.Folder.ProjectId, Model.Id)">Cancel</a>
+        @if (DemoMode.IsEnabled)
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled>Save</button></span>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary">Save</button>
+        }
+    </div>
+</form>
