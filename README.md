@@ -49,7 +49,11 @@ idle, so the first visit can take a minute.
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Document with its AI summary](docs/screenshots/document-ai.png) |
 | ![Command palette](docs/screenshots/palette.png) | ![Admin analytics](docs/screenshots/admin-analytics.png) |
 
-<img src="docs/screenshots/mobile-documents.png" alt="Documents on a phone" width="260" />
+<p>
+  <img src="docs/screenshots/mobile-dashboard.png" alt="Dashboard on a phone" width="250" />
+  <img src="docs/screenshots/mobile-documents.png" alt="Documents on a phone" width="250" />
+  <img src="docs/screenshots/mobile-document.png" alt="A document with its AI summary on a phone" width="250" />
+</p>
 
 ## Not there yet
 

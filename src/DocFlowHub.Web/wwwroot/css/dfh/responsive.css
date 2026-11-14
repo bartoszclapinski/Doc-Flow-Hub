@@ -213,6 +213,8 @@
     /* Toolbars keep one line and scroll sideways; the breadcrumb gives way first. */
     .dfh-toolbar { overflow-x: auto; scrollbar-width: none; }
     .dfh-toolbar .dfh-breadcrumb { display: none; }
+    /* Buttons never wrap their labels ("New / version"); the toolbar scrolls instead. */
+    .dfh-toolbar .btn, .dfh-toolbar .dfh-btn-disabled-wrap { flex: none; white-space: nowrap; }
 
     /* Document preview placeholder: a short band, not a page (design 9c). */
     .dfh-preview { flex: none; height: 220px; padding: 12px; }

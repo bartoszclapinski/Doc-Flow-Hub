@@ -330,6 +330,11 @@ test('readme screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/Documents');
   await page.screenshot({ path: `${out}/mobile-documents.png` });
+  await page.goto('/');
+  await hideBanner();
+  await page.screenshot({ path: `${out}/mobile-dashboard.png` });
+  await page.goto(href + '?tab=ai');
+  await page.screenshot({ path: `${out}/mobile-document.png` });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.context().clearCookies();
   await signIn(page, DEMO_ADMIN);
