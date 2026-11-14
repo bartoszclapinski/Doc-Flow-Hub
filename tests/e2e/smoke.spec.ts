@@ -91,10 +91,10 @@ test('signed out: / is the landing page with working calls to action', async ({ 
 
   const demo = page.locator('.dfh-lp-hero a', { hasText: 'Try the demo' });
   if (await demo.count()) {
-    // Demo: the call to action signs in with the demo account pre-filled.
+    // Demo: the call to action opens Sign in, which offers the demo accounts first.
     await demo.click();
-    await expect(page).toHaveURL(/\/Account\/Login\?demo=1/);
-    await expect(page.locator('#Input_Email')).toHaveValue(DEMO_USER.email);
+    await expect(page).toHaveURL(/\/Account\/Login$/);
+    await expect(page.locator('form.dfh-demo-account')).toHaveCount(2);
   } else {
     await page.locator('.dfh-lp-hero a', { hasText: 'Create account' }).click();
     await expect(page).toHaveURL(/\/Account\/Register/);
@@ -118,17 +118,72 @@ test('signed out: Sign in still works from the landing page', async ({ page }) =
   await page.goto('/');
   await page.locator('.dfh-lp-nav').getByRole('link', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/Account\/Login$/);
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.locator('#login-submit')).toBeVisible();
 });
 
-test('demo: clicking a demo account fills the sign-in form', async ({ page }) => {
+// Sprint 17: the demo accounts are explained and sign in with one click.
+test('demo sign-in: accounts are explained; one click signs in as user or admin', async ({ page }) => {
   await page.goto('/Account/Login');
-  const fill = page.locator('.dfh-demo-fill').first();
-  test.skip((await fill.count()) === 0, 'not a demo instance');
-  await fill.click();
-  await expect(page.locator('#Input_Email')).toHaveValue(DEMO_USER.email);
-  await Promise.all([page.waitForURL((url) => url.pathname === '/'), page.locator('#login-submit').click()]);
+  const cards = page.locator('form.dfh-demo-account');
+  test.skip((await cards.count()) === 0, 'not a demo instance');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Explore the read-only demo');
+  await expect(cards.nth(0)).toContainText('Demo user');
+  await expect(cards.nth(0)).toContainText(DEMO_USER.email);
+  await expect(cards.nth(1)).toContainText('admin panel');
+  // The explanation is collapsed until asked for.
+  const why = page.locator('details.dfh-demo-why');
+  await expect(why.locator('ul')).toBeHidden();
+  await why.locator('summary').click();
+  await expect(why).toContainText('read-only');
+
+  await Promise.all([page.waitForURL((url) => url.pathname === '/'), page.getByRole('button', { name: 'Sign in as user' }).click()]);
   await expect(page.locator('.dfh-page-header h1')).toHaveText('Overview');
+  await expect(page.locator('.dfh-rail a[href="/Admin"]')).toHaveCount(0);
+
+  await page.context().clearCookies();
+  await page.goto('/Account/Login');
+  await Promise.all([page.waitForURL((url) => url.pathname === '/'), page.getByRole('button', { name: 'Sign in as admin' }).click()]);
+  await expect(page.locator('.dfh-rail a[href="/Admin"]')).toBeVisible();
+
+  // The e-mail form still works next to the cards.
+  await page.context().clearCookies();
+  await signIn(page, DEMO_USER);
+  await expect(page.locator('.dfh-page-header h1')).toHaveText('Overview');
+});
+
+test('demo: /Account/Register explains why there is no sign-up', async ({ page }) => {
+  await page.goto('/Account/Login');
+  test.skip((await page.locator('form.dfh-demo-account').count()) === 0, 'not a demo instance');
+  await page.goto('/Account/Register');
+  await expect(page).toHaveURL(/\/Account\/Register$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('No sign-up in the demo');
+  await expect(page.locator('details.dfh-demo-why ul')).toBeVisible();
+  await expect(page.locator('#registerSubmit')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Explore the demo' }).click();
+  await expect(page.locator('form.dfh-demo-account')).toHaveCount(2);
+});
+
+test('without demo mode: no demo accounts, and the demo sign-in handler does not exist', async ({ page }) => {
+  await page.goto('/Account/Login');
+  test.skip((await page.locator('form.dfh-demo-account').count()) > 0, 'demo instance');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sign in');
+  const token = await page.locator('#account input[name="__RequestVerificationToken"]').inputValue();
+  const response = await page.request.post('/Account/Login?handler=Demo', {
+    form: { __RequestVerificationToken: token, account: 'user' },
+    maxRedirects: 0,
+  });
+  expect(response.status()).toBe(404);
+});
+
+test('demo sign-in on a phone: full-width buttons, no sideways scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Account/Login');
+  test.skip((await page.locator('form.dfh-demo-account').count()) === 0, 'not a demo instance');
+  const button = page.getByRole('button', { name: 'Sign in as user' });
+  const box = await button.boundingBox();
+  expect(box!.width).toBeGreaterThan(250);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test('dashboard: stats, recent documents, strip and activity render', async ({ page }) => {
@@ -162,7 +217,7 @@ test('demo admin: / is the personal dashboard, /Admin the system overview', asyn
 
 test('register: password rules update live and gate the submit button', async ({ page }) => {
   await page.goto('/Account/Register');
-  test.skip(page.url().includes('/Account/Login'), 'registration is disabled in the demo');
+  test.skip((await page.locator('#registerSubmit').count()) === 0, 'registration is disabled in the demo');
   const submit = page.locator('#registerSubmit');
   await expect(submit).toBeDisabled();
   await page.locator('#Input_Password').fill('abc');

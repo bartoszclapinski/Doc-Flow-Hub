@@ -5,6 +5,22 @@
     Layout = "_AuthLayout";
 }
 
+@if (Model.DemoBlocked)
+{
+    <main class="dfh-auth-card dfh-auth-card--demo">
+        <div class="dfh-auth-head">
+            <h1>No sign-up in the demo</h1>
+            <p>This is the public, read-only demo of DocFlowHub. You can look around with a ready-made account instead.</p>
+        </div>
+        <partial name="_DemoExplainer" model="true" />
+        <div class="dfh-demo-actions">
+            <a class="btn btn-primary" asp-page="./Login">Explore the demo<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+            <a class="btn btn-secondary" href="https://github.com/bartoszclapinski/Doc-Flow-Hub" rel="noopener"><i class="bi bi-github" aria-hidden="true"></i>Run your own copy</a>
+        </div>
+    </main>
+}
+else
+{
 <main class="dfh-auth-card dfh-auth-card--wide">
     <div class="dfh-auth-head">
         <h1>Create account</h1>
@@ -59,6 +75,7 @@
 
     <p class="dfh-auth-alt">Already have an account? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Sign in</a></p>
 </main>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

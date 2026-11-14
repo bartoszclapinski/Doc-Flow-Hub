@@ -4,13 +4,14 @@
     Public landing page at "/" for signed-out visitors (handoff "DocFlowHub Landing", Sprint 16).
     A full HTML document returned by IndexModel as a partial, so it has no app chrome. The copy follows
     the mock but only claims what the app does (fact check in .ai/sprints/sprint16/sprint16-plan.md).
-    Demo mode decides the calls to action: "Try the demo" (sign in with the demo account pre-filled)
+    Demo mode decides the calls to action: "Try the demo" (Sign in, which offers the demo accounts)
     or "Create account" / "Sign in" on a self-hosted install.
 *@
 @{
     const string GitHub = "https://github.com/bartoszclapinski/Doc-Flow-Hub";
     var demo = DemoMode.IsEnabled;
-    var demoUrl = Url.Page("/Account/Login", new { area = "", demo = 1 }) ?? "/Account/Login?demo=1";
+    // "Try the demo" opens Sign in, which lists the demo accounts first (Sprint 17).
+    var demoUrl = Url.Page("/Account/Login", new { area = "" }) ?? "/Account/Login";
     var loginUrl = Url.Page("/Account/Login", new { area = "" }) ?? "/Account/Login";
     var registerUrl = Url.Page("/Account/Register", new { area = "" }) ?? "/Account/Register";
     var privacyUrl = Url.Page("/Privacy", new { area = "" }) ?? "/Privacy";
