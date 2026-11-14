@@ -1,26 +1,8 @@
-// Sign in and Register (designs 3g, 8d): demo click-to-fill and live password rules.
+// Register (design 8d): live password rules. (The demo accounts on Sign in are plain forms since Sprint 17.)
 (function () {
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Demo box: clicking an account fills the sign-in form.
-        document.querySelectorAll('.dfh-demo-fill').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const email = document.getElementById('Input_Email');
-                const password = document.getElementById('Input_Password');
-                if (!email || !password) return;
-                email.value = button.getAttribute('data-email');
-                password.value = button.getAttribute('data-password');
-                document.getElementById('login-submit')?.focus();
-            });
-        });
-
-        // "Try the demo" on the landing page links here with ?demo=1: fill in the demo user account.
-        const firstDemo = document.querySelector('.dfh-demo-fill');
-        if (firstDemo && new URLSearchParams(window.location.search).get('demo') === '1') {
-            firstDemo.click();
-        }
-
         // Register: rules, strength meter, and a submit that waits for a valid password.
         const password = document.querySelector('[data-dfh-password]');
         if (!password) return;

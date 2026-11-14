@@ -414,30 +414,51 @@
 .dfh-form-error ul { margin: 0; padding: 0; list-style: none; }
 .dfh-form-error.validation-summary-valid { display: none; }
 
-/* Demo credentials box (demo mode only) */
-.dfh-demo-box {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 380px;
-    max-width: 100%;
-    padding: 12px 14px;
-    border: 1px dashed var(--dfh-border-button);
+/* Demo sign-in (demo mode only, Sprint 17): account cards, "why read-only", divider before the e-mail form */
+.dfh-auth-card--demo { width: 460px; }
+.dfh-demo-accounts { display: flex; flex-direction: column; gap: 10px; }
+.dfh-auth-card form.dfh-demo-account {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid var(--dfh-border);
     border-radius: var(--dfh-radius-lg);
+    background: var(--dfh-bg);
+}
+.dfh-demo-account > i { font-size: 16px; line-height: 22px; color: var(--dfh-text-muted); }
+.dfh-demo-account-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dfh-demo-account h2 { margin: 0; font-size: 14px; line-height: 22px; font-weight: 600; }
+.dfh-demo-account p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--dfh-text-2); }
+.dfh-demo-account .dfh-mono { color: var(--dfh-text-muted); overflow-wrap: anywhere; }
+.dfh-demo-account .btn { grid-column: 2; justify-self: start; gap: 6px; }
+
+.dfh-demo-why { font-size: 12.5px; color: var(--dfh-text-2); }
+.dfh-demo-why summary { cursor: pointer; color: var(--dfh-link); width: fit-content; }
+.dfh-demo-why summary:hover { text-decoration: underline; }
+.dfh-demo-why ul { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding-left: 18px; line-height: 1.5; }
+.dfh-demo-why code { font-size: 11.5px; color: var(--dfh-text); overflow-wrap: anywhere; }
+.dfh-demo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dfh-demo-actions .btn { gap: 6px; }
+
+.dfh-auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0 0;
     font-size: 12px;
+    font-weight: 400;
     color: var(--dfh-text-muted);
 }
-.dfh-demo-box-title { display: flex; align-items: center; gap: 6px; color: var(--dfh-text-2); }
-.dfh-demo-box .dfh-mono { overflow-wrap: anywhere; }
-.dfh-demo-fill {
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    color: var(--dfh-link);
-    cursor: pointer;
+.dfh-auth-divider::before,
+.dfh-auth-divider::after { content: ""; flex: 1; border-top: 1px solid var(--dfh-border); }
+
+@media (max-width: 599px) {
+    .dfh-auth-card form.dfh-demo-account { grid-template-columns: 1fr; }
+    .dfh-demo-account > i { display: none; }
+    .dfh-demo-account .btn { grid-column: 1; justify-self: stretch; justify-content: center; min-height: 40px; }
+    .dfh-demo-actions .btn { flex: 1 1 100%; justify-content: center; }
 }
-.dfh-demo-fill:hover { text-decoration: underline; }
 
 /* Password rules + strength meter (Register) */
 .dfh-strength { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 2px; }

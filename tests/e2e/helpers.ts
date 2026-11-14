@@ -10,7 +10,7 @@ export async function signIn(page: Page, account: { email: string; password: str
   await page.locator('input[name="Input.Password"]').fill(account.password);
   await Promise.all([
     page.waitForURL((url) => !url.pathname.startsWith('/Account/Login')),
-    page.locator('form button[type="submit"]').first().click(),
+    page.locator('#login-submit').click(),
   ]);
 }
 

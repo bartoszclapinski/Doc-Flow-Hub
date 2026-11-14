@@ -44,6 +44,9 @@ namespace DocFlowHub.Web.Pages.Account
 
         public string ReturnUrl { get; set; }
 
+        /// <summary>Demo mode: the page explains why there is no sign-up instead of showing the form (S17-5).</summary>
+        public bool DemoBlocked { get; private set; }
+
         public class InputModel
         {
             [Required]
@@ -75,10 +78,11 @@ namespace DocFlowHub.Web.Pages.Account
 
         public IActionResult OnGet(string returnUrl = null)
         {
-            // Registration is disabled in the read-only public demo.
+            // Registration is disabled in the read-only public demo: say why instead of redirecting.
             if (_demoMode.IsEnabled)
             {
-                return RedirectToPage("/Account/Login");
+                DemoBlocked = true;
+                return Page();
             }
 
             ReturnUrl = returnUrl;

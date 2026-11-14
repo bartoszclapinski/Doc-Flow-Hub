@@ -211,6 +211,9 @@ test('signed-out screens', async ({ page }) => {
     await page.goto(path);
     await page.screenshot({ path: `${dir}/${name}.png` });
   }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Account/Login');
+  await page.screenshot({ path: `${dir}/sign-in-390.png`, fullPage: true });
 });
 
 test('form states', async ({ page }) => {
@@ -226,7 +229,7 @@ test('form states', async ({ page }) => {
 
   // Register (not available in the demo): invalid email + a half-strong password.
   await page.goto('/Account/Register');
-  if (page.url().includes('/Account/Login')) return;
+  if ((await page.locator('#Input_FirstName').count()) === 0) return; // demo: no form
   await page.locator('#Input_FirstName').fill('Bartosz');
   await page.locator('#Input_LastName').fill('Cłapiński');
   await page.locator('#Input_Email').fill('bartosz@acme');

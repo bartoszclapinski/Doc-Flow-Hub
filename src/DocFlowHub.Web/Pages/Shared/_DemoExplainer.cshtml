@@ -1,0 +1,19 @@
+@model bool
+@* Why the public demo is read-only and has no sign-up (Sprint 17, S17-4). Collapsed on Sign in;
+   Register passes true to show it open. *@
+@{
+    var open = Model;
+}
+<details class="dfh-demo-why" open="@(open ? "open" : null)">
+    <summary>Why read-only? Why no sign-up?</summary>
+    <ul>
+        <li>This demo is public and shared by everyone, so uploads, edits and new accounts are blocked. Every visitor sees the same sample data.</li>
+        <li>The data is reset when the server restarts. The free server sleeps when idle, so the first visit can take a minute.</li>
+        <li>Generating new AI summaries is turned off because every request costs money. The summaries and comparisons you see were saved in advance.</li>
+        <li>
+            To upload files and use your own account, run your own copy:
+            <code>dotnet run --project src/DocFlowHub.Web</code>
+            (<a href="https://github.com/bartoszclapinski/Doc-Flow-Hub#running-it-locally" rel="noopener">instructions on GitHub</a>).
+        </li>
+    </ul>
+</details>

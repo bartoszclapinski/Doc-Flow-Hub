@@ -5,20 +5,64 @@
 @{
     ViewData["Title"] = "Sign in";
     Layout = "_AuthLayout";
+    var demo = DemoMode.IsEnabled;
 }
 
-<main class="dfh-auth-card">
-    <div class="dfh-auth-head">
-        <h1>Sign in</h1>
-        <p>Documents, versions and AI summaries for your team.</p>
-    </div>
+<main class="dfh-auth-card@(demo ? " dfh-auth-card--demo" : "")">
+    @if (demo)
+    {
+        @* Sprint 17: the demo accounts come first, each signs in with one click (works without JS). *@
+        <div class="dfh-auth-head">
+            <h1>Explore the read-only demo</h1>
+            <p>Pick an account — no sign-up needed.</p>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="dfh-form-error" role="alert"></div>
+
+        <div class="dfh-demo-accounts">
+            <form class="dfh-demo-account" method="post" asp-page-handler="Demo" asp-route-returnUrl="@Model.ReturnUrl" data-dfh-busy="Signing in…">
+                <input type="hidden" name="account" value="user" />
+                <i class="bi bi-person" aria-hidden="true"></i>
+                <div class="dfh-demo-account-text">
+                    <h2>Demo user</h2>
+                    <p>A regular team member: dashboard, projects with folders, team documents, version history with AI comparisons, AI summaries and the command palette (Ctrl K).</p>
+                    <span class="dfh-mono">@DemoAccounts.UserEmail · @DemoAccounts.Password</span>
+                </div>
+                <button type="submit" class="btn btn-primary">Sign in as user<i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+            </form>
+            <form class="dfh-demo-account" method="post" asp-page-handler="Demo" asp-route-returnUrl="@Model.ReturnUrl" data-dfh-busy="Signing in…">
+                <input type="hidden" name="account" value="admin" />
+                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                <div class="dfh-demo-account-text">
+                    <h2>Demo administrator</h2>
+                    <p>Everything the user sees, plus the admin panel: users and roles, AI usage and limits, and analytics.</p>
+                    <span class="dfh-mono">@DemoAccounts.AdminEmail · @DemoAccounts.Password</span>
+                </div>
+                <button type="submit" class="btn btn-secondary">Sign in as admin<i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+            </form>
+        </div>
+
+        <partial name="_DemoExplainer" model="false" />
+
+        <h2 class="dfh-auth-divider"><span>or sign in with e-mail</span></h2>
+    }
+    else
+    {
+        <div class="dfh-auth-head">
+            <h1>Sign in</h1>
+            <p>Documents, versions and AI summaries for your team.</p>
+        </div>
+    }
 
     <form id="account" method="post" data-dfh-busy="Signing in…">
-        <div asp-validation-summary="ModelOnly" class="dfh-form-error" role="alert"></div>
+        @if (!demo)
+        {
+            <div asp-validation-summary="ModelOnly" class="dfh-form-error" role="alert"></div>
+        }
 
         <div class="dfh-field">
             <label asp-for="Input.Email">Email</label>
-            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus />
+            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus="@(demo ? null : "autofocus")" />
             <span asp-validation-for="Input.Email" class="field-validation-error"></span>
         </div>
 
@@ -33,29 +77,14 @@
             <label asp-for="Input.RememberMe" class="form-check-label">Keep me signed in</label>
         </div>
 
-        <button id="login-submit" type="submit" class="btn btn-primary dfh-btn-34">Sign in</button>
+        <button id="login-submit" type="submit" class="btn @(demo ? "btn-secondary" : "btn-primary") dfh-btn-34">Sign in</button>
     </form>
 
-    @if (!DemoMode.IsEnabled)
+    @if (!demo)
     {
         <p class="dfh-auth-alt">No account? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create one</a></p>
     }
 </main>
-
-@if (DemoMode.IsEnabled)
-{
-    <aside class="dfh-demo-box" aria-label="Demo accounts">
-        <div class="dfh-demo-box-title"><i class="bi bi-lock" aria-hidden="true"></i>Read-only demo</div>
-        <div class="dfh-mono">
-            <button type="button" class="dfh-demo-fill" data-email="@DemoAccounts.UserEmail" data-password="@DemoAccounts.Password"
-                    title="Fill in the user account">@DemoAccounts.UserEmail</button>
-            ·
-            <button type="button" class="dfh-demo-fill" data-email="@DemoAccounts.AdminEmail" data-password="@DemoAccounts.Password"
-                    title="Fill in the administrator account">@DemoAccounts.AdminEmail</button>
-        </div>
-        <div class="dfh-mono">password: @DemoAccounts.Password</div>
-    </aside>
-}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
