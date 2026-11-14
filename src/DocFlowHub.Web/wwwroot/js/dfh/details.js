@@ -86,4 +86,17 @@
             });
         }
     });
+
+    // 7d · generating: summaries are made during the post, so show the skeleton card meanwhile.
+    document.addEventListener('submit', function (e) {
+        const form = e.target.closest && e.target.closest('form[data-dfh-ai-generate]');
+        if (!form) return;
+        setTimeout(function () {
+            if (e.defaultPrevented) return;
+            const card = document.querySelector('[data-dfh-ai-generating]');
+            if (card) card.hidden = false;
+            const idle = document.querySelector('[data-dfh-ai-idle]');
+            if (idle) idle.hidden = true;
+        }, 0);
+    });
 })();

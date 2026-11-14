@@ -138,13 +138,41 @@
                     }
                     <span class="dfh-ai-meta">@d.Summary.Model · <span title="@Dfh.Timestamp(d.Summary.GeneratedAt)">@Dfh.Relative(d.Summary.GeneratedAt)</span></span>
                 }
+                else if (Model.LimitReached)
+                {
+                    @* 7d · failed (limit) *@
+                    <div class="dfh-ai-card is-failed" role="status">
+                        <span class="dfh-ai-card-head"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>AI limit reached</span>
+                        <p>You have used @Dfh.Number(Model.Limits!.CurrentDailyOperations) of @Dfh.Number(Model.Limits.DailyOperationLimit) AI requests today@(Model.Limits.CurrentHourlyOperations >= Model.Limits.HourlyOperationLimit ? $" ({Model.Limits.CurrentHourlyOperations} of {Model.Limits.HourlyOperationLimit} this hour)" : ""). The daily limit resets at midnight UTC.</p>
+                        <span class="dfh-ai-card-actions"><button type="button" class="dfh-link-btn" disabled>Retry</button></span>
+                    </div>
+                }
                 else
                 {
-                    <p class="dfh-insp-note">This document has no AI summary yet. Generating one uses one AI request and your preferred model from Settings · AI.</p>
+                    @if (!Model.SummariesOn)
+                    {
+                        @* 7d · off *@
+                        <div class="dfh-ai-card is-off">
+                            <span class="dfh-ai-card-head"><i class="bi bi-stars" aria-hidden="true"></i>AI summary · off</span>
+                            <p>Summaries are turned off in your AI settings, so uploads don't offer them. You can still summarize this document.</p>
+                            <span class="dfh-ai-card-actions"><a asp-page="/Settings/AI">Settings</a></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="dfh-insp-note" data-dfh-ai-idle>This document has no AI summary yet. Generating one uses one AI request and your preferred model from Settings · AI.</p>
+                    }
+                    @* 7d · generating: shown by details.js while the form posts (generation is synchronous). *@
+                    <div class="dfh-ai-card is-generating" data-dfh-ai-generating hidden aria-live="polite">
+                        <span class="dfh-ai-card-head"><i class="bi bi-stars" aria-hidden="true"></i>AI summary<span class="dfh-spacer"></span><span class="dfh-muted">generating…</span></span>
+                        <span class="dfh-ai-skel" style="width: 100%"></span>
+                        <span class="dfh-ai-skel" style="width: 92%"></span>
+                        <span class="dfh-ai-skel" style="width: 64%"></span>
+                    </div>
                     @if (Model.CanEdit)
                     {
-                        <form method="post" asp-page-handler="GenerateSummary" asp-route-id="@d.Id" data-dfh-busy="Generating…">
-                            <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-stars" aria-hidden="true"></i>Generate summary</button>
+                        <form method="post" asp-page-handler="GenerateSummary" asp-route-id="@d.Id" data-dfh-busy="Generating…" data-dfh-ai-generate>
+                            <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-stars" aria-hidden="true"></i>@(Model.SummariesOn ? "Generate summary" : "Summarize this document")</button>
                         </form>
                     }
                     else

@@ -67,11 +67,11 @@ test('demo: a blocked form post shows the read-only toast', async ({ page }) => 
   await expect(page.locator('.dfh-toast')).toContainText('read-only');
 });
 
-test('Ctrl K focuses the global search', async ({ page }) => {
+test('Ctrl K opens the command palette with the search box focused', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents');
   await page.keyboard.press('Control+k');
-  await expect(page.locator('#dfh-global-search')).toBeFocused();
+  await expect(page.locator('#dfh-palette-q')).toBeFocused();
 });
 
 // Sprint 10: sign in, dashboard, admin overview.
@@ -344,4 +344,59 @@ test('settings: profile, password and AI pages share the settings tree', async (
   await page.locator('[data-dfh-settings-filter]').fill('pass');
   await expect(page.locator('.dfh-settings-tree a', { hasText: 'Password' })).toBeVisible();
   await expect(page.locator('.dfh-settings-tree a', { hasText: 'Profile' })).toBeHidden();
+});
+
+// Sprint 15: command palette, shortcuts, context menu, responsive.
+test('palette: Ctrl K finds documents and folders, Enter opens the active row', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  await page.keyboard.press('Control+k');
+  const palette = page.locator('#dfh-palette');
+  await expect(palette).toBeVisible();
+  await page.locator('#dfh-palette-q').fill('annual rep');
+  await expect(palette.locator('.dfh-palette-row').first()).toContainText('Annual Report');
+  await expect(palette.locator('.dfh-palette-row b').first()).toHaveText(/annual/i);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+});
+
+test('palette: the title-bar search opens it; actions and Esc work', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/');
+  await page.locator('#dfh-global-search').click();
+  const palette = page.locator('#dfh-palette');
+  await expect(palette).toBeVisible();
+  await page.locator('#dfh-palette-q').fill('teams');
+  await expect(palette.locator('.dfh-palette-row', { hasText: 'Go to Teams' })).toBeVisible();
+  await expect(palette.locator('.dfh-palette-row', { hasText: 'Upload a document' })).toHaveCount(0); // demo: no write actions
+  await page.keyboard.press('Escape');
+  await expect(palette).toBeHidden();
+  await page.keyboard.press('?');
+  await expect(page.locator('#dfh-shortcuts')).toBeVisible();
+});
+
+test('documents: right click and ⋯ open the row menu; demo disables changes', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  const row = page.locator('tbody tr[data-id]').nth(1);
+  await row.locator('td').nth(3).click({ button: 'right' });
+  const menu = page.locator('.dfh-menu');
+  await expect(menu).toBeVisible();
+  await expect(row).toHaveClass(/is-selected/);
+  await expect(menu.locator('.dropdown-item', { hasText: 'Open' })).toBeFocused();
+  await expect(menu.locator('.dropdown-item', { hasText: 'Move to…' })).toHaveAttribute('aria-disabled', 'true');
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await row.hover();
+  await row.locator('[data-dfh-row-menu]').click();
+  await expect(menu).toBeVisible();
+  await menu.locator('.dropdown-item', { hasText: 'Open' }).click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+});
+
+test('privacy page describes what the app stores, signed in or not', async ({ page }) => {
+  await page.goto('/Privacy');
+  await expect(page.locator('h1')).toHaveText('Privacy');
+  await expect(page.locator('.dfh-doc-page')).toContainText('salted hash');
+  await expect(page.locator('body')).not.toContainText('Use this page to detail');
 });

@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprints 11–14 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **Sprints 9–15 done** — 9–10 on 2026-11-13, 11–15 on 2026-11-14, all merged into `redesign/ide`; merging `redesign/ide` → `master` (redeploys the demo) awaits the user's approval · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -199,23 +199,27 @@ with filters, `dfh-table` with check column and file-type labels, AI flag (list 
 that keeps filters (bug fix), inspector filled from the selected row (+ lazy JSON for AI summary and
 last 4 versions), bulk bar, delete / bulk delete with per-item results / move with searchable tree
 picker, empty and no-results states, skeleton rows. Cards/grid view dropped (not in the design).
+Details: [`sprints/sprint11/sprint11-plan.md`](sprints/sprint11/sprint11-plan.md). **Done** — [log](sprints/sprint11/sprint11-log.md).
 
 ### Sprint 12 — Details, Compare, Upload, Edit (L)
 Details (3b): editor tab, toolbar, preview placeholder (D5), inspector tabs Info / AI / Versions /
 Sharing. Compare (3i) as its own page and editor tab, AI comparison inspector (D4). Upload (3c):
 dropzone, file row, details grid, AI options, sticky footer, destination tree inspector. Edit by
 analogy.
+Details: [`sprints/sprint12/sprint12-plan.md`](sprints/sprint12/sprint12-plan.md). **Done** — [log](sprints/sprint12/sprint12-log.md).
 
 ### Sprint 13 — Projects, Folders, Teams (M)
 Projects table (8a) with colour squares and stats; Project details; Folder (8b) with subfolders above
 documents and folder settings in the inspector; Folders/Index tree (keeps drag-and-drop move); Teams
 list and Team (3d) with members table and role controls; all Create/Edit forms by analogy.
+Details: [`sprints/sprint13/sprint13-plan.md`](sprints/sprint13/sprint13-plan.md). **Done** — [log](sprints/sprint13/sprint13-log.md).
 
 ### Sprint 14 — Admin, Settings, Profile (L)
 Admin nav, Users (3e) with token search, bulk bar, numbered pager, details modal re-skinned in JS;
 Analytics (8c) with CSS bar charts and the never-populated `UsageTrends`/`ErrorStats` fixed; Roles,
 UserLimits, Admin Settings by analogy; settings shell with tree; Settings · AI (3f); Profile (8e) +
 Edit profile / Change password / Picture. Chart.js removed.
+Details: [`sprints/sprint14/sprint14-plan.md`](sprints/sprint14/sprint14-plan.md). **Done** — [log](sprints/sprint14/sprint14-log.md).
 
 ### Sprint 15 — Interactions, states, responsive, cleanup (L)
 AI states (7d), banners, context menu (7j), command palette (7k), keyboard shortcuts, all remaining
@@ -223,6 +227,7 @@ AI states (7d), banners, context menu (7j), command palette (7k), keyboard short
 inspector overlay, ≤768 tree drawer, <600 bottom nav + two-line rows + details as tabs); delete old
 CSS/JS and dead files; final full screenshot pass; merge `redesign/ide` → `master`; update README
 screenshots and `.ai` status docs.
+Details: [`sprints/sprint15/sprint15-plan.md`](sprints/sprint15/sprint15-plan.md). **Done** — [log](sprints/sprint15/sprint15-log.md).
 
 ## 8. Bugs fixed along the way
 
@@ -251,6 +256,12 @@ screenshots and `.ai` status docs.
 | Role description silently dropped (Identity roles have no column); users role filter ignored | 14 |
 | User details showed `IsActive` hard-coded; Activate / Suspend duplicated Unlock / Lock | 14 |
 | Decimal form fields failed validation on a non-English server culture (no request culture set) | 14 |
+| AI daily / hourly limits counted but never enforced (manual summary now checks them) | 15 |
+| Admin "Send password reset" generated a token, sent nothing and reported success (removed) | 15 |
+| Admin messages reported "sent" although users have no inbox and no e-mail is sent (now worded honestly) | 15 |
+| Legacy CSS (1,110 lines) and a link to an empty scoped-CSS bundle still loaded on every page | 15 |
+| Privacy page was the template text; README promised features that don't exist | 15 |
+| `.dfh-kbd` inherited Bootstrap's light `kbd` background | 15 |
 | `theme-manager.js` posts to a non-existent `/api/profile/theme` | 9 (file removed) |
 
 ## 9. Risks

@@ -55,7 +55,7 @@ public class DetailsModel : PageModel
         else
         {
             var sent = await _messages.SendBulkMessageAsync(new List<string> { id }, User.GetUserId()!, subject.Trim(), message.Trim());
-            if (sent.Succeeded) TempData["ToastSuccess"] = "Message sent";
+            if (sent.Succeeded) TempData["ToastSuccess"] = "Message saved (no inbox or e-mail yet)";
             else TempData["ToastError"] = sent.Error ?? "The message could not be sent.";
         }
         return RedirectToPage(new { id });

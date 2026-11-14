@@ -119,7 +119,7 @@ public class IndexModel : PageModel
             }
             var sent = await _messages.SendBulkMessageAsync(ids, adminId, subject.Trim(), message.Trim());
             return sent.Succeeded
-                ? Back(returnUrl, success: $"Message sent to {ids.Count} {(ids.Count == 1 ? "user" : "users")}")
+                ? Back(returnUrl, success: $"Message saved for {ids.Count} {(ids.Count == 1 ? "user" : "users")} (no inbox or e-mail yet)")
                 : Back(returnUrl, error: sent.Error ?? "The message could not be sent.");
         }
 
@@ -162,21 +162,16 @@ public class IndexModel : PageModel
         var ids = new List<string> { userId };
         ServiceResult result = action switch
         {
-            "activate" => await _users.ActivateUsersAsync(ids, adminId),
-            "deactivate" => await _users.DeactivateUsersAsync(ids, adminId),
+            // "Send password reset" is gone (Sprint 15): it made a token, sent nothing and reported success.
             "lock" => await _users.LockUsersAsync(ids, adminId),
             "unlock" => await _users.UnlockUsersAsync(ids, adminId),
-            "reset-password" => await _users.ResetUserPasswordAsync(userId, adminId),
             "confirm-email" => await _users.ConfirmUserEmailAsync(userId, adminId),
             _ => ServiceResult.Failure("Unknown action."),
         };
         var label = action switch
         {
-            "activate" => "User activated",
-            "deactivate" => "User locked",
             "lock" => "User locked",
             "unlock" => "User unlocked",
-            "reset-password" => "Password reset requested",
             "confirm-email" => "E-mail marked as confirmed",
             _ => "Done",
         };

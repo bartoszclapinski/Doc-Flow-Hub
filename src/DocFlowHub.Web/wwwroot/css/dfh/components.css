@@ -1515,6 +1515,26 @@ img.dfh-avatar { object-fit: cover; }
 .dfh-banner--info > .bi { color: var(--dfh-info); }
 .dfh-banner--warning { background: oklch(0.80 0.12 80 / 0.10); border-bottom-color: oklch(0.80 0.12 80 / 0.35); }
 .dfh-banner--warning > .bi { color: var(--dfh-warning); }
+.dfh-banner--danger { background: var(--dfh-danger-tint); border-bottom-color: var(--dfh-danger-tint-border); }
+.dfh-banner--danger > .bi { color: var(--dfh-danger); }
+.dfh-banner--ai { background: var(--dfh-ai-tint); border-bottom-color: var(--dfh-ai-tint-border); }
+.dfh-banner--ai > .bi { color: var(--dfh-ai); }
+.dfh-banner[hidden] { display: none; }
+.dfh-banner .dfh-grow { flex: 1 1 auto; min-width: 0; }
+.dfh-banner-close {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dfh-radius-xs);
+    background: transparent;
+    color: var(--dfh-text-muted);
+}
+.dfh-banner-close:hover { color: var(--dfh-text); background: var(--dfh-bg-hover); }
 
 /* Inline meter in a table (User limits) */
 .dfh-meter-track--inline { display: block; width: 100%; height: 6px; }
@@ -1653,3 +1673,170 @@ img.dfh-avatar { object-fit: cover; }
 .dfh-avatar-row form { margin: 0; }
 .dfh-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--dfh-success); }
 
+
+
+/* ==================== Sprint 15: command palette (7k), shortcuts ==================== */
+.dfh-palette-dialog {
+    --bs-modal-width: 560px;
+    margin-top: 12vh;
+}
+.dfh-palette { overflow: hidden; }
+.dfh-palette-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--dfh-border);
+    color: var(--dfh-text-muted);
+}
+.dfh-palette-input input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--dfh-text);
+    font-size: 14px;
+    outline: none;
+}
+.dfh-palette-input input:focus-visible { box-shadow: none; }
+.dfh-palette-results {
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+    padding: 6px 0;
+}
+.dfh-palette-group {
+    padding: 8px 14px 4px;
+    font-family: var(--dfh-font-mono);
+    font-size: 11px;
+    line-height: 14px;
+    text-transform: uppercase;
+    color: var(--dfh-text-muted);
+}
+.dfh-palette-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 14px;
+    color: var(--dfh-text);
+    text-decoration: none;
+    font-size: 13px;
+}
+.dfh-palette-row:hover { color: var(--dfh-text); text-decoration: none; }
+.dfh-palette-row.is-active { background: var(--dfh-selection); color: var(--dfh-text-on-selection); }
+.dfh-palette-row.is-active .dfh-palette-meta { color: var(--dfh-text-2); }
+.dfh-palette-row b { font-weight: 600; color: var(--dfh-text); }
+.dfh-palette-row .dfh-filetype { width: 32px; }
+.dfh-palette-icon { color: var(--dfh-text-muted); font-size: 13px; justify-self: center; }
+.dfh-palette-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dfh-text-2); }
+.dfh-palette-meta {
+    font-family: var(--dfh-font-mono);
+    font-size: 11.5px;
+    color: var(--dfh-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+.dfh-palette-note { padding: 8px 14px; font-size: 12px; color: var(--dfh-text-muted); }
+.dfh-palette-footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 14px;
+    border-top: 1px solid var(--dfh-border);
+    font-family: var(--dfh-font-mono);
+    font-size: 11px;
+    color: var(--dfh-text-muted);
+}
+.dfh-palette-footer .dfh-kbd { margin-right: 4px; }
+.dfh-palette-footer .dfh-spacer { flex: 1 1 auto; }
+
+.dfh-shortcut-list {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 6px 12px;
+    margin: 0 0 12px;
+    font-size: 13px;
+}
+.dfh-shortcut-list dt { font-weight: 400; }
+.dfh-shortcut-list dd { margin: 0; color: var(--dfh-text-2); }
+.dfh-shortcut-head { font-size: 12px; font-weight: 600; margin: 4px 0 8px; color: var(--dfh-text); }
+
+/* ==================== Sprint 15: context menu (7j) ==================== */
+.dfh-menu {
+    position: fixed;
+    z-index: 1080;
+    width: 248px;
+    margin: 0;
+}
+.dfh-menu .dropdown-item { display: flex; align-items: center; gap: 10px; min-height: 26px; }
+.dfh-menu .dropdown-item.is-ai { color: var(--dfh-ai); }
+.dfh-menu .dropdown-item.is-ai:hover, .dfh-menu .dropdown-item.is-ai:focus { color: var(--dfh-on-accent); }
+.dfh-menu .dropdown-item:hover .dfh-menu-meta, .dfh-menu .dropdown-item:focus .dfh-menu-meta { color: inherit; opacity: .8; }
+.dfh-menu .dropdown-item.disabled { pointer-events: auto; cursor: default; }
+.dfh-menu .dropdown-item.disabled:hover { background: transparent; color: var(--dfh-text-muted); }
+
+/* ⋯ in a table row: visible on hover, on the selected row and on touch screens. */
+.dfh-row-menu-btn {
+    flex: none;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dfh-radius-xs);
+    background: transparent;
+    color: var(--dfh-text-muted);
+    visibility: hidden;
+}
+.dfh-row-menu-btn:hover { background: var(--dfh-bg-hover); color: var(--dfh-text); }
+tr:hover .dfh-row-menu-btn, tr.is-selected .dfh-row-menu-btn, .dfh-row-menu-btn:focus-visible { visibility: visible; }
+@media (hover: none) { .dfh-row-menu-btn { visibility: visible; } }
+
+/* ==================== Sprint 15: AI states (7d) ==================== */
+.dfh-ai-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--dfh-bg-panel);
+    border: 1px solid var(--dfh-border);
+    border-radius: var(--dfh-radius);
+    font-size: 12.5px;
+    color: var(--dfh-text-2);
+}
+.dfh-ai-card[hidden] { display: none; }
+.dfh-ai-card p { margin: 0; line-height: 1.5; }
+.dfh-ai-card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--dfh-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--dfh-ai);
+}
+.dfh-ai-card.is-failed .dfh-ai-card-head { color: var(--dfh-danger); }
+.dfh-ai-card.is-off .dfh-ai-card-head { color: var(--dfh-text-muted); }
+.dfh-ai-card-actions { display: flex; gap: 12px; font-size: 12px; }
+.dfh-ai-card-actions .dfh-link-btn:disabled { color: var(--dfh-text-muted); opacity: .6; }
+.dfh-ai-skel { display: block; height: 8px; border-radius: 2px; background: var(--dfh-ai-skeleton); }
+
+/* ==================== Sprint 15: text pages (Privacy) ==================== */
+.dfh-doc-page { max-width: 680px; padding: 32px 24px 48px; font-size: 14px; line-height: 1.6; color: var(--dfh-text-2); }
+.dfh-doc-page h1 { margin: 0 0 8px; }
+.dfh-doc-page h2 { margin: 24px 0 6px; font-size: 14px; font-weight: 600; color: var(--dfh-text); }
+.dfh-doc-page p, .dfh-doc-page ul { margin: 0 0 8px; }
+.dfh-doc-page ul { padding-left: 18px; }
+.dfh-doc-page li + li { margin-top: 4px; }
+.dfh-doc-page b { color: var(--dfh-text); font-weight: 500; }
+.dfh-doc-lead { color: var(--dfh-text-muted); }
+.dfh-doc-note { margin: 12px 0 4px; border: 1px solid var(--dfh-ai-tint-border); border-radius: var(--dfh-radius); }

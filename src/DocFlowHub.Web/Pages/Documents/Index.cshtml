@@ -337,17 +337,17 @@
     else
     {
         <div class="dfh-fill" data-dfh-doc-scroll>
-            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table
+            <table class="dfh-table dfh-table--select" data-dfh-doc-table data-dfh-select-table data-demo="@(Model.IsDemo ? "true" : "false")"
                    data-inspector-url="/Documents?handler=Inspector&id={id}" data-open-url="/Documents/Details/{id}"
                    aria-label="Documents" aria-multiselectable="true">
                 <colgroup>
                     <col class="dfh-col-check" />
                     <col />
-                    <col style="width: 116px" />
+                    <col class="dfh-hide-md" style="width: 116px" />
                     <col style="width: 44px" />
-                    <col style="width: 72px" />
+                    <col class="dfh-hide-md" style="width: 72px" />
                     <col style="width: 92px" />
-                    <col style="width: 132px" />
+                    <col class="dfh-hide-lg" style="width: 132px" />
                 </colgroup>
                 <thead>
                     <tr>
@@ -355,11 +355,11 @@
                             <input type="checkbox" class="form-check-input dfh-check" id="dfh-check-all" aria-label="Select all documents on this page" />
                         </th>
                         <th scope="col" aria-sort="@AriaSort("name")"><a class="dfh-sort" href="@s.SortedBy("name").Href">Name<i class="bi @SortIcon("name")" aria-hidden="true"></i></a></th>
-                        <th scope="col">Workspace</th>
+                        <th scope="col" class="dfh-hide-md">Workspace</th>
                         <th scope="col">Ver</th>
-                        <th scope="col" class="is-num" aria-sort="@AriaSort("size")"><a class="dfh-sort" href="@s.SortedBy("size").Href"><i class="bi @SortIcon("size")" aria-hidden="true"></i>Size</a></th>
+                        <th scope="col" class="is-num dfh-hide-md" aria-sort="@AriaSort("size")"><a class="dfh-sort" href="@s.SortedBy("size").Href"><i class="bi @SortIcon("size")" aria-hidden="true"></i>Size</a></th>
                         <th scope="col" aria-sort="@AriaSort(null)"><a class="dfh-sort" href="@s.SortedBy(null).Href">Modified<i class="bi @SortIcon(null)" aria-hidden="true"></i></a></th>
-                        <th scope="col">Author</th>
+                        <th scope="col" class="dfh-hide-lg">Author</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -370,11 +370,12 @@
                         var first = i == 0;
                         <tr class="@(first ? "is-selected" : null)" data-id="@doc.Id" data-title="@doc.Title" data-ext="@label" data-kind="@kind"
                             data-location="@(doc.Location ?? "No project")" data-owner="@(doc.IsOwner ? "1" : "0")"
+                            data-version="@(doc.Version ?? 0)" data-ai="@(doc.HasSummary ? "1" : "0")" data-size="@Dfh.FileSize(doc.FileSize)@(doc.Version != null ? $" · v{doc.Version}" : "")"
                             tabindex="@(first ? "0" : "-1")" aria-selected="@(first ? "true" : "false")">
                             <td class="dfh-check-cell">
                                 <input type="checkbox" class="form-check-input dfh-check dfh-row-check" value="@doc.Id" aria-label="Select @doc.Title" />
                             </td>
-                            <td>
+                            <td class="dfh-col-name">
                                 <div class="dfh-name-cell">
                                     <span class="dfh-filetype dfh-filetype--@kind">@label</span>
                                     <a class="dfh-cell-link dfh-ellipsis" href="/Documents/Details/@doc.Id" title="@doc.Title">@doc.Title</a>
@@ -382,17 +383,18 @@
                                     {
                                         <i class="bi bi-stars dfh-ai-star" title="AI summary available" aria-label="AI summary available"></i>
                                     }
+                                    <button type="button" class="dfh-row-menu-btn" data-dfh-row-menu aria-haspopup="menu" aria-label="Actions for @doc.Title" tabindex="-1"><i class="bi bi-three-dots" aria-hidden="true"></i></button>
                                 </div>
                             </td>
-                            <td class="is-muted">
+                            <td class="is-muted dfh-hide-md">
                                 <span class="dfh-workspace" title="@(doc.TeamName != null ? $"Shared with {doc.TeamName}" : "Only you can see this document")">
                                     <i class="bi @(doc.TeamName != null ? "bi-people" : "bi-lock")" aria-hidden="true"></i><span class="dfh-ellipsis">@(doc.TeamName ?? "Private")</span>
                                 </span>
                             </td>
-                            <td class="is-mono is-2">@(doc.Version != null ? $"v{doc.Version}" : "—")</td>
-                            <td class="is-mono is-muted is-num">@Dfh.FileSize(doc.FileSize)</td>
-                            <td class="is-muted" title="@Dfh.Timestamp(doc.ModifiedAt)">@Dfh.Relative(doc.ModifiedAt)</td>
-                            <td>
+                            <td class="is-mono is-2 dfh-col-ver">@(doc.Version != null ? $"v{doc.Version}" : "—")</td>
+                            <td class="is-mono is-muted is-num dfh-col-size dfh-hide-md">@Dfh.FileSize(doc.FileSize)</td>
+                            <td class="is-muted dfh-col-modified" title="@Dfh.Timestamp(doc.ModifiedAt)">@Dfh.Relative(doc.ModifiedAt)</td>
+                            <td class="dfh-hide-lg">
                                 <span class="dfh-person">
                                     <span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(doc.OwnerName)</span>
                                     <span class="dfh-ellipsis">@doc.OwnerName</span>
@@ -439,4 +441,6 @@
     <script src="~/js/dfh/selectable-table.js" asp-append-version="true"></script>
     <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/documents.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/menu.js" asp-append-version="true"></script>
+    <script src="~/js/dfh/document-menu.js" asp-append-version="true"></script>
 }

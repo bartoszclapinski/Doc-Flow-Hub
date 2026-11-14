@@ -4,6 +4,7 @@
 @using DocFlowHub.Core.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IAntiforgery Antiforgery
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
     var signedIn = SignInManager.IsSignedIn(User);
     var csrf = Antiforgery.GetAndStoreTokens(Context);
@@ -49,12 +50,6 @@
 
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
-    @* Legacy styles: still needed by pages not yet redesigned (removed in Sprint 15). *@
-    <link rel="stylesheet" href="~/css/themes.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/ux-enhancements.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/DocFlowHub.Web.styles.css" asp-append-version="true" />
     @* IDE redesign *@
     <link rel="stylesheet" href="~/css/dfh/fonts.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dfh/tokens.css" asp-append-version="true" />
@@ -62,10 +57,23 @@
     <link rel="stylesheet" href="~/css/dfh/base.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dfh/shell.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dfh/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/responsive.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="dfh-shell">
     <partial name="_TitleBar" />
+
+    @* Page-wide banners (design 7e). The demo one can be dismissed for the browser session. *@
+    <div class="dfh-shell-banners">
+        @if (signedIn && DemoMode.IsEnabled)
+        {
+            <div class="dfh-banner dfh-banner--ai" data-dfh-dismiss-key="demo-banner" hidden>
+                <i class="bi bi-lock" aria-hidden="true"></i>
+                <span class="dfh-grow">Demo is read-only. Uploads, edits and deletes are disabled.</span>
+                <button type="button" class="dfh-banner-close" data-dfh-dismiss aria-label="Hide this message"><i class="bi bi-x" aria-hidden="true"></i></button>
+            </div>
+        }
+    </div>
 
     <div class="dfh-workbench">
         @if (signedIn)
@@ -87,6 +95,15 @@
     </div>
 
     @await Component.InvokeAsync("StatusBar")
+    @if (signedIn)
+    {
+        <partial name="_BottomNav" />
+    }
+
+    @if (signedIn)
+    {
+        <partial name="_Palette" />
+    }
 
     <div id="dfh-toast-stack" class="dfh-toast-stack" aria-live="polite"></div>
     @if (serverToasts.Count > 0)
@@ -100,6 +117,10 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/dfh/shell.js" asp-append-version="true"></script>
+    @if (signedIn)
+    {
+        <script src="~/js/dfh/palette.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

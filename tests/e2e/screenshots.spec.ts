@@ -204,3 +204,103 @@ test('form states', async ({ page }) => {
   await page.locator('#Input_Password').fill('secret12');
   await page.screenshot({ path: `${dir}/register-filled.png` });
 });
+
+// Sprint 15: palette, row menu, AI card, and the layout at the design's breakpoints.
+test('interaction screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  await page.keyboard.press('Control+k');
+  await page.locator('#dfh-palette-q').fill('annual rep');
+  await page.locator('.dfh-palette-row b').first().waitFor();
+  await page.screenshot({ path: `${dir}/palette.png` });
+  await page.keyboard.press('Escape');
+  const row = page.locator('tbody tr[data-id]').nth(2);
+  const box = await row.boundingBox();
+  await page.mouse.click(box!.x + 420, box!.y + box!.height / 2, { button: 'right' });
+  await page.screenshot({ path: `${dir}/row-menu.png` });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('?');
+  await page.screenshot({ path: `${dir}/shortcuts.png` });
+});
+
+for (const [label, width, height] of [['1024', 1024, 768], ['768', 768, 1024], ['390', 390, 844]] as const) {
+  test(`responsive ${label}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await signIn(page, DEMO_USER);
+    await page.goto('/Documents');
+    await page.screenshot({ path: `${dir}/r${label}-documents.png` });
+    if (width > 600) {
+      await page.locator('tbody tr[data-id] td.dfh-col-modified').nth(1).click();
+      await page.waitForTimeout(250); // 120ms slide
+      await page.screenshot({ path: `${dir}/r${label}-documents-inspector.png` });
+      await page.keyboard.press('Escape');
+    }
+    if (width <= 768) {
+      await page.locator('[data-dfh-panel-toggle="toolwindow"]').click();
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: `${dir}/r${label}-documents-drawer.png` });
+      await page.keyboard.press('Escape');
+    }
+    for (const [name, path] of [['dashboard', '/'], ['projects', '/Projects'], ['settings-ai', '/Settings/AI'], ['profile', '/Account/Manage']] as const) {
+      await page.goto(path);
+      await page.screenshot({ path: `${dir}/r${label}-${name}.png` });
+    }
+    const href = await page.goto('/Documents').then(() => page.locator('a[href*="/Documents/Details/"]').first().getAttribute('href'));
+    await page.goto(href!);
+    await page.screenshot({ path: `${dir}/r${label}-details.png` });
+    if (width < 600) {
+      await page.locator('.dfh-workbench').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+      await page.screenshot({ path: `${dir}/r${label}-details-end.png` });
+    }
+    if (width < 600) {
+      await page.goto('/Documents');
+      await page.locator('.dfh-bottomnav-more > button').click();
+      await page.screenshot({ path: `${dir}/r${label}-more.png` });
+    }
+  });
+}
+
+test('responsive admin', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, DEMO_ADMIN);
+  for (const [name, path] of [['admin-users', '/Admin/Users'], ['admin-analytics', '/Admin/Analytics']] as const) {
+    await page.goto(path);
+    await page.screenshot({ path: `${dir}/r390-${name}.png` });
+  }
+});
+
+// README screenshots (Sprint 15): README_SHOTS=<folder>, the demo banner dismissed.
+test('readme screenshots', async ({ page }) => {
+  const out = process.env.README_SHOTS;
+  test.skip(!out, 'README_SHOTS not set');
+  const hideBanner = async () => {
+    const close = page.locator('[data-dfh-dismiss-key] [data-dfh-dismiss]');
+    if (await close.isVisible()) await close.click();
+  };
+  await signIn(page, DEMO_USER);
+  await page.goto('/');
+  await hideBanner();
+  await page.screenshot({ path: `${out}/dashboard.png` });
+  await page.goto('/Documents');
+  await page.locator('tbody tr[data-id]').nth(2).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${out}/documents.png` });
+  const href = await page.locator('tbody tr[data-ai="1"] a[href*="/Documents/Details/"]').first().getAttribute('href');
+  await page.goto(href + '?tab=ai');
+  await page.screenshot({ path: `${out}/document-ai.png` });
+  await page.goto('/Documents');
+  await page.keyboard.press('Control+k');
+  await page.locator('#dfh-palette-q').fill('annual rep');
+  await page.locator('.dfh-palette-row b').first().waitFor();
+  await page.screenshot({ path: `${out}/palette.png` });
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents');
+  await page.screenshot({ path: `${out}/mobile-documents.png` });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.context().clearCookies();
+  await signIn(page, DEMO_ADMIN);
+  await page.goto('/Admin/Analytics');
+  await hideBanner();
+  await page.screenshot({ path: `${out}/admin-analytics.png` });
+});

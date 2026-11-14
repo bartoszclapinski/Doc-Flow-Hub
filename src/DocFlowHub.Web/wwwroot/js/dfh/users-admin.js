@@ -7,7 +7,7 @@
         'assign-role': { operation: 'AssignRole', title: 'Assign a role', button: 'Assign role', fields: ['role'],
             text: function (n) { return 'Give a role to ' + n + '. Their other roles stay.'; } },
         message: { operation: 'SendMessage', title: 'Send a message', button: 'Send', fields: ['subject', 'message'],
-            text: function (n) { return 'The message goes to ' + n + ' in the app.'; } },
+            text: function (n) { return 'The message is saved for ' + n + '. Users have no inbox and no e-mail is sent yet, so they will not see it.'; } },
         Delete: { operation: 'Delete', title: 'Delete users?', button: 'Delete', danger: true, fields: [],
             text: function (n) { return 'Delete ' + n + ' and their data. Your own account is left out. It can\'t be undone.'; } },
         lock: { operation: 'LockAccount', title: 'Lock users?', button: 'Lock', danger: true, fields: [],

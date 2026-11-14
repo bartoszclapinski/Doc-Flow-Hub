@@ -1,4 +1,5 @@
-// Shell behaviour for the IDE redesign: toasts, Ctrl K, opt-in busy forms, server messages.
+// Shell behaviour for the IDE redesign: toasts, confirm dialog, opt-in busy forms, server messages.
+// The command palette and keyboard shortcuts live in palette.js.
 (function () {
     'use strict';
 
@@ -214,6 +215,19 @@
                 });
         }, true);
 
+        // Dismissible banners (7e): hidden until we know they weren't dismissed in this session.
+        document.querySelectorAll('[data-dfh-dismiss-key]').forEach(function (banner) {
+            const key = 'dfh-dismissed-' + banner.dataset.dfhDismissKey;
+            let dismissed = false;
+            try { dismissed = sessionStorage.getItem(key) === '1'; } catch (e) { /* storage unavailable */ }
+            banner.hidden = dismissed;
+            const close = banner.querySelector('[data-dfh-dismiss]');
+            if (close) close.addEventListener('click', function () {
+                banner.hidden = true;
+                try { sessionStorage.setItem(key, '1'); } catch (e) { /* storage unavailable */ }
+            });
+        });
+
         // <select data-dfh-autosubmit> posts its form as soon as the value changes (inline role select).
         document.addEventListener('change', function (event) {
             const select = event.target.closest && event.target.closest('select[data-dfh-autosubmit]');
@@ -255,15 +269,95 @@
         }
     });
 
-    // Ctrl K / Cmd K: jump to the global search (the command palette arrives in Sprint 15).
+
+    // ---------- Narrow screens (S15-6): tool window drawer (≤768) and inspector overlay (≤1024) ----------
+    const panels = {
+        toolwindow: { el: document.querySelector('.dfh-toolwindow'), query: window.matchMedia('(max-width: 768px)') },
+        inspector: { el: document.querySelector('.dfh-inspector'), query: window.matchMedia('(max-width: 1024px)') }
+    };
+    let backdrop = null;
+    let panelReturn = null;
+
+    function isOverlay(name) {
+        const p = panels[name];
+        if (!p.el || !p.query.matches) return false;
+        // On phones an inspector that belongs to the page (details, activity) sits under the content.
+        return !(name === 'inspector' && window.matchMedia('(max-width: 599.98px)').matches && !p.el.querySelector('#dfh-inspector-body'));
+    }
+
+    function setPanel(name, open) {
+        const p = panels[name];
+        if (!p.el) return;
+        if (open && !isOverlay(name)) return;
+        Object.keys(panels).forEach(function (other) {
+            if (other !== name && open) setPanel(other, false);
+        });
+        p.el.classList.toggle('is-open', open);
+        document.querySelectorAll('[data-dfh-panel-toggle="' + name + '"]').forEach(function (b) {
+            b.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        const anyOpen = Object.keys(panels).some(function (n) { return panels[n].el && panels[n].el.classList.contains('is-open'); });
+        if (backdrop) backdrop.classList.toggle('is-open', anyOpen);
+        if (open) {
+            panelReturn = document.activeElement;
+            const target = p.el.querySelector('.dfh-panel-close');
+            if (target) target.focus({ preventScroll: true });
+        } else if (!anyOpen && panelReturn && panelReturn.focus && document.activeElement && p.el.contains(document.activeElement)) {
+            panelReturn.focus({ preventScroll: true });
+        }
+    }
+
+    function openPanel(name) { setPanel(name, true); }
+
+    Object.keys(panels).forEach(function (name) {
+        const p = panels[name];
+        if (!p.el) return;
+        if (!p.el.id) p.el.id = 'dfh-panel-' + name;
+        document.querySelectorAll('[data-dfh-panel-toggle="' + name + '"]').forEach(function (b) {
+            b.hidden = false;
+            b.setAttribute('aria-controls', p.el.id);
+            b.addEventListener('click', function () { setPanel(name, !p.el.classList.contains('is-open')); });
+        });
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'dfh-panel-close';
+        close.setAttribute('aria-label', 'Close the panel');
+        close.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+        close.addEventListener('click', function () { setPanel(name, false); });
+        p.el.prepend(close);
+        // Leaving the narrow layout closes the overlay.
+        p.query.addEventListener('change', function () { if (!p.query.matches) setPanel(name, false); });
+        // A link in the drawer navigates: close it so Back doesn't show it open.
+        if (name === 'toolwindow') {
+            p.el.addEventListener('click', function (e) { if (e.target.closest('a[href]')) setPanel(name, false); });
+        }
+    });
+
+    if (panels.toolwindow.el || panels.inspector.el) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'dfh-panel-backdrop';
+        backdrop.addEventListener('click', function () { setPanel('toolwindow', false); setPanel('inspector', false); });
+        document.body.appendChild(backdrop);
+    }
+
     document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-            const search = document.getElementById('dfh-global-search');
-            if (search) {
+        if (e.key !== 'Escape' || document.querySelector('.modal.show, .dropdown-menu.show')) return;
+        ['inspector', 'toolwindow'].forEach(function (name) {
+            if (panels[name].el && panels[name].el.classList.contains('is-open')) {
                 e.preventDefault();
-                search.focus();
-                search.select();
+                setPanel(name, false);
             }
+        });
+    });
+
+    window.DocFlowHub.panels = { open: openPanel, close: function (name) { setPanel(name, false); }, isOverlay: isOverlay };
+
+    // Buttons that open the command palette (mobile search, bottom-bar menu).
+    document.addEventListener('click', function (e) {
+        const b = e.target.closest && e.target.closest('[data-dfh-open-palette]');
+        if (b && window.DocFlowHub.palette) {
+            e.preventDefault();
+            window.DocFlowHub.palette.open('');
         }
     });
 })();
