@@ -84,6 +84,45 @@ public static class Dfh
     public static string TeamColor(int teamId) =>
         $"oklch(0.74 0.13 {TeamHues[Math.Abs(teamId) % TeamHues.Length]})";
 
+    /// <summary>
+    /// Project colour on the design formula oklch(0.74 0.13 h) (decision S11-11): the hue of the stored
+    /// hex colour, or a hue derived from the id when there is none (or it is grey).
+    /// </summary>
+    public static string ProjectColor(string? hex, int projectId)
+    {
+        var hue = OklchHue(hex) ?? TeamHues[Math.Abs(projectId) % TeamHues.Length];
+        return $"oklch(0.74 0.13 {hue.ToString("0", Invariant)})";
+    }
+
+    /// <summary>OKLCH hue of "#rrggbb" / "#rgb", or null when it is not a colour or has almost no chroma.</summary>
+    private static double? OklchHue(string? hex)
+    {
+        var value = (hex ?? string.Empty).Trim().TrimStart('#');
+        if (value.Length == 3) value = string.Concat(value.Select(c => $"{c}{c}"));
+        if (value.Length != 6 || !int.TryParse(value, System.Globalization.NumberStyles.HexNumber, Invariant, out var rgb))
+        {
+            return null;
+        }
+
+        static double Linear(int channel)
+        {
+            var c = channel / 255.0;
+            return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+        double r = Linear((rgb >> 16) & 0xff), g = Linear((rgb >> 8) & 0xff), b = Linear(rgb & 0xff);
+
+        // sRGB → OKLab (Björn Ottosson's matrices).
+        var l = Math.Cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+        var m = Math.Cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+        var s = Math.Cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+        var a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+        var bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+
+        if (Math.Sqrt(a * a + bb * bb) < 0.02) return null;
+        var hue = Math.Atan2(bb, a) * 180 / Math.PI;
+        return hue < 0 ? hue + 360 : hue;
+    }
+
     /// <summary>"12.5%" of a part in a whole.</summary>
     public static string Percent(long part, long whole) =>
         whole <= 0 ? "0%" : (part * 100.0 / whole).ToString("0.#", Invariant) + "%";

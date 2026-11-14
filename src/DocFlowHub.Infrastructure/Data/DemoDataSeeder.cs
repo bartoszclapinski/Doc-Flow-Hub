@@ -157,7 +157,7 @@ public static class DemoDataSeeder
                     Description = $"{rootName} in {project.Name}",
                     ProjectId = project.Id,
                     Level = 0,
-                    Path = $"/{project.Name}/{rootName}",
+                    Path = $"/{rootName}", // same format as FolderService: the project is not part of the path
                     CreatedByUserId = project.OwnerId,
                     CreatedAt = project.CreatedAt.AddDays(rng.Next(1, 20)),
                 };

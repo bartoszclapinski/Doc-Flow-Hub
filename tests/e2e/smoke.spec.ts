@@ -134,3 +134,66 @@ test('register: password rules update live and gate the submit button', async ({
   await page.locator('#Input_ConfirmPassword').fill('Abcdefg1!');
   await expect(submit).toBeEnabled();
 });
+
+// Sprint 11: documents list.
+test('documents: links keep the filters, the tree scopes the list', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?owner=me&sort=name');
+  const rows = page.locator('[data-dfh-doc-table] tbody tr');
+  expect(await rows.count()).toBeGreaterThan(0);
+  expect(await rows.count()).toBeLessThanOrEqual(25);
+  await expect(page.locator('.dfh-token')).toContainText('owner:me');
+  for (const link of await page.locator('.dfh-pager a, .dfh-tree a.dfh-tree-link').all()) {
+    const href = (await link.getAttribute('href')) ?? '';
+    expect(href, 'link keeps the owner filter').toContain('owner=me');
+    expect(href, 'link keeps the sort').toContain('sort=name');
+  }
+  const folder = page.locator('.dfh-tree a.dfh-tree-link[href*="folder="]').first();
+  await folder.click();
+  await expect(page.locator('.dfh-tree-row.is-selected')).toHaveCount(1);
+  await expect(page.locator('.dfh-breadcrumb-current')).toHaveText((await page.locator('.dfh-tree-row.is-selected .dfh-tree-name').textContent()) ?? '');
+});
+
+test('documents: selecting a row fills the inspector; arrows move the selection', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  const rows = page.locator('[data-dfh-doc-table] tbody tr');
+  await expect(page.locator('#dfh-inspector-body .dfh-insp-title')).toHaveText((await rows.nth(0).getAttribute('data-title')) ?? '');
+  await rows.nth(2).click();
+  await expect(rows.nth(2)).toHaveClass(/is-selected/);
+  await expect(page.locator('#dfh-inspector-body .dfh-insp-title')).toHaveText((await rows.nth(2).getAttribute('data-title')) ?? '');
+  await page.keyboard.press('ArrowDown');
+  await expect(rows.nth(3)).toHaveClass(/is-selected/);
+  await expect(page.locator('#dfh-inspector-body .dfh-insp-title')).toHaveText((await rows.nth(3).getAttribute('data-title')) ?? '');
+});
+
+test('documents: checking rows opens the bulk bar, Escape clears it', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  const bar = page.locator('#dfh-bulkbar');
+  await expect(bar).toBeHidden();
+  await page.locator('.dfh-row-check').nth(0).check();
+  await page.locator('.dfh-row-check').nth(1).check();
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('[data-dfh-bulk-count]')).toHaveText('2');
+  // Escape in a menu closes the menu only.
+  await page.locator('.dfh-toolbar [data-bs-toggle="dropdown"]').first().click();
+  await page.keyboard.press('Escape');
+  await expect(bar).toBeVisible();
+  await page.locator('body').click({ position: { x: 600, y: 760 } });
+  await page.keyboard.press('Escape');
+  await expect(bar).toBeHidden();
+  await page.locator('#dfh-check-all').check();
+  await expect(bar.locator('[data-dfh-bulk-count]')).toHaveText(String(await page.locator('.dfh-row-check').count()));
+});
+
+test('demo: a blocked AJAX move reports the read-only message', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  test.skip((await page.locator('[data-dfh-bulk="move"]').count()) > 0, 'not a demo instance');
+  const result = await page.evaluate(() =>
+    (window as any).DocFlowHub.postJson('/Documents?handler=Move', { documentIds: [1], projectId: 1, folderId: null }));
+  expect(result.success).toBe(false);
+  expect(result.readOnly).toBe(true);
+  expect(result.message).toContain('read-only');
+});

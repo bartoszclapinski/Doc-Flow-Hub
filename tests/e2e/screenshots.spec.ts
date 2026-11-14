@@ -43,6 +43,51 @@ test('user screens', async ({ page }) => {
   }
 });
 
+// Documents list (3h) and its states. The dialogs need a non-demo build (their buttons are disabled in the demo).
+test('documents screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  await page.locator('[data-dfh-doc-table] tbody tr').nth(2).click();
+  await page.waitForSelector('#dfh-inspector-body .dfh-insp-title');
+  await page.screenshot({ path: `${dir}/documents-selected.png` });
+
+  const folder = page.locator('.dfh-tree a.dfh-tree-link[href*="folder="]').first();
+  if (await folder.count()) {
+    await folder.click();
+    await page.screenshot({ path: `${dir}/documents-folder.png` });
+  }
+  await page.goto('/Documents?type=pdf&owner=me&sort=size');
+  await page.screenshot({ path: `${dir}/documents-filtered.png` });
+  await page.goto('/Documents?q=no-such-document-xyz&type=pdf');
+  await page.screenshot({ path: `${dir}/documents-no-results.png` });
+
+  await page.goto('/Documents');
+  const checks = page.locator('.dfh-row-check');
+  await checks.nth(0).check();
+  await checks.nth(1).check();
+  await page.screenshot({ path: `${dir}/documents-bulk.png` });
+
+  const move = page.locator('[data-dfh-bulk="move"]');
+  if (await move.count()) {
+    await move.click();
+    await page.locator('[data-dfh-move-filter]').fill('dra');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${dir}/documents-move.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    await page.locator('[data-dfh-bulk="delete"]').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${dir}/documents-bulk-delete.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    await page.locator('#dfh-inspector-body [data-bs-toggle="dropdown"]').click();
+    await page.screenshot({ path: `${dir}/documents-menu.png` });
+    await page.locator('#dfh-inspector-body [data-dfh-action="delete"]').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${dir}/documents-delete.png` });
+  }
+});
+
 test('admin screens', async ({ page }) => {
   await signIn(page, DEMO_ADMIN);
   for (const [name, path] of ADMIN_PAGES) {

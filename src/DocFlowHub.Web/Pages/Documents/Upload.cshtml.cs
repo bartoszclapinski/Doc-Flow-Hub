@@ -62,10 +62,10 @@ public class UploadModel : PageModel
     [BindProperty]
     public int? TeamId { get; set; }
 
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public int? ProjectId { get; set; }
 
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public int? FolderId { get; set; }
 
     // AI Settings Properties
