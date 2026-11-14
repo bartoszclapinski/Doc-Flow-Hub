@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentCategoryService, DocumentCategoryService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IDocumentBrowserService, DocumentBrowserService>();
         if (IsProvider(configuration["DocumentStorage:Provider"], "Local"))
         {
             services.AddScoped<IDocumentStorageService, LocalDocumentStorageService>();

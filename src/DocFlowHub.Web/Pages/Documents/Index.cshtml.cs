@@ -1,73 +1,62 @@
+using System.Text.Json;
+using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Documents.Browser;
+using DocFlowHub.Core.Models.Documents.Dto;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
+using DocFlowHub.Web.Ui;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Models;
-using DocFlowHub.Core.Models.Common;
-using DocFlowHub.Core.Models.Documents;
-using DocFlowHub.Core.Models.Documents.Dto;
-using DocFlowHub.Core.Models.Teams;
-using DocFlowHub.Core.Models.Teams.Dto;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using System.Linq;
-using DocFlowHub.Core.Models.Projects.Dto;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace DocFlowHub.Web.Pages.Documents;
 
+/// <summary>
+/// Documents (design 3h): project tree, filtered table with multi-select, details inspector.
+/// Reads go through <see cref="IDocumentBrowserService"/>; changes use the existing document service.
+/// </summary>
 [Authorize]
 public class IndexModel : PageModel
 {
+    private const int MaxBatch = 100;
+
+    private readonly IDocumentBrowserService _browser;
     private readonly IDocumentService _documentService;
     private readonly IDocumentCategoryService _categoryService;
-    private readonly ITeamService _teamService;
-    private readonly IProjectService _projectService;
-    private readonly IFolderService _folderService;
+    private readonly IDemoModeService _demoMode;
+    private readonly ILogger<IndexModel> _logger;
 
     public IndexModel(
+        IDocumentBrowserService browser,
         IDocumentService documentService,
         IDocumentCategoryService categoryService,
-        ITeamService teamService,
-        IProjectService projectService,
-        IFolderService folderService)
+        IDemoModeService demoMode,
+        ILogger<IndexModel> logger)
     {
+        _browser = browser;
         _documentService = documentService;
         _categoryService = categoryService;
-        _teamService = teamService;
-        _projectService = projectService;
-        _folderService = folderService;
+        _demoMode = demoMode;
+        _logger = logger;
     }
 
-    public PagedResult<DocumentDto> Documents { get; set; } = new();
-    public IEnumerable<DocumentCategoryDto> Categories { get; set; } = new List<DocumentCategoryDto>();
-    public IEnumerable<TeamDto> UserTeams { get; set; } = new List<TeamDto>();
-    public string? ErrorMessage { get; set; }
+    public DocumentListState State { get; private set; } = new();
+    public DocumentTree Tree { get; private set; } = new();
+    public DocumentListPage? Documents { get; private set; }
+    public IReadOnlyList<DocumentCategoryDto> Categories { get; private set; } = Array.Empty<DocumentCategoryDto>();
+    public DocumentInspector? Selected { get; private set; }
+    public string? ErrorMessage { get; private set; }
+    public bool IsDemo => _demoMode.IsEnabled;
 
-    [BindProperty(SupportsGet = true)]
-    public DocumentFilter Filter { get; set; } = new();
+    /// <summary>Breadcrumb of the selected tree node: (label, href); the last one is the current node.</summary>
+    public List<(string Label, string Href)> Breadcrumb { get; } = new();
 
-    [BindProperty(SupportsGet = true)]
-    public string? SortBy { get; set; }
+    /// <summary>The selected project and folder ids, plus every folder on the way (expanded in the tree).</summary>
+    public HashSet<int> OpenFolders { get; } = new();
 
-    [BindProperty(SupportsGet = true)]
-    public string? SortDirection { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? ProjectId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? FolderId { get; set; }
-
-    public IEnumerable<ProjectDto> Projects { get; set; } = new List<ProjectDto>();
-    public IEnumerable<FolderDto> Folders { get; set; } = new List<FolderDto>();
-
-    public SelectList ProjectSelectList => new SelectList(Projects, "Id", "Name", ProjectId);
-    public SelectList FolderSelectList => new SelectList(Folders, "Id", "Name", FolderId);
-
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(
+        string? q, string? type, string? owner, int? category, int? project, int? folder, int? team,
+        string? sort, string? dir, int? page)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -75,60 +64,47 @@ public class IndexModel : PageModel
             return RedirectToPage("/Account/Login");
         }
 
-        // Handle sorting
-        if (!string.IsNullOrEmpty(SortBy))
+        State = DocumentListState.From(q, type, owner, category, project, folder, team, sort, dir, page);
+
+        var tree = await _browser.GetTreeAsync(userId);
+        if (tree.Succeeded && tree.Data != null)
         {
-            Filter.SortBy = SortBy;
-            Filter.SortDirection = SortDirection ?? "asc";
+            Tree = tree.Data;
         }
 
-        // Set ViewData for sorting indicators
-        SetSortViewData();
-
-        var categoriesResult = await _categoryService.GetAllCategoriesAsync();
-        if (!categoriesResult.Succeeded)
+        // A folder link carries its project; derive it when only the folder is given.
+        if (State.Folder is int folderId && Tree.FindFolder(folderId) is { } hit && State.Project != hit.Project.Id)
         {
-            ErrorMessage = categoriesResult.Error;
+            State = State with { Project = hit.Project.Id };
+        }
+        BuildBreadcrumb();
+
+        var categories = await _categoryService.GetAllCategoriesAsync();
+        if (categories.Succeeded && categories.Data != null)
+        {
+            Categories = categories.Data.OrderBy(c => c.Name).ToList();
+        }
+
+        var list = await _browser.GetDocumentsAsync(userId, State.ToQuery());
+        if (!list.Succeeded || list.Data == null)
+        {
+            ErrorMessage = list.Error ?? "The documents could not be loaded.";
             return Page();
         }
-        Categories = categoriesResult.Data;
+        Documents = list.Data;
+        State = State with { Page = Documents.Page };
 
-        // Load user's teams for team filter
-        var teamsResult = await _teamService.GetUserTeamsAsync(userId, new TeamFilter());
-        if (teamsResult.Succeeded)
+        if (Documents.Items.Count > 0)
         {
-            UserTeams = teamsResult.Data.Items;
+            var inspector = await _browser.GetInspectorAsync(userId, Documents.Items[0].Id);
+            Selected = inspector.Succeeded ? inspector.Data : null;
         }
-
-        // Load projects & folders
-        var projectsResult = await _projectService.GetActiveProjectsForUserAsync(userId);
-        Projects = projectsResult.Succeeded ? projectsResult.Data : new List<ProjectDto>();
-        if (ProjectId.HasValue && ProjectId.Value > 0)
-        {
-            await LoadFoldersAsync(userId);
-        }
-
-        // Build folder list even when no specific project selected (empty list)
-
-        // apply project/folder filter
-        if (ProjectId.HasValue)
-            Filter.ProjectId = ProjectId;
-        if (FolderId.HasValue)
-            Filter.FolderId = FolderId;
-
-        // Use secure method that only returns documents the user has access to
-        var documentsResult = await _documentService.GetDocumentsForUserAsync(userId, Filter);
-        if (!documentsResult.Succeeded)
-        {
-            ErrorMessage = documentsResult.Error;
-            return Page();
-        }
-        Documents = documentsResult.Data;
 
         return Page();
     }
 
-    public async Task<IActionResult> OnPostDownloadAsync(int documentId)
+    /// <summary>Inspector HTML for one document (loaded when a row is selected).</summary>
+    public async Task<IActionResult> OnGetInspectorAsync(int id, string? returnUrl)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -136,44 +112,48 @@ public class IndexModel : PageModel
             return Unauthorized();
         }
 
-        // Get document details first to check permissions and get current version
-        var documentResult = await _documentService.GetDocumentByIdAsync(documentId);
-        if (!documentResult.Succeeded)
+        var result = await _browser.GetInspectorAsync(userId, id);
+        if (!result.Succeeded || result.Data == null)
         {
-            ErrorMessage = documentResult.Error;
-            return Page();
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return Content("This document is no longer available.", "text/plain");
         }
 
-        var document = documentResult.Data;
+        return Partial("_DocumentInspector", new DocumentInspectorView(result.Data, IsDemo, SafeReturnUrl(returnUrl)));
+    }
 
-        // Verify user has access to this document using secure method
-        var accessResult = await _documentService.CanUserAccessDocumentAsync(documentId, userId);
-        if (!accessResult.Succeeded || !accessResult.Data)
+    /// <summary>Downloads the current version. Also used by Folders/Details.</summary>
+    public async Task<IActionResult> OnPostDownloadAsync(int documentId, string? returnUrl)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var access = await _documentService.CanUserAccessDocumentAsync(documentId, userId);
+        if (!access.Succeeded || !access.Data)
         {
             return Forbid();
         }
 
-        // Download the current version
-        if (document.CurrentVersionId == null)
+        var document = await _documentService.GetDocumentByIdAsync(documentId);
+        if (!document.Succeeded || document.Data?.CurrentVersionId == null)
         {
-            ErrorMessage = "Document has no current version";
-            return Page();
+            return Back(returnUrl, error: document.Error ?? "This document has no file to download.");
         }
 
-        var downloadResult = await _documentService.DownloadDocumentVersionAsync(documentId, document.CurrentVersionId.Value);
-        if (!downloadResult.Succeeded)
+        var download = await _documentService.DownloadDocumentVersionAsync(documentId, document.Data.CurrentVersionId.Value);
+        if (!download.Succeeded || download.Data == null)
         {
-            ErrorMessage = downloadResult.Error;
-            return Page();
+            return Back(returnUrl, error: download.Error ?? "The file could not be downloaded.");
         }
 
-        var contentType = GetContentType(document.FileType);
-        var fileName = $"{document.Title}{document.FileType}";
-
-        return File(downloadResult.Data, contentType, fileName);
+        var fileName = $"{document.Data.Title}{document.Data.FileType}";
+        return File(download.Data, ContentType(document.Data.FileType), fileName);
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int documentId)
+    public async Task<IActionResult> OnPostDeleteAsync(int documentId, string? returnUrl)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -181,241 +161,203 @@ public class IndexModel : PageModel
             return Unauthorized();
         }
 
-        // Get document details first to check ownership
-        var documentResult = await _documentService.GetDocumentByIdAsync(documentId);
-        if (!documentResult.Succeeded)
+        var document = await _documentService.GetDocumentByIdAsync(documentId);
+        if (!document.Succeeded || document.Data == null)
         {
-            TempData["ErrorMessage"] = documentResult.Error;
-            return RedirectToPage();
+            return Back(returnUrl, error: document.Error ?? "Document not found.");
+        }
+        if (document.Data.OwnerId != userId)
+        {
+            return Back(returnUrl, error: "You can only delete documents that you own.");
         }
 
-        var document = documentResult.Data;
-
-        // Verify user owns this document (only owners can delete)
-        if (document.OwnerId != userId)
-        {
-            TempData["ErrorMessage"] = "You can only delete documents that you own.";
-            return RedirectToPage();
-        }
-
-        // Delete the document
-        var deleteResult = await _documentService.DeleteDocumentAsync(documentId);
-        if (!deleteResult.Succeeded)
-        {
-            TempData["ErrorMessage"] = deleteResult.Error;
-            return RedirectToPage();
-        }
-
-        TempData["SuccessMessage"] = $"Document '{document.Title}' has been successfully deleted.";
-        return RedirectToPage();
+        var result = await _documentService.DeleteDocumentAsync(documentId);
+        return result.Succeeded
+            ? Back(returnUrl, success: $"Deleted \"{document.Data.Title}\"")
+            : Back(returnUrl, error: result.Error ?? "The document could not be deleted.");
     }
 
-    public async Task<IActionResult> OnPostBulkDeleteAsync([FromBody] BulkDeleteRequest request)
+    /// <summary>Soft-deletes several documents; the JSON has one result per document (design 7h).</summary>
+    public async Task<IActionResult> OnPostBulkDeleteAsync([FromBody] BulkDeleteRequest? request)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
-            return new JsonResult(new { success = false, error = "User not authenticated" });
+            return new JsonResult(new { success = false, message = "You are signed out. Sign in and try again." });
         }
 
-        if (request?.DocumentIds == null || !request.DocumentIds.Any())
+        var ids = request?.DocumentIds?.Distinct().ToList() ?? new List<int>();
+        if (ids.Count == 0 || ids.Count > MaxBatch)
         {
-            return new JsonResult(new { success = false, error = "No documents selected for deletion" });
+            return new JsonResult(new { success = false, message = $"Select between 1 and {MaxBatch} documents." });
         }
 
-        if (request.DocumentIds.Count > 100)
+        var result = await _documentService.BulkDeleteDocumentsAsync(ids, userId);
+        if (!result.Succeeded || result.Data == null)
         {
-            return new JsonResult(new { success = false, error = "Cannot delete more than 100 documents at once" });
+            return new JsonResult(new { success = false, message = result.Error ?? "The documents could not be deleted." });
         }
 
-        try
+        return new JsonResult(new
         {
-            // Call bulk delete service method
-            var result = await _documentService.BulkDeleteDocumentsAsync(request.DocumentIds, userId);
-            
-            if (!result.Succeeded)
+            success = true,
+            deleted = result.Data.SuccessfulDeletions,
+            failed = result.Data.FailedDeletions,
+            results = result.Data.Results.Select(r => new
             {
-                return new JsonResult(new { success = false, error = result.Error });
-            }
-
-            var bulkResult = result.Data;
-            
-            // Return detailed results
-            return new JsonResult(new 
-            { 
-                success = true,
-                totalRequested = bulkResult.TotalRequested,
-                successfulDeletions = bulkResult.SuccessfulDeletions,
-                failedDeletions = bulkResult.FailedDeletions,
-                isFullySuccessful = bulkResult.IsFullySuccessful,
-                hasPartialFailure = bulkResult.HasPartialFailure,
-                results = bulkResult.Results.Select(r => new
-                {
-                    documentId = r.DocumentId,
-                    documentTitle = r.DocumentTitle,
-                    success = r.Success,
-                    errorMessage = r.ErrorMessage
-                })
-            });
-        }
-        catch (Exception ex)
-        {
-            // Log the exception (assuming you have logging configured)
-            return new JsonResult(new { success = false, error = "An unexpected error occurred during bulk deletion" });
-        }
+                documentId = r.DocumentId,
+                success = r.Success,
+                reason = r.Success ? null : DeleteReason(r.ErrorMessage),
+            }),
+        });
     }
 
-    public async Task<IActionResult> OnPostMoveAsync([FromBody] MoveDocumentRequest request)
+    /// <summary>Moves one or more documents to a project root or a folder (design 7i), one result per document.</summary>
+    public async Task<IActionResult> OnPostMoveAsync([FromBody] MoveRequest? request)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
-            return new JsonResult(new { success = false, error = "User not authenticated" });
+            return new JsonResult(new { success = false, message = "You are signed out. Sign in and try again." });
         }
 
-        if (request == null)
+        var ids = request?.DocumentIds?.Distinct().ToList() ?? new List<int>();
+        if (ids.Count == 0 || ids.Count > MaxBatch)
         {
-            return new JsonResult(new { success = false, error = "Invalid request" });
+            return new JsonResult(new { success = false, message = $"Select between 1 and {MaxBatch} documents." });
+        }
+        if (request!.ProjectId == null && request.FolderId != null)
+        {
+            return new JsonResult(new { success = false, message = "Choose a project or a folder." });
         }
 
-        // Ensure UserId in request matches authenticated user (owner check will happen in service)
-        request.UserId = userId;
-
-        var result = await _documentService.MoveDocumentAsync(request);
-        if (!result.Succeeded)
+        var results = new List<object>();
+        var moved = 0;
+        foreach (var id in ids)
         {
-            return new JsonResult(new { success = false, error = result.Error });
-        }
-
-        return new JsonResult(new { success = true, document = result.Data });
-    }
-
-    public async Task<JsonResult> OnGetFoldersAsync(int projectId)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return new JsonResult(new { success = false, error = "User not authenticated" });
-        }
-
-        var result = await _folderService.GetProjectFoldersAsync(projectId, userId);
-        if (!result.Succeeded)
-            return new JsonResult(new { success = false, error = result.Error });
-
-        return new JsonResult(new { success = true, folders = result.Data.Select(f => new { f.Id, f.Name }) });
-    }
-
-    public async Task<JsonResult> OnPostBulkMoveAsync([FromBody] BulkMoveRequest request)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-            return new JsonResult(new { success = false, error = "User not authenticated" });
-
-        if (request?.DocumentIds == null || !request.DocumentIds.Any())
-            return new JsonResult(new { success = false, error = "No documents selected" });
-
-        int success = 0;
-        foreach (var docId in request.DocumentIds)
-        {
-            var moveRequest = new MoveDocumentRequest
+            var result = await _documentService.MoveDocumentAsync(new MoveDocumentRequest
             {
-                DocumentId = docId,
+                DocumentId = id,
                 ProjectId = request.ProjectId,
                 FolderId = request.FolderId,
-                UserId = userId
-            };
-            var result = await _documentService.MoveDocumentAsync(moveRequest);
-            if (result.Succeeded) success++;
-        }
-        return new JsonResult(new { success = true, total = request.DocumentIds.Count, successfulMoves = success });
-    }
-
-    private static string GetContentType(string fileExtension)
-    {
-        return fileExtension.ToLower() switch
-        {
-            ".pdf" => "application/pdf",
-            ".doc" => "application/msword",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".md" => "text/markdown",
-            ".txt" => "text/plain",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".gif" => "image/gif",
-            _ => "application/octet-stream"
-        };
-    }
-
-    private void SetSortViewData()
-    {
-        ViewData["CurrentSort"] = Filter.SortBy;
-        
-        // Set next sort direction for each column
-        ViewData["TitleSortDirection"] = Filter.SortBy == "Title" && Filter.SortDirection == "asc" ? "desc" : "asc";
-        ViewData["UpdatedAtSortDirection"] = Filter.SortBy == "UpdatedAt" && Filter.SortDirection == "asc" ? "desc" : "asc";
-        ViewData["FileSizeSortDirection"] = Filter.SortBy == "FileSize" && Filter.SortDirection == "asc" ? "desc" : "asc";
-    }
-
-    public string GetSortUrl(string sortBy, string sortDirection)
-    {
-        var queryParams = new List<string>();
-        
-        // Add sorting parameters
-        queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
-        queryParams.Add($"sortDirection={Uri.EscapeDataString(sortDirection)}");
-        
-        // Add current filter parameters (excluding existing sort parameters)
-        if (!string.IsNullOrEmpty(Filter.SearchTerm))
-            queryParams.Add($"Filter.SearchTerm={Uri.EscapeDataString(Filter.SearchTerm)}");
-            
-        if (!string.IsNullOrEmpty(Filter.FileType))
-            queryParams.Add($"Filter.FileType={Uri.EscapeDataString(Filter.FileType)}");
-            
-        if (Filter.TeamId.HasValue)
-            queryParams.Add($"Filter.TeamId={Filter.TeamId.Value}");
-            
-        if (Filter.CategoryId.HasValue)
-            queryParams.Add($"Filter.CategoryId={Filter.CategoryId.Value}");
-            
-        if (Filter.IncludeTeamDocuments)
-            queryParams.Add($"Filter.IncludeTeamDocuments={Filter.IncludeTeamDocuments}");
-            
-        if (Filter.ProjectId.HasValue)
-            queryParams.Add($"Filter.ProjectId={Filter.ProjectId.Value}");
-            
-        if (Filter.FolderId.HasValue)
-            queryParams.Add($"Filter.FolderId={Filter.FolderId.Value}");
-            
-        // Don't preserve page number when sorting - always reset to page 1 for better UX
-            
-        if (Filter.PageSize != 10) // Assuming 10 is default
-            queryParams.Add($"Filter.PageSize={Filter.PageSize}");
-        
-        return "?" + string.Join("&", queryParams);
-    }
-
-    private async Task LoadFoldersAsync(string userId)
-    {
-        if (!ProjectId.HasValue || ProjectId.Value <= 0)
-        {
-            Folders = new List<FolderDto>();
-            return;
+                UserId = userId,
+            });
+            if (result.Succeeded) moved++;
+            results.Add(new
+            {
+                documentId = id,
+                success = result.Succeeded,
+                reason = result.Succeeded ? null : MoveReason(result.Error),
+            });
         }
 
-        var result = await _folderService.GetProjectFoldersAsync(ProjectId.Value, userId);
-        if (!result.Succeeded)
+        if (moved < ids.Count)
         {
-            Folders = new List<FolderDto>();
-            return;
+            _logger.LogInformation("Moved {Moved} of {Total} documents for user {UserId}", moved, ids.Count, userId);
         }
-        // Apply indentation based on folder level for dropdown display
-        Folders = result.Data
-            .OrderBy(f => f.Path) // Order by path to maintain hierarchy order
-            .Select(f => new FolderDto 
-            { 
-                Id = f.Id, 
-                Name = new string('›', f.Level) + " " + f.Name // use chevron character for indentation based on level
-            })
-            .ToList();
+        return new JsonResult(new { success = true, moved, failed = ids.Count - moved, results });
     }
-} 
+
+    /// <summary>Projects and folders for the move picker, embedded in the page as JSON.</summary>
+    public string MoveTreeJson() => JsonSerializer.Serialize(
+        Tree.Projects.Select(p => new
+        {
+            id = p.Id,
+            name = p.Name,
+            color = Dfh.ProjectColor(p.Color, p.Id),
+            folders = p.Folders.Select(FolderNode),
+        }));
+
+    private static object FolderNode(DocumentTreeFolder folder) => new
+    {
+        id = folder.Id,
+        name = folder.Name,
+        count = folder.DocumentCount,
+        children = folder.Children.Select(FolderNode),
+    };
+
+    private void BuildBreadcrumb()
+    {
+        if (State.Folder is int folderId && Tree.FindFolder(folderId) is { } hit)
+        {
+            Breadcrumb.Add((hit.Project.Name, State.Scoped(project: hit.Project.Id).Href));
+            var chain = new List<DocumentTreeFolder>();
+            var node = hit.Folder;
+            var byId = hit.Project.AllFolders().ToDictionary(f => f.Id);
+            while (node != null)
+            {
+                chain.Insert(0, node);
+                node = node.ParentId is int parentId && byId.TryGetValue(parentId, out var parent) ? parent : null;
+            }
+            foreach (var f in chain)
+            {
+                OpenFolders.Add(f.Id);
+                Breadcrumb.Add((f.Name, State.Scoped(project: hit.Project.Id, folder: f.Id).Href));
+            }
+        }
+        else if (State.Project is int projectId && Tree.FindProject(projectId) is { } project)
+        {
+            Breadcrumb.Add((project.Name, State.Scoped(project: project.Id).Href));
+        }
+        else if (State.Team is int teamId && Tree.Teams.FirstOrDefault(t => t.Id == teamId) is { } t)
+        {
+            Breadcrumb.Add(("Teams", State.Scoped().Href));
+            Breadcrumb.Add((t.Name, State.Scoped(team: t.Id).Href));
+        }
+        else if (State.HasScope)
+        {
+            // A project, folder or team the user cannot see: the list is empty, say what was asked for.
+            Breadcrumb.Add(("Unavailable", State.Href));
+        }
+        else
+        {
+            Breadcrumb.Add(("All documents", State.Scoped().Href));
+        }
+    }
+
+    private IActionResult Back(string? returnUrl, string? success = null, string? error = null)
+    {
+        if (success != null) TempData["ToastSuccess"] = success;
+        if (error != null) TempData["ToastError"] = error;
+        return LocalRedirect(SafeReturnUrl(returnUrl));
+    }
+
+    private string SafeReturnUrl(string? returnUrl) =>
+        !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/Documents";
+
+    private static string DeleteReason(string? error) =>
+        error != null && error.Contains("own", StringComparison.OrdinalIgnoreCase) ? "not owner · skipped"
+        : error != null && error.Contains("not found", StringComparison.OrdinalIgnoreCase) ? "already deleted"
+        : "failed";
+
+    private static string MoveReason(string? error) =>
+        error != null && error.Contains("authorized", StringComparison.OrdinalIgnoreCase) ? "not owner · skipped"
+        : error ?? "failed";
+
+    private static string ContentType(string fileExtension) => fileExtension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".md" => "text/markdown",
+        ".txt" => "text/plain",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        _ => "application/octet-stream",
+    };
+
+    public class MoveRequest
+    {
+        public List<int> DocumentIds { get; set; } = new();
+        public int? ProjectId { get; set; }
+        public int? FolderId { get; set; }
+    }
+}
+
+/// <summary>Model of the inspector partial.</summary>
+public record DocumentInspectorView(DocumentInspector Doc, bool IsDemo, string ReturnUrl);
+
+/// <summary>Model of the recursive tree-folder partial.</summary>
+public record DocumentTreeFolderNode(
+    DocumentTreeFolder Folder, int ProjectId, int Level, DocumentListState State, IReadOnlySet<int> OpenFolders);

@@ -8,6 +8,10 @@
     var signedIn = SignInManager.IsSignedIn(User);
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
     var isAdminArea = currentPage.StartsWith("/Admin", StringComparison.OrdinalIgnoreCase);
+    // On the Documents list the box shows the current search, so it can be edited in place.
+    var searchValue = currentPage.Equals("/Documents/Index", StringComparison.OrdinalIgnoreCase)
+        ? Context.Request.Query["q"].ToString()
+        : string.Empty;
 
     string initials = "?";
     string displayName = User.Identity?.Name ?? string.Empty;
@@ -46,7 +50,7 @@
         <div class="dfh-titlebar-center">
             <form class="dfh-titlebar-search" method="get" asp-area="" asp-page="/Documents/Index" role="search">
                 <i class="bi bi-search" aria-hidden="true"></i>
-                <input id="dfh-global-search" type="search" name="Filter.SearchTerm"
+                <input id="dfh-global-search" type="search" name="q" value="@searchValue"
                        placeholder="Search documents" aria-label="Search documents" autocomplete="off" />
                 <kbd class="dfh-kbd">Ctrl K</kbd>
             </form>

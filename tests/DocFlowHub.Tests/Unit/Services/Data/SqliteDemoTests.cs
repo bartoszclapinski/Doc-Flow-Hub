@@ -2,6 +2,7 @@ using DocFlowHub.Core.Constants;
 using DocFlowHub.Core.Identity;
 using DocFlowHub.Core.Models.Dashboard;
 using DocFlowHub.Core.Models.Documents;
+using DocFlowHub.Core.Models.Documents.Browser;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure;
 using DocFlowHub.Infrastructure.Data;
@@ -204,5 +205,42 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
         overview.StorageBytes.Should().BeGreaterThan(0);
         overview.LargestTeams.Should().NotBeEmpty();
         overview.Activity.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task DocumentBrowser_RunsOnSqliteAndMatchesTheDocumentList()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+        var browser = Get<IDocumentBrowserService>(scope);
+
+        var tree = await browser.GetTreeAsync(userId);
+        tree.Succeeded.Should().BeTrue(tree.Error);
+        var list = await Get<IDocumentService>(scope).GetDocumentsAsync(userId, new DocumentFilter { PageSize = 1 });
+        tree.Data!.TotalDocuments.Should().Be(list.Data!.TotalItems);
+        tree.Data.Projects.Should().NotBeEmpty();
+        tree.Data.FileTypes.Sum(t => t.Count).Should().Be(tree.Data.TotalDocuments);
+
+        var page = await browser.GetDocumentsAsync(userId, new DocumentListQuery { Sort = DocumentSort.Name, Descending = false });
+        page.Succeeded.Should().BeTrue(page.Error);
+        page.Data!.Total.Should().Be(tree.Data.TotalDocuments);
+        page.Data.Items.Should().HaveCount(Math.Min(25, page.Data.Total));
+        page.Data.Items.Select(r => r.Title.ToLowerInvariant()).Should().BeInAscendingOrder(StringComparer.Ordinal);
+
+        var project = tree.Data.Projects.First(p => p.DocumentCount > 0);
+        var inProject = await browser.GetDocumentsAsync(userId, new DocumentListQuery
+        {
+            ProjectId = project.Id, FileType = "PDF", Owner = DocumentOwnerFilter.Me, Search = "A", CategoryId = 1,
+        });
+        inProject.Succeeded.Should().BeTrue(inProject.Error);
+
+        var first = page.Data.Items[0];
+        var upper = await browser.GetDocumentsAsync(userId, new DocumentListQuery { Search = first.Title.ToUpperInvariant() });
+        upper.Data!.Items.Should().Contain(r => r.Id == first.Id, "search ignores case on SQLite");
+
+        var inspector = await browser.GetInspectorAsync(userId, first.Id);
+        inspector.Succeeded.Should().BeTrue(inspector.Error);
+        inspector.Data!.RecentVersions.Should().NotBeEmpty();
+        inspector.Data.VersionCount.Should().BeGreaterThanOrEqualTo(inspector.Data.RecentVersions.Count);
     }
 }

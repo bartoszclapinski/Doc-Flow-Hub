@@ -88,8 +88,66 @@
         csrfToken: function () {
             const meta = document.querySelector('meta[name="csrf-token"]');
             return meta ? meta.getAttribute('content') : '';
-        }
+        },
+        postJson: postJson,
+        reportFailure: reportFailure,
+        toastAfterReload: toastAfterReload
     });
+
+    /**
+     * POSTs JSON to a page handler with the antiforgery token. Always resolves to an object with
+     * `success`; failures carry `message` and `status` (403 from the demo filter: `readOnly`).
+     */
+    async function postJson(url, body) {
+        let response;
+        try {
+            response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': window.DocFlowHub.csrfToken()
+                },
+                body: JSON.stringify(body)
+            });
+        } catch (e) {
+            return { success: false, message: 'The server could not be reached. Check your connection and try again.' };
+        }
+
+        let data = null;
+        try { data = await response.json(); } catch (e) { /* not JSON */ }
+
+        if (!response.ok || !data) {
+            const message = data && (data.message || data.error);
+            return {
+                success: false,
+                status: response.status,
+                readOnly: response.status === 403 && !!message,
+                message: message || (response.status === 403
+                    ? 'You do not have permission to do this.'
+                    : 'Something went wrong (HTTP ' + response.status + '). Try again.')
+            };
+        }
+        if (data.success === false && !data.message) data.message = data.error || 'The request failed.';
+        return data;
+    }
+
+    /** Shows a failed postJson result: the demo's read-only notice as info, anything else as an error. */
+    function reportFailure(result, fallback) {
+        const message = (result && result.message) || fallback || 'The request failed.';
+        if (result && result.readOnly) showToast('info', message);
+        else showToast('error', message);
+    }
+
+    /** Queues a toast for the next page load (e.g. after a list reload). */
+    function toastAfterReload(type, message, options) {
+        try {
+            const queue = JSON.parse(sessionStorage.getItem('dfh-toasts') || '[]');
+            queue.push({ type: type, message: message, options: options || {} });
+            sessionStorage.setItem('dfh-toasts', JSON.stringify(queue.slice(-3)));
+        } catch (e) { /* storage unavailable: the toast is skipped */ }
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         // Messages the server queued for this page (e.g. the demo read-only notice).
@@ -99,6 +157,12 @@
                 JSON.parse(queued.textContent).forEach(function (t) { showToast(t.type, t.message); });
             } catch (e) { /* ignore malformed payload */ }
         }
+        // Messages a script queued before reloading the page.
+        try {
+            const pending = JSON.parse(sessionStorage.getItem('dfh-toasts') || '[]');
+            sessionStorage.removeItem('dfh-toasts');
+            pending.forEach(function (t) { showToast(t.type, t.message, t.options); });
+        } catch (e) { /* storage unavailable */ }
 
         // Opt-in double-submit protection: <form data-dfh-busy="Saving…">.
         document.querySelectorAll('form[data-dfh-busy]').forEach(function (form) {

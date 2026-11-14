@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **in progress** — Sprints 9–10 done (2026-11-13) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprint 11 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -237,6 +237,8 @@ screenshots and `.ai` status docs.
 | Dashboard / admin overview loaded whole document lists (admin: per user) just to count them | 10 |
 | Documents pagination drops filters and sort | 11 |
 | Demo: mutating AJAX calls show "HTTP error 403" / `alert('Move failed')` instead of the read-only message | 11 |
+| Demo seed stored folder paths with the project name, unlike `FolderService` (locations repeated the project) | 11 |
+| Bulk move returned only a count, no per-document result | 11 |
 | Projects/Details TotalSize hard-coded to 0 | 13 |
 | Admin Analytics never fills `UsageTrends` / `ErrorStats` | 14 |
 | Settings AI loads Chart.js from a CDN instead of the local copy (removed anyway) | 14 |

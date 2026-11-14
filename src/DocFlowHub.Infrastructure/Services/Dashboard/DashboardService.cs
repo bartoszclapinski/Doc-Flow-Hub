@@ -4,6 +4,7 @@ using DocFlowHub.Core.Models.Dashboard;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Services.Interfaces;
 using DocFlowHub.Infrastructure.Data;
+using DocFlowHub.Infrastructure.Services.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -194,9 +195,9 @@ public class DashboardService : IDashboardService
             FileType = r.FileType,
             FileSize = r.FileSize,
             ModifiedAt = r.Modified,
-            Location = !string.IsNullOrWhiteSpace(r.FolderPath) ? r.FolderPath.Trim('/') : r.ProjectName,
+            Location = DisplayFormat.Location(r.ProjectName, r.FolderPath),
             Version = r.Version,
-            OwnerName = DisplayName(r.FirstName, r.LastName, r.Email),
+            OwnerName = DisplayFormat.PersonName(r.FirstName, r.LastName, r.Email),
             HasSummary = r.HasSummary,
         }).ToList();
     }
@@ -277,7 +278,7 @@ public class DashboardService : IDashboardService
                 .Where(u => userIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.FirstName, u.LastName, u.Email })
                 .ToListAsync())
-            .ToDictionary(u => u.Id, u => DisplayName(u.FirstName, u.LastName, u.Email));
+            .ToDictionary(u => u.Id, u => DisplayFormat.PersonName(u.FirstName, u.LastName, u.Email));
 
         string NameOf(string? id, string? fallback) =>
             id != null && names.TryGetValue(id, out var name) ? name
@@ -292,7 +293,7 @@ public class DashboardService : IDashboardService
             Verb = v.VersionNumber <= 1 ? "created" : $"uploaded v{v.VersionNumber} of",
             Subject = v.Title,
             DocumentId = v.DocumentId,
-            Hash = ShortHash(v.FileHash),
+            Hash = DisplayFormat.ShortHash(v.FileHash),
         }));
         items.AddRange(summaryEvents.Select(s => new ActivityItem
         {
@@ -330,14 +331,4 @@ public class DashboardService : IDashboardService
 
         return items.OrderByDescending(i => i.At).Take(ActivityCount).ToList();
     }
-
-    private static string DisplayName(string? first, string? last, string? email)
-    {
-        var name = $"{first} {last}".Trim();
-        return name.Length > 0 ? name : email ?? "Unknown";
-    }
-
-    /// <summary>First 7 hex characters of the stored MD5 hex string, like a short commit id.</summary>
-    private static string? ShortHash(string? hash) =>
-        hash is { Length: >= 7 } && hash[..7].All(Uri.IsHexDigit) ? hash[..7].ToLowerInvariant() : null;
 }
