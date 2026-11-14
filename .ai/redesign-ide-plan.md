@@ -1,6 +1,6 @@
 # DocFlowHub UI redesign ("IDE" direction): implementation plan
 
-Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprints 11–13 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
+Status: **in progress** — Sprints 9–10 done (2026-11-13), Sprints 11–14 done (2026-11-14) · Sprints 9–15 · All recommended decisions (D1–D7) accepted
 
 The designer's handoff lives locally (git-ignored) in
 `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`. `README.md` there is the
@@ -244,6 +244,13 @@ screenshots and `.ai` status docs.
 | Projects/Details TotalSize hard-coded to 0 | 13 |
 | Admin Analytics never fills `UsageTrends` / `ErrorStats` | 14 |
 | Settings AI loads Chart.js from a CDN instead of the local copy (removed anyway) | 14 |
+| Documents pager: `?page=2` bound to the Razor Pages route value, page 2 never opened (introduced in 11) | 14 |
+| Admin user Create / Edit and Change password accepted 6-char passwords (Identity requires 8) | 14 |
+| Admin could lock, delete or demote their own account; Administrator role could be renamed | 14 |
+| User limits "Reset usage" / "Update default limits" reported success without doing anything | 14 |
+| Role description silently dropped (Identity roles have no column); users role filter ignored | 14 |
+| User details showed `IsActive` hard-coded; Activate / Suspend duplicated Unlock / Lock | 14 |
+| Decimal form fields failed validation on a non-English server culture (no request culture set) | 14 |
 | `theme-manager.js` posts to a non-existent `/api/profile/theme` | 9 (file removed) |
 
 ## 9. Risks

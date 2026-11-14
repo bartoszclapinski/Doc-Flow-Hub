@@ -296,3 +296,52 @@ test('team page: members, real permission matrix, documents link', async ({ page
   await expect(page.locator('.dfh-table--members')).toContainText('you');
   await expect(page.locator('.dfh-viewtab', { hasText: 'Documents' })).toHaveAttribute('href', /\/Documents\?team=\d+/);
 });
+
+// Sprint 14: admin, settings, profile.
+test('documents: the pager really opens page 2 (Razor Pages "page" route value)', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  const next = page.locator('.dfh-pager a[rel="next"]');
+  test.skip((await next.count()) === 0, 'only one page of documents');
+  await next.click();
+  await expect(page.locator('.dfh-pager .dfh-mono').first()).toHaveText(/^26–/);
+});
+
+test('admin users: table, filters as tokens, user page', async ({ page }) => {
+  await signIn(page, DEMO_ADMIN);
+  await page.goto('/Admin/Users');
+  await expect(page.locator('.dfh-nav-item.is-active .dfh-nav-count')).toHaveText(/\d+/);
+  await expect(page.locator('tbody tr[data-id]')).not.toHaveCount(0);
+  await page.locator('.dfh-filter-btn', { hasText: 'Role' }).click();
+  await page.locator('.dropdown-menu.show .dropdown-item', { hasText: 'Administrator' }).click();
+  await expect(page.locator('.dfh-token')).toContainText('role:Administrator');
+  await expect(page.locator('tbody tr[data-id]')).toHaveCount(1);
+  await page.locator('tbody tr[data-id] a.dfh-cell-link').first().click();
+  await expect(page.locator('.dfh-entity-header h1')).toContainText('(you)');
+  await expect(page.locator('.dfh-detail-panel')).toHaveCount(3);
+});
+
+test('admin analytics, limits and settings: CSS charts and honest notes', async ({ page }) => {
+  await signIn(page, DEMO_ADMIN);
+  await page.goto('/Admin/Analytics?period=7');
+  await expect(page.locator('.dfh-barchart .dfh-bar')).toHaveCount(7);
+  await expect(page.locator('.dfh-segmented a.is-active')).toHaveText('7d');
+  await page.goto('/Admin/UserLimits');
+  await expect(page.locator('.dfh-banner--info')).toContainText('fixed limits');
+  await expect(page.locator('button', { hasText: 'Reset usage' })).toHaveCount(0);
+  await page.goto('/Admin/Settings');
+  await expect(page.locator('.dfh-banner--warning')).toContainText('Saved, not applied yet');
+});
+
+test('settings: profile, password and AI pages share the settings tree', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Account/Manage/EditProfile');
+  await expect(page).toHaveURL(/\/Account\/Manage$/);
+  await expect(page.locator('.dfh-settings-tree .is-selected')).toHaveText('Profile');
+  await expect(page.locator('input[aria-label="E-mail"]')).toHaveValue('demo@docflowhub.com');
+  await page.locator('.dfh-settings-tree a', { hasText: 'Models & features' }).click();
+  await expect(page.locator('.dfh-not-applied').first()).toBeVisible();
+  await page.locator('[data-dfh-settings-filter]').fill('pass');
+  await expect(page.locator('.dfh-settings-tree a', { hasText: 'Password' })).toBeVisible();
+  await expect(page.locator('.dfh-settings-tree a', { hasText: 'Profile' })).toBeHidden();
+});

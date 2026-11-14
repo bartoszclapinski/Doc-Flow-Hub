@@ -223,7 +223,8 @@
         // Opt-in double-submit protection: <form data-dfh-busy="Saving…">.
         document.querySelectorAll('form[data-dfh-busy]').forEach(function (form) {
             form.addEventListener('submit', function (event) {
-                const button = form.querySelector('button[type="submit"], input[type="submit"]');
+                // The button that was pressed (a form can have several, e.g. Save and Reset to defaults).
+                const button = event.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
                 if (!button || button.disabled) return;
                 setTimeout(function () {
                     // A page script cancelled the submit (e.g. validation): leave the button usable.

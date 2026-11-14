@@ -136,6 +136,38 @@ test('workspace screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/team.png` });
 });
 
+// Settings (3f, 8e) for the user; admin users (3e), analytics (8c) and the rest of the admin area.
+test('settings screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  for (const [name, path] of [['profile', '/Account/Manage'], ['password', '/Account/Manage/ChangePassword'], ['settings-ai', '/Settings/AI']] as const) {
+    await page.goto(path);
+    await page.screenshot({ path: `${dir}/${name}.png` });
+  }
+});
+
+test('admin area screens', async ({ page }) => {
+  await signIn(page, DEMO_ADMIN);
+  for (const [name, path] of [
+    ['admin-users', '/Admin/Users'], ['admin-analytics', '/Admin/Analytics'], ['admin-analytics-90', '/Admin/Analytics?period=90'],
+    ['admin-limits', '/Admin/UserLimits'], ['admin-settings', '/Admin/Settings'], ['admin-roles', '/Admin/Roles'],
+    ['admin-user-create', '/Admin/Users/Create'], ['admin-role-create', '/Admin/Roles/Create'],
+  ] as const) {
+    await page.goto(path);
+    await page.screenshot({ path: `${dir}/${name}.png` });
+  }
+  await page.goto('/Admin/Users');
+  await page.locator('.dfh-row-check').nth(1).check();
+  await page.screenshot({ path: `${dir}/admin-users-bulk.png` });
+  const user = await page.locator('tbody tr[data-id]').nth(1).getAttribute('data-id');
+  for (const [name, path] of [['admin-user', `/Admin/Users/Details/${user}`], ['admin-user-edit', `/Admin/Users/Edit/${user}`]] as const) {
+    await page.goto(path);
+    await page.screenshot({ path: `${dir}/${name}.png` });
+  }
+  await page.goto('/Admin/Roles');
+  await page.locator('tbody tr[data-dfh-href]').first().click();
+  await page.screenshot({ path: `${dir}/admin-role.png` });
+});
+
 test('admin screens', async ({ page }) => {
   await signIn(page, DEMO_ADMIN);
   for (const [name, path] of ADMIN_PAGES) {

@@ -1,3 +1,4 @@
+@inject DocFlowHub.Core.Services.Interfaces.IAdminBrowserService AdminBrowser
 @{
     Layout = "_Layout";
     ViewData["IsAdminArea"] = true;
@@ -6,14 +7,18 @@
     bool Is(string p) => page.Equals(p, StringComparison.OrdinalIgnoreCase);
     bool Starts(string p) => page.StartsWith(p, StringComparison.OrdinalIgnoreCase);
 
-    var nav = new[]
+    // Counts and mini stats of design 3e (S14-2); the nav still renders if they fail.
+    var statsResult = await AdminBrowser.GetNavStatsAsync();
+    var stats = statsResult.Succeeded ? statsResult.Data : null;
+
+    var nav = new (string Page, string Icon, string Label, bool Active, int? Count)[]
     {
-        (Page: "/Admin/Index", Icon: "bi-speedometer2", Label: "Overview", Active: Is("/Admin/Index")),
-        (Page: "/Admin/Users/Index", Icon: "bi-people", Label: "Users", Active: Starts("/Admin/Users")),
-        (Page: "/Admin/Roles/Index", Icon: "bi-person-badge", Label: "Roles", Active: Starts("/Admin/Roles")),
-        (Page: "/Admin/UserLimits", Icon: "bi-shield-check", Label: "User limits", Active: Is("/Admin/UserLimits")),
-        (Page: "/Admin/Analytics", Icon: "bi-graph-up", Label: "Analytics", Active: Is("/Admin/Analytics")),
-        (Page: "/Admin/Settings/Index", Icon: "bi-sliders", Label: "System settings", Active: Starts("/Admin/Settings")),
+        ("/Admin/Index", "bi-speedometer2", "Overview", Is("/Admin/Index"), null),
+        ("/Admin/Users/Index", "bi-people", "Users", Starts("/Admin/Users"), stats?.Users),
+        ("/Admin/Roles/Index", "bi-person-badge", "Roles", Starts("/Admin/Roles"), stats?.Roles),
+        ("/Admin/UserLimits", "bi-shield-check", "User limits", Is("/Admin/UserLimits"), null),
+        ("/Admin/Analytics", "bi-graph-up", "Analytics", Is("/Admin/Analytics"), null),
+        ("/Admin/Settings/Index", "bi-sliders", "System settings", Starts("/Admin/Settings"), null),
     };
 }
 
@@ -25,16 +30,27 @@
             {
                 <a class="dfh-nav-item @(item.Active ? "is-active" : "")" asp-area="" asp-page="@item.Page"
                    aria-current="@(item.Active ? "page" : null)">
-                    <i class="bi @item.Icon" aria-hidden="true"></i>@item.Label
+                    <i class="bi @item.Icon" aria-hidden="true"></i><span class="dfh-grow">@item.Label</span>
+                    @if (item.Count is int count)
+                    {
+                        <span class="dfh-nav-count">@Dfh.Number(count)</span>
+                    }
                 </a>
             }
         </nav>
+        @if (stats != null)
+        {
+            <div class="dfh-toolwindow-spacer"></div>
+            <dl class="dfh-mini-stats">
+                <dt>Active (30d)</dt><dd>@Dfh.Number(stats.ActiveIn30Days)</dd>
+                <dt>Locked</dt><dd>@Dfh.Number(stats.Locked)</dd>
+                <dt>Sign-ups (7d)</dt><dd class="@(stats.SignupsIn7Days > 0 ? "is-positive" : null)">+@stats.SignupsIn7Days</dd>
+            </dl>
+        }
     </aside>
 }
 
 @section Styles {
-    @* Old admin page styles, kept until the admin pages are redesigned (Sprint 14). *@
-    <link rel="stylesheet" href="~/css/legacy/admin.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 }
 

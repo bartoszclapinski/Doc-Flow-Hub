@@ -1,0 +1,20 @@
+@model (string? Name, string? NameError, bool NameLocked)
+@* Name of a role (Create and Edit, "Input." prefix like the page models). There is no description field:
+   roles are plain Identity roles, which have no column for one (the old forms dropped it silently). *@
+<fieldset class="dfh-form-section">
+    <legend class="dfh-form-heading">Role</legend>
+    <div class="dfh-form-grid">
+        <label class="dfh-field is-wide">
+            <span class="dfh-field-label">Name</span>
+            <input name="Input.Name" value="@Model.Name" class="form-control" maxlength="256" required readonly="@Model.NameLocked" />
+            @if (Model.NameError != null)
+            {
+                <span class="field-validation-error">@Model.NameError</span>
+            }
+            @if (Model.NameLocked)
+            {
+                <span class="form-text">The Administrator role opens the admin area, so its name can't change.</span>
+            }
+        </label>
+    </div>
+</fieldset>

@@ -35,7 +35,7 @@ public class IndexModel : PageModel
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
-            TempData["ErrorMessage"] = "User not authenticated.";
+            TempData["ToastError"] = "User not authenticated.";
             return RedirectToPage();
         }
 
@@ -43,11 +43,11 @@ public class IndexModel : PageModel
         
         if (result.Succeeded)
     {
-            TempData["SuccessMessage"] = "Settings updated successfully.";
+            TempData["ToastSuccess"] = "Settings updated successfully.";
         }
         else
         {
-            TempData["ErrorMessage"] = result.Error;
+            TempData["ToastError"] = result.Error;
         }
 
         return RedirectToPage();
@@ -58,7 +58,7 @@ public class IndexModel : PageModel
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
-            TempData["ErrorMessage"] = "User not authenticated.";
+            TempData["ToastError"] = "User not authenticated.";
             return RedirectToPage();
         }
 
@@ -66,11 +66,11 @@ public class IndexModel : PageModel
         
         if (result.Succeeded)
         {
-            TempData["SuccessMessage"] = $"Category '{category}' reset to default values.";
+            TempData["ToastSuccess"] = $"Category '{category}' reset to default values.";
         }
         else
         {
-            TempData["ErrorMessage"] = result.Error;
+            TempData["ToastError"] = result.Error;
         }
 
         return RedirectToPage();
@@ -81,7 +81,7 @@ public class IndexModel : PageModel
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {
-            TempData["ErrorMessage"] = "User not authenticated.";
+            TempData["ToastError"] = "User not authenticated.";
             return RedirectToPage();
         }
 
@@ -89,11 +89,11 @@ public class IndexModel : PageModel
         
         if (result.Succeeded)
         {
-            TempData["SuccessMessage"] = $"Setting '{key}' reset to default value.";
+            TempData["ToastSuccess"] = $"Setting '{key}' reset to default value.";
         }
         else
         {
-            TempData["ErrorMessage"] = result.Error;
+            TempData["ToastError"] = result.Error;
         }
 
         return RedirectToPage();

@@ -22,13 +22,6 @@
       ]
     },
     {
-      "library": "Chart.js@4.4.1",
-      "destination": "wwwroot/lib/chart.js/",
-      "files": [
-        "chart.umd.min.js"
-      ]
-    },
-    {
       "library": "jquery@3.7.1",
       "destination": "wwwroot/lib/jquery/dist/",
       "files": [

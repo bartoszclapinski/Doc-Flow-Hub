@@ -1,412 +1,150 @@
 @page
 @model DocFlowHub.Web.Pages.Admin.AnalyticsModel
 @{
-    ViewData["Title"] = "AI Analytics & Monitoring";
+    ViewData["Title"] = "Analytics";
+    ViewData["FullBleed"] = true;
     Layout = "_AdminLayout";
+    var a = Model.Data;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Pct(double v) => (v * 100).ToString(v < 0.1 && v > 0 ? "0.0" : "0", inv) + "%";
+    string Money(decimal v) => "$" + v.ToString("0.00", inv);
+    string Short(int v) => v >= 10000 ? (v / 1000.0).ToString("0.#", inv) + "k" : Dfh.Number(v);
 }
 
-<div class="d-flex justify-content-between align-items-center admin-deep-header">
-    <div>
-        <h1>AI Analytics &amp; Monitoring</h1>
-        <p class="subtitle">System-wide AI usage monitoring and performance insights</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-secondary" onclick="refreshAnalytics()">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
-        <div class="dropdown">
-            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="bi bi-calendar3"></i> Last 30 Days
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="changePeriod(7)">Last 7 Days</a></li>
-                <li><a class="dropdown-item" href="#" onclick="changePeriod(30)">Last 30 Days</a></li>
-                <li><a class="dropdown-item" href="#" onclick="changePeriod(90)">Last 90 Days</a></li>
-            </ul>
-        </div>
-    </div>
-</div>
+<div class="dfh-column">
+    <header class="dfh-page-header">
+        <h1>Analytics</h1>
+        <nav class="dfh-segmented" aria-label="Period">
+            @foreach (var days in new[] { 7, 30, 90 })
+            {
+                <a href="/Admin/Analytics?period=@days" class="@(Model.Period == days ? "is-active" : null)" aria-current="@(Model.Period == days ? "page" : null)">@(days)d</a>
+            }
+        </nav>
+        @if (a != null)
+        {
+            <div class="dfh-statline" aria-label="Summary">
+                <span><b>@Dfh.Number(a.ActiveUsers)</b> active users</span>
+                <span><b>@Dfh.Number(a.Uploads)</b> uploads</span>
+                <span><b>@Dfh.FileSize(a.StoredBytes)</b> stored</span>
+                <span class="is-ai"><b>@Short(a.AiRequests)</b> AI req · @Money(a.AiCost)</span>
+            </div>
+        }
+    </header>
 
-<!-- System Overview Cards -->
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="d-flex align-items-center justify-content-center mb-3">
-                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                        <i class="bi bi-people text-primary fs-4"></i>
-                    </div>
-                </div>
-                <h4 class="fw-bold mb-1" id="total-users">@(Model.SystemStats?.TotalUsers ?? 0)</h4>
-                <p class="text-muted mb-0">Total Users</p>
-                <small class="text-success">
-                    <i class="bi bi-arrow-up"></i> @(Model.SystemStats?.ActiveUsers ?? 0) active
-                </small>
-            </div>
+    @if (a == null)
+    {
+        <div class="dfh-empty dfh-fill">
+            <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+            <span class="dfh-empty-title">The analytics could not be loaded</span>
+            <p>@Model.ErrorMessage</p>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="d-flex align-items-center justify-content-center mb-3">
-                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                        <i class="bi bi-cpu text-success fs-4"></i>
-                    </div>
+    }
+    else
+    {
+        var max = Math.Max(1, a.UploadsPerDay.Max(d => d.Count));
+        var avg = a.UploadsPerDay.Count == 0 ? 0 : a.UploadsPerDay.Average(d => d.Count);
+        var mid = a.UploadsPerDay[a.UploadsPerDay.Count / 2].Day;
+        <div class="dfh-quad">
+            <section class="dfh-quad-cell" aria-labelledby="uploads-title">
+                <div class="dfh-quad-head">
+                    <span id="uploads-title">Uploads per day</span>
+                    <span class="dfh-mono dfh-muted">avg @avg.ToString(avg < 10 ? "0.#" : "0", inv) · peak @max</span>
                 </div>
-                <h4 class="fw-bold mb-1" id="total-operations">@(Model.SystemStats?.TotalOperations.ToString("N0") ?? "0")</h4>
-                <p class="text-muted mb-0">Total Operations</p>
-                <small class="text-success">
-                    <i class="bi bi-check-circle"></i> @((Model.SystemStats?.ErrorRate * 100)?.ToString("F1") ?? "0")% success rate
-                </small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="d-flex align-items-center justify-content-center mb-3">
-                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                        <i class="bi bi-currency-dollar text-warning fs-4"></i>
-                    </div>
+                <div class="dfh-barchart@(a.UploadsPerDay.Count > 45 ? " is-dense" : "")" role="img" aria-label="Uploads per day, @Model.Period days, peak @max">
+                    @for (var i = 0; i < a.UploadsPerDay.Count; i++)
+                    {
+                        var d = a.UploadsPerDay[i];
+                        var h = d.Count == 0 ? 0 : Math.Max(2, Math.Round(d.Count * 100.0 / max));
+                        <span class="dfh-bar@(i == a.UploadsPerDay.Count - 1 ? " is-today" : "")" style="--h: @h.ToString(inv)%" title="@d.Day.ToString("MMM d", inv) · @d.Count @Dfh.Noun(d.Count, "upload")"></span>
+                    }
                 </div>
-                <h4 class="fw-bold mb-1" id="total-cost">$@((Model.SystemStats?.TotalCost)?.ToString("F2") ?? "0.00")</h4>
-                <p class="text-muted mb-0">Total Cost</p>
-                <small class="text-info">
-                    <i class="bi bi-speedometer2"></i> @(Model.SystemStats?.AverageResponseTime.TotalSeconds.ToString("F1") ?? "0")s avg response
-                </small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="d-flex align-items-center justify-content-center mb-3">
-                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                        <i class="bi bi-lightning text-info fs-4"></i>
-                    </div>
+                <div class="dfh-barchart-axis dfh-mono">
+                    <span>@a.UploadsPerDay[0].Day.ToString("MMM d", inv)</span><span>@mid.ToString("MMM d", inv)</span><span>@a.UploadsPerDay[^1].Day.ToString("MMM d", inv)</span>
                 </div>
-                <h4 class="fw-bold mb-1" id="cache-hit-rate">@((Model.SystemStats?.CacheHitRate * 100)?.ToString("F1") ?? "0")%</h4>
-                <p class="text-muted mb-0">Cache Hit Rate</p>
-                <small class="text-success">
-                    <i class="bi bi-arrow-up"></i> Optimizing costs
-                </small>
-            </div>
-        </div>
-    </div>
-</div>
+            </section>
 
-<!-- Charts Row -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Usage Trends</h5>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-graph-up"></i> Metrics
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="switchChart('operations')">Operations</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="switchChart('costs')">Costs</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="switchChart('errors')">Error Rates</a></li>
-                        </ul>
-                    </div>
+            <section class="dfh-quad-cell" aria-labelledby="ai-title">
+                <div class="dfh-quad-head">
+                    <span id="ai-title"><i class="bi bi-stars dfh-ai-text" aria-hidden="true"></i> AI usage by feature</span>
+                    @if (a.TopModel != null)
+                    {
+                        <span class="dfh-mono dfh-muted" title="Most used model">@a.TopModel</span>
+                    }
                 </div>
-            </div>
-            <div class="card-body">
-                <div style="height: 350px;" class="d-flex align-items-center justify-content-center" id="trends-chart-container">
-                    <canvas id="trendsChart"></canvas>
+                @if (a.AiByOperation.Count == 0)
+                {
+                    <p class="dfh-insp-note">No AI requests in this period.</p>
+                }
+                else
+                {
+                    <ul class="dfh-hbars">
+                        @foreach (var op in a.AiByOperation)
+                        {
+                            <li>
+                                <span class="dfh-hbars-label">@AnalyticsModel.OperationLabel(op.Operation)</span>
+                                <span class="dfh-hbars-track"><span style="width: @((op.Share * 100).ToString("0.#", inv))%"></span></span>
+                                <span class="dfh-mono dfh-muted">@Short(op.Requests) · @Money(op.Cost)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                <div class="dfh-toolwindow-spacer"></div>
+                <div class="dfh-quad-foot">
+                    <span>Cache hit rate <b class="dfh-mono">@Pct(a.CacheHitRate)</b></span>
+                    <span>Failures <b class="dfh-mono@(a.FailureRate > 0 ? " is-danger" : "")">@Pct(a.FailureRate)</b></span>
+                    <span>p95 latency <b class="dfh-mono">@(a.P95LatencySeconds is double p ? p.ToString("0.0", inv) + "s" : "—")</b></span>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <h5 class="card-title mb-0">Model Usage Distribution</h5>
-            </div>
-            <div class="card-body">
-                <div style="height: 350px;" class="d-flex align-items-center justify-content-center" id="model-chart-container">
-                    <canvas id="modelChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+            </section>
 
-<!-- Top Users and Expensive Operations -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <h5 class="card-title mb-0">Top Users by Usage</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th class="text-end">Operations</th>
-                                <th class="text-end">Cost</th>
-                                <th class="text-end">Tokens</th>
+            <section class="dfh-quad-cell" aria-labelledby="storage-title">
+                <div class="dfh-quad-head"><span id="storage-title">Top users by storage</span></div>
+                <table class="dfh-table dfh-table--compact" aria-labelledby="storage-title">
+                    <colgroup><col /><col style="width: 84px" /><col style="width: 64px" /></colgroup>
+                    <thead><tr><th scope="col">User</th><th scope="col" class="is-num">Storage</th><th scope="col" class="is-num">Docs</th></tr></thead>
+                    <tbody>
+                        @foreach (var u in a.TopStorage)
+                        {
+                            <tr data-dfh-href="/Admin/Users/Details/@u.UserId">
+                                <td><span class="dfh-person"><span class="dfh-avatar dfh-avatar--18" aria-hidden="true">@Dfh.Initials(u.Name)</span><span class="dfh-ellipsis">@u.Name</span></span></td>
+                                <td class="is-mono is-num">@Dfh.FileSize(u.Bytes)</td>
+                                <td class="is-mono is-muted is-num">@u.Documents</td>
                             </tr>
-                        </thead>
-                        <tbody id="top-users-table">
-                            @if (Model.SystemStats?.TopUsersByUsage != null)
-                            {
-                                @foreach (var user in Model.SystemStats.TopUsersByUsage.Take(10))
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-primary bg-opacity-10 rounded-circle p-1 me-2">
-                                                    <i class="bi bi-person text-primary"></i>
-                                                </div>
-                                                <small>@user.UserEmail</small>
-                                            </div>
-                                        </td>
-                                        <td class="text-end"><span class="badge bg-light text-dark">@user.Operations</span></td>
-                                        <td class="text-end"><small class="text-muted">$@user.Cost.ToString("F2")</small></td>
-                                        <td class="text-end"><small class="text-info">@user.TokensUsed.ToString("N0")</small></td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
+                        }
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="dfh-quad-cell" aria-labelledby="actions-title">
+                <div class="dfh-quad-head">
+                    <span id="actions-title">Recorded actions</span>
+                    <span class="dfh-muted" title="Failed sign-ins, devices and downloads are not recorded">admin + account</span>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <h5 class="card-title mb-0">Expensive Operations</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Operation</th>
-                                <th class="text-end">Count</th>
-                                <th class="text-end">Total Cost</th>
-                                <th class="text-end">Avg Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody id="expensive-operations-table">
-                            @if (Model.ExpensiveOperations != null)
+                @if (a.AdminActions.Count == 0)
+                {
+                    <p class="dfh-insp-note">Nothing recorded in this period. The app records admin actions on users and roles; failed sign-ins, new devices and downloads are not recorded.</p>
+                }
+                else
+                {
+                    <ul class="dfh-event-list">
+                        @foreach (var e in a.AdminActions)
+                        {
+                            var icon = e.Type switch
                             {
-                                @foreach (var op in Model.ExpensiveOperations)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div>
-                                                <small class="fw-medium">@op.OperationType</small>
-                                                <br><small class="text-muted">@op.AIModel</small>
-                                            </div>
-                                        </td>
-                                        <td class="text-end"><span class="badge bg-light text-dark">@op.OperationCount</span></td>
-                                        <td class="text-end"><small class="text-danger">$@op.TotalCost.ToString("F2")</small></td>
-                                        <td class="text-end"><small class="text-muted">$@op.AverageCost.ToString("F3")</small></td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                "UserDeactivated" or "UserDeleted" => ("bi-pause-circle", "is-danger"),
+                                "UserLocked" => ("bi-lock", "is-warning"),
+                                "RoleAssigned" or "RoleRemoved" => ("bi-person-badge", "is-info"),
+                                "PasswordResetSent" => ("bi-key", "is-info"),
+                                _ => ("bi-journal-text", ""),
+                            };
+                            <li>
+                                <i class="bi @icon.Item1 @icon.Item2" aria-hidden="true"></i>
+                                <span class="dfh-ellipsis"><span>@e.Description</span> <span class="dfh-mono dfh-muted">by @e.ActorName</span></span>
+                                <span class="dfh-muted" title="@Dfh.Timestamp(e.At)">@Dfh.Relative(e.At)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
         </div>
-    </div>
+    }
 </div>
-
-<!-- Error Analysis -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0 pb-0">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Error Analysis</h5>
-                    <span class="badge bg-danger bg-opacity-10 text-danger">
-                        @((Model.ErrorStats?.OverallErrorRate)?.ToString("F2") ?? "0")% Error Rate
-                    </span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div style="height: 200px;" class="d-flex align-items-center justify-content-center" id="error-chart-container">
-                            <canvas id="errorChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <h6 class="fw-medium mb-3">Common Error Patterns</h6>
-                        <div id="error-patterns">
-                            @if (Model.ErrorStats?.ErrorPatterns != null)
-                            {
-                                @foreach (var pattern in Model.ErrorStats.ErrorPatterns.Take(5))
-                                {
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <small class="fw-medium">@pattern.ErrorType</small>
-                                            <br><small class="text-muted">@pattern.Pattern</small>
-                                        </div>
-                                        <span class="badge bg-danger bg-opacity-10 text-danger">@pattern.Frequency</span>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    @* UMD build: the ESM chart.min.js cannot be loaded by a classic <script> tag
-       (it starts with `import` and pulls a ./chunks/ file that was never vendored),
-       which left Chart undefined and every canvas on this page blank. *@
-    <script src="~/lib/chart.js/chart.umd.min.js"></script>
-    <script>
-        let trendsChart, modelChart, errorChart;
-        let currentPeriod = 30;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-            loadAnalyticsData();
-        });
-
-        function initializeCharts() {
-            // Usage Trends Chart
-            const trendsCtx = document.getElementById('trendsChart').getContext('2d');
-            const trendsLabels = @Html.Raw(Json.Serialize(Model.UsageTrends?.TrendLabels ?? new List<string> { "No Data" }));
-            const trendsData = @Html.Raw(Json.Serialize(Model.UsageTrends?.DailyOperations?.Values.ToList() ?? new List<int> { 0 }));
-            
-            trendsChart = new Chart(trendsCtx, {
-                type: 'line',
-                data: {
-                    labels: trendsLabels,
-                    datasets: [{
-                        label: 'Operations',
-                        data: trendsData,
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0,0,0,0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            });
-
-            // Model Usage Chart
-            const modelCtx = document.getElementById('modelChart').getContext('2d');
-            const modelData = @Html.Raw(Json.Serialize(Model.SystemStats?.ModelUsageBreakdown ?? new Dictionary<string, int> { ["No Data"] = 1 }));
-            modelChart = new Chart(modelCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(modelData),
-                    datasets: [{
-                        data: Object.values(modelData),
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.8)',
-                            'rgba(54, 162, 235, 0.8)',
-                            'rgba(255, 205, 86, 0.8)',
-                            'rgba(75, 192, 192, 0.8)'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-
-            // Error Rate Chart
-            const errorCtx = document.getElementById('errorChart').getContext('2d');
-            const errorData = @Html.Raw(Json.Serialize(Model.ErrorStats?.DailyErrorRates ?? new Dictionary<string, double> { ["No Data"] = 0 }));
-            errorChart = new Chart(errorCtx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(errorData),
-                    datasets: [{
-                        label: 'Error Rate %',
-                        data: Object.values(errorData),
-                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            grid: {
-                                color: 'rgba(0,0,0,0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
-                }
-            });
-        }
-
-        function refreshAnalytics() {
-            window.location.reload();
-        }
-
-        function changePeriod(days) {
-            currentPeriod = days;
-            window.location.href = `?period=${days}`;
-        }
-
-        function switchChart(metric) {
-            // Implementation for switching chart metrics
-            console.log('Switching to metric:', metric);
-        }
-
-        function loadAnalyticsData() {
-            // Real-time data loading could be implemented here
-            console.log('Analytics data loaded');
-        }
-    </script>
-} 

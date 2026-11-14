@@ -41,7 +41,7 @@
             });
             meter.setAttribute('data-score', value.length ? String(met) : '0');
             const ready = met === 4 && (!confirm || confirm.value === value);
-            submit.disabled = !ready;
+            if (submit) submit.disabled = !ready; // no submit button in the read-only demo
         }
 
         password.addEventListener('input', update);

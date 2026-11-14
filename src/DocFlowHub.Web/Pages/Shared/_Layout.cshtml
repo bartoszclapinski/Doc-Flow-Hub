@@ -23,6 +23,13 @@
     {
         serverToasts.Add(new { type = "error", message = toastError });
     }
+    // Older page models still report results in StatusMessage ("Error: …" for failures).
+    if (TempData["StatusMessage"] is string status && !string.IsNullOrWhiteSpace(status))
+    {
+        var failed = status.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
+        var text = status.StartsWith("Error:", StringComparison.OrdinalIgnoreCase) ? status[6..].Trim() : status;
+        serverToasts.Add(new { type = failed ? "error" : "success", message = text });
+    }
 
     // Pages redesigned for the IDE shell set ViewData["FullBleed"] = true and lay out their own
     // panels; older pages get a padded, scrolling container.
