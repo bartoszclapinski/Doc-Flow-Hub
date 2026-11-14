@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Documents.Browser;
 using DocFlowHub.Core.Models.Documents.Dto;
@@ -257,24 +256,6 @@ public class IndexModel : PageModel
         }
         return new JsonResult(new { success = true, moved, failed = ids.Count - moved, results });
     }
-
-    /// <summary>Projects and folders for the move picker, embedded in the page as JSON.</summary>
-    public string MoveTreeJson() => JsonSerializer.Serialize(
-        Tree.Projects.Select(p => new
-        {
-            id = p.Id,
-            name = p.Name,
-            color = Dfh.ProjectColor(p.Color, p.Id),
-            folders = p.Folders.Select(FolderNode),
-        }));
-
-    private static object FolderNode(DocumentTreeFolder folder) => new
-    {
-        id = folder.Id,
-        name = folder.Name,
-        count = folder.DocumentCount,
-        children = folder.Children.Select(FolderNode),
-    };
 
     private void BuildBreadcrumb()
     {

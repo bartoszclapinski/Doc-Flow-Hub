@@ -77,6 +77,13 @@ public class DocumentBrowserServiceTests : IDisposable
         _context.DocumentSummaries.Add(new DocumentSummary
         {
             Id = 1, DocumentId = 1, Summary = "Revenue grew.", AIModel = "gpt-4o-mini", ConfidenceScore = 0.9, GeneratedAt = _now,
+            KeyPoints = "• First point\n- Second point\n\n",
+        });
+        _context.VersionComparisons.Add(new VersionComparison
+        {
+            Id = 1, DocumentId = 1, FromVersionId = 1, ToVersionId = 2, ChangeSummary = "Totals fixed.",
+            DetailedChanges = "• Totals corrected\n• Typo fixed", ChangeType = ChangeType.ContentModification,
+            Significance = ChangeSignificance.Low, AIModel = "claude-haiku-4-5", TokensUsed = 1200, GeneratedAt = _now,
         });
         _context.SaveChanges();
     }
@@ -207,5 +214,44 @@ public class DocumentBrowserServiceTests : IDisposable
     {
         var result = await _service.GetInspectorAsync("me", id);
         result.Succeeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Details_HasAllVersionsKeyPointsAndSavedComparisons()
+    {
+        var result = await _service.GetDetailsAsync("me", 1);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var doc = result.Data!;
+        doc.Description.Should().Be("About Quarterly report");
+        doc.Versions.Select(v => (v.Number, v.Author)).Should().Equal((2, "other@x.test"), (1, "Anna Kowalska"));
+        doc.Current!.Hash.Should().Be("abcdef0");
+        doc.Summary!.KeyPoints.Should().Equal("First point", "Second point");
+        doc.Comparisons.Should().Equal((1, 2));
+        doc.IsOwner.Should().BeTrue();
+        (await _service.GetDetailsAsync("me", 5)).Succeeded.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(2, 1)] // reversed
+    [InlineData(1, 1)] // same version: falls back to the one before "to"
+    public async Task Comparison_PicksTwoVersionsOldestFirstAndReadsTheSavedResult(int? from, int? to)
+    {
+        var result = await _service.GetComparisonAsync("me", 1, from, to);
+
+        result.Succeeded.Should().BeTrue(result.Error);
+        var view = result.Data!;
+        (view.From.Number, view.To.Number).Should().Be((1, 2));
+        view.Comparison!.Summary.Should().Be("Totals fixed.");
+        view.Comparison.Changes.Should().Equal("Totals corrected", "Typo fixed");
+        view.Location.Should().Be("Finance / reports");
+    }
+
+    [Fact]
+    public async Task Comparison_FailsWithOneVersionOrWithoutAccess()
+    {
+        (await _service.GetComparisonAsync("me", 2, null, null)).Error.Should().Contain("only one version");
+        (await _service.GetComparisonAsync("me", 5, null, null)).Succeeded.Should().BeFalse();
     }
 }

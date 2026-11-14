@@ -358,8 +358,8 @@ public class DocumentService : IDocumentService
 
             await transaction.CommitAsync();
 
-            // Generate AI summary in background (don't fail upload if this fails)
-            _ = Task.Run(async () =>
+            // Generate AI summary in background (don't fail upload if this fails), if the uploader asked for one.
+            if (request.GenerateSummary) _ = Task.Run(async () =>
             {
                 try
                 {

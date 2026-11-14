@@ -179,3 +179,79 @@ public class DocumentInspectorVersion
     public DateTime CreatedAt { get; set; }
     public string Author { get; set; } = string.Empty;
 }
+
+/// <summary>Everything the Details page shows: the document, all its versions and its AI data.</summary>
+public class DocumentDetails
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string FileType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string? Location { get; set; }
+    public int? ProjectId { get; set; }
+    public int? FolderId { get; set; }
+    public string OwnerName { get; set; } = string.Empty;
+    public bool IsOwner { get; set; }
+    public int? TeamId { get; set; }
+    public string? TeamName { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime ModifiedAt { get; set; }
+    public List<string> Categories { get; set; } = new();
+    public DocumentDetailsSummary? Summary { get; set; }
+
+    /// <summary>Newest first.</summary>
+    public List<DocumentDetailsVersion> Versions { get; set; } = new();
+
+    /// <summary>Version-number pairs (from, to) that have a saved AI comparison.</summary>
+    public List<(int From, int To)> Comparisons { get; set; } = new();
+
+    public DocumentDetailsVersion? Current => Versions.Count > 0 ? Versions[0] : null;
+}
+
+public class DocumentDetailsSummary : DocumentInspectorSummary
+{
+    /// <summary>One key point per item, bullets removed.</summary>
+    public List<string> KeyPoints { get; set; } = new();
+}
+
+public class DocumentDetailsVersion
+{
+    public int Id { get; set; }
+    public int Number { get; set; }
+    public string? Message { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string Author { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string FileType { get; set; } = string.Empty;
+    public string? Hash { get; set; }
+}
+
+/// <summary>The Compare page: two versions of a document and their saved AI comparison, if any.</summary>
+public class DocumentComparisonView
+{
+    public int DocumentId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string FileType { get; set; } = string.Empty;
+    public string? Location { get; set; }
+
+    /// <summary>All versions, newest first (for the pickers).</summary>
+    public List<DocumentDetailsVersion> Versions { get; set; } = new();
+    public DocumentDetailsVersion From { get; set; } = new();
+    public DocumentDetailsVersion To { get; set; } = new();
+    public DocumentComparisonResult? Comparison { get; set; }
+}
+
+public class DocumentComparisonResult
+{
+    public string Summary { get; set; } = string.Empty;
+
+    /// <summary>One change per item, bullets removed.</summary>
+    public List<string> Changes { get; set; } = new();
+    public AI.ChangeType ChangeType { get; set; }
+    public AI.ChangeSignificance Significance { get; set; }
+    public string Model { get; set; } = string.Empty;
+    public double? Confidence { get; set; }
+    public int? TokensUsed { get; set; }
+    public DateTime GeneratedAt { get; set; }
+}

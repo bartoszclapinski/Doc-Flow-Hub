@@ -243,4 +243,30 @@ public class SqliteDemoTests : IClassFixture<SqliteDemoFixture>
         inspector.Data!.RecentVersions.Should().NotBeEmpty();
         inspector.Data.VersionCount.Should().BeGreaterThanOrEqualTo(inspector.Data.RecentVersions.Count);
     }
+
+    [Fact]
+    public async Task DocumentDetailsAndSeededComparisons_RunOnSqlite()
+    {
+        using var scope = _fixture.Services.CreateScope();
+        var context = Get<ApplicationDbContext>(scope);
+        var browser = Get<IDocumentBrowserService>(scope);
+        var userId = await UserIdAsync(scope, DemoAccounts.UserEmail);
+
+        // A document of the demo user with at least two versions (the seed compares consecutive ones).
+        var documentId = await context.Documents
+            .Where(d => d.OwnerId == userId && d.Versions.Count >= 2)
+            .Select(d => d.Id)
+            .FirstAsync();
+
+        var details = await browser.GetDetailsAsync(userId, documentId);
+        details.Succeeded.Should().BeTrue(details.Error);
+        details.Data!.Versions.Should().BeInDescendingOrder(v => v.Number);
+        details.Data.Comparisons.Should().NotBeEmpty("the demo seed saves comparisons of consecutive versions");
+
+        var comparison = await browser.GetComparisonAsync(userId, documentId, null, null);
+        comparison.Succeeded.Should().BeTrue(comparison.Error);
+        comparison.Data!.Comparison.Should().NotBeNull();
+        comparison.Data.Comparison!.Changes.Should().NotBeEmpty();
+        comparison.Data.From.Number.Should().BeLessThan(comparison.Data.To.Number);
+    }
 }

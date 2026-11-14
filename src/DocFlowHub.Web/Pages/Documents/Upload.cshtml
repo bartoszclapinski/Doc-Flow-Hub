@@ -1,1421 +1,184 @@
 @page
 @model DocFlowHub.Web.Pages.Documents.UploadModel
-@using DocFlowHub.Core.Models.AI
+@using DocFlowHub.Core.Models.Documents.Browser
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = "Upload Document";
+    ViewData["Title"] = "Upload";
+    ViewData["FullBleed"] = true;
+    var tree = Model.Tree;
+    var types = string.Join(" ", Model.AllowedTypes.Select(t => t.TrimStart('.')));
+    var maxMb = Model.MaxFileBytes / 1024 / 1024;
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="./Index">Documents</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Upload</li>
-        </ol>
-    </nav>
+@section Inspector {
+    <aside class="dfh-inspector dfh-inspector--320" aria-label="Destination">
+        <div class="dfh-panel-header is-inspector"><span class="dfh-panel-title">Destination</span></div>
+        <ul class="dfh-tree dfh-destination" data-dfh-destination aria-label="Projects and folders">
+            <li>
+                <button type="button" class="dfh-picker-row" data-project="" data-folder="" style="--level: 0">
+                    <i class="bi bi-files dfh-tree-icon" aria-hidden="true"></i>
+                    <span class="dfh-tree-name">No project</span>
+                </button>
+            </li>
+            @foreach (var project in tree.Projects)
+            {
+                <li>
+                    <button type="button" class="dfh-picker-row" data-project="@project.Id" data-folder="" data-count="@project.DocumentCount" style="--level: 0">
+                        <span class="dfh-swatch" style="background: @Dfh.ProjectColor(project.Color, project.Id)" aria-hidden="true"></span>
+                        <span class="dfh-tree-name">@project.Name</span>
+                        <span class="dfh-tree-count">@project.DocumentCount</span>
+                    </button>
+                </li>
+                @foreach (var folder in project.AllFolders())
+                {
+                    var depth = 1;
+                    for (var p = folder.ParentId; p != null; p = project.AllFolders().FirstOrDefault(f => f.Id == p)?.ParentId) depth++;
+                    <li>
+                        <button type="button" class="dfh-picker-row" data-project="@project.Id" data-folder="@folder.Id" data-count="@folder.DocumentCount" style="--level: @depth">
+                            <i class="bi bi-folder2 dfh-tree-icon" aria-hidden="true"></i>
+                            <span class="dfh-tree-name">@folder.Name</span>
+                            <span class="dfh-tree-count">@folder.DocumentCount</span>
+                        </button>
+                    </li>
+                }
+            }
+        </ul>
+        <div class="dfh-insp-block">
+            <span class="dfh-insp-block-head"><span>Usage</span></span>
+            <dl class="dfh-kv">
+                <dt>Storage used</dt>
+                <dd>@Dfh.FileSize(tree.StorageBytes) <span data-dfh-upload-after></span></dd>
+                @if (Model.AiDailyLimit is int limit)
+                {
+                    <dt>AI requests today</dt>
+                    <dd>@Model.AiRequestsToday / @Dfh.Number(limit)</dd>
+                }
+            </dl>
+        </div>
+    </aside>
+}
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title"><div class="page-icon">☁️</div> Upload Document</h1>
-        <p class="page-subtitle">Add a new document and optionally generate an AI summary</p>
-    </div>
+<form class="dfh-column" method="post" enctype="multipart/form-data" data-dfh-upload-form data-dfh-busy="Uploading…"
+      data-max-bytes="@Model.MaxFileBytes" data-types="@string.Join(",", Model.AllowedTypes)">
+    <partial name="_EditorTabs" model='new EditorTabsView("Upload document", Icon: "bi-upload")' />
 
-    <div class="row justify-content-center">
-        <div class="col-xl-11 col-xxl-10">
-            <div class="form-card">
-                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            @Model.ErrorMessage
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    }
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
+            }
 
-                    <form method="post" enctype="multipart/form-data" id="upload-form" data-dfh-busy="Uploading…">
-                        <div class="row g-4 upload-grid">
-                        <!-- LEFT COLUMN: the file -->
-                        <div class="col-lg-6">
-                        <!-- File Upload Section -->
-                        <div class="mb-4">
-                            <label asp-for="File" class="form-label fw-bold">
-                                <i class="bi bi-paperclip me-1"></i> Document File
-                            </label>
-                            
-                            <div class="file-upload-container" id="file-drop-zone">
-                                <div class="upload-icon mb-3">
-                                    <i class="bi bi-cloud-upload fs-1 text-muted"></i>
-                                </div>
-                                
-                                <input asp-for="File" class="form-control d-none" type="file" id="file-input" 
-                                       accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif" />
-                                
-                                <div class="upload-text">
-                                    <p class="mb-2"><strong>Drag & drop your file here</strong></p>
-                                    <p class="text-muted mb-3">or click to browse</p>
-                                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('file-input').click()">
-                                        <i class="bi bi-folder2-open me-1"></i> Choose File
-                                    </button>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <small class="text-muted">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Maximum file size: 30MB<br>
-                                        Supported formats: PDF, DOC, DOCX, TXT, MD, JPG, PNG, GIF<br>
-                                        <i class="bi bi-lightbulb me-1"></i>
-                                        Legacy <strong>.doc</strong> files can't be read for AI summaries — re-save as <strong>.docx</strong> for automatic summarization.
-                                    </small>
-                                </div>
-                            </div>
-                            
-                            <div class="selected-file mt-3 d-none" id="selected-file">
-                                <div class="alert alert-info">
-                                    <i class="bi bi-file-earmark me-2"></i>
-                                    <span id="file-name"></span>
-                                    <span class="text-muted ms-2" id="file-size"></span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearFile()">
-                                        <i class="bi bi-x"></i> Remove
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <span asp-validation-for="File" class="text-danger"></span>
-                            
-                            <!-- Enhanced Upload Progress with AI Processing -->
-                            <div class="upload-progress mt-3" id="upload-progress">
-                                <!-- Progress Steps Indicator -->
-                                <div class="progress-steps mb-3" id="progress-steps" style="display: none;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="step-item" id="step-upload">
-                                            <div class="step-icon">
-                                                <i class="bi bi-cloud-upload"></i>
-                                            </div>
-                                            <small class="step-label">Upload File</small>
-                                        </div>
-                                        <div class="step-line"></div>
-                                        <div class="step-item" id="step-ai">
-                                            <div class="step-icon">
-                                                <i class="bi bi-robot"></i>
-                                            </div>
-                                            <small class="step-label">AI Processing</small>
-                                        </div>
-                                        <div class="step-line"></div>
-                                        <div class="step-item" id="step-complete">
-                                            <div class="step-icon">
-                                                <i class="bi bi-check-circle"></i>
-                                            </div>
-                                            <small class="step-label">Complete</small>
-                                        </div>
-                                    </div>
-                                </div>
+            <fieldset class="dfh-form-section">
+                <legend class="dfh-form-heading">File</legend>
+                <label class="dfh-dropzone" data-dfh-dropzone>
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <span class="dfh-dropzone-text">
+                        <span>Drop a file here or <span class="dfh-dropzone-link">browse</span></span>
+                        <span class="dfh-mono">@types · max @maxMb MB</span>
+                    </span>
+                    <input type="file" name="File" class="dfh-file-input" accept="@string.Join(",", Model.AllowedTypes)" required data-dfh-file />
+                </label>
+                <ul class="dfh-upload-list" data-dfh-file-list hidden>
+                    <li class="dfh-upload-row">
+                        <span class="dfh-filetype" data-dfh-file-ext></span>
+                        <span class="dfh-ellipsis" data-dfh-file-name></span>
+                        <span class="dfh-mono" data-dfh-file-size></span>
+                        <span class="dfh-upload-status" data-dfh-file-status></span>
+                        <button type="button" class="dfh-icon-action" data-dfh-file-remove aria-label="Remove the file"><i class="bi bi-x" aria-hidden="true"></i></button>
+                    </li>
+                </ul>
+            </fieldset>
 
-                                <!-- Progress Bar -->
-                                <div class="progress mb-2">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                         role="progressbar" style="width: 0%" id="progress-bar">
-                                        <span id="progress-text">0%</span>
-                                    </div>
-                                </div>
-
-                                <!-- Progress Status Message -->
-                                <div class="progress-status" id="progress-status">
-                                    <div class="d-flex align-items-center">
-                                        <div class="spinner-border spinner-border-sm me-2" role="status" id="progress-spinner" style="display: none;">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                        <div class="progress-message" id="progress-message">
-                                            <i class="bi bi-info-circle me-1"></i>
-                                            <span id="progress-message-text">Ready to upload</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- AI Processing Details -->
-                                <div class="ai-processing-details mt-2" id="ai-processing-details" style="display: none;">
-                                    <div class="alert alert-info py-2 mb-0">
-                                        <div class="d-flex align-items-center">
-                                            <div class="me-2">
-                                                <div class="spinner-border spinner-border-sm text-info" role="status">
-                                                    <span class="visually-hidden">Processing...</span>
-                                                </div>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold" id="ai-stage-title">AI Processing</div>
-                                                <small class="text-muted" id="ai-stage-description">Analyzing document content...</small>
-                                            </div>
-                                            <div class="ai-processing-stats">
-                                                <small class="text-muted" id="ai-processing-time">Est. <span id="ai-time-remaining">30s</span></small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        </div><!-- /col-lg-6 LEFT -->
-
-                        <!-- RIGHT COLUMN: document details -->
-                        <div class="col-lg-6">
-                        <!-- Project & Folder Selection -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="ProjectId" class="form-label fw-bold">
-                                    <i class="bi bi-kanban me-1"></i> Project
+            <fieldset class="dfh-form-section">
+                <legend class="dfh-form-heading">Details</legend>
+                <div class="dfh-form-grid">
+                    <label class="dfh-field is-wide">
+                        <span class="dfh-field-label">Title</span>
+                        <input asp-for="Title" class="form-control" placeholder="Taken from the file name" maxlength="200" data-dfh-title />
+                    </label>
+                    <label class="dfh-field">
+                        <span class="dfh-field-label">Project</span>
+                        <select asp-for="ProjectId" class="form-select" data-dfh-project>
+                            <option value="">No project</option>
+                            @foreach (var project in tree.Projects)
+                            {
+                                <option value="@project.Id">@project.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="dfh-field">
+                        <span class="dfh-field-label">Folder</span>
+                        <select asp-for="FolderId" class="form-select" data-dfh-folder>
+                            <option value="">Project root</option>
+                            @foreach (var project in tree.Projects)
+                            {
+                                foreach (var folder in project.AllFolders())
+                                {
+                                    <option value="@folder.Id" data-project="@project.Id">@folder.Name</option>
+                                }
+                            }
+                        </select>
+                    </label>
+                    <label class="dfh-field">
+                        <span class="dfh-field-label">Workspace</span>
+                        <select asp-for="TeamId" class="form-select">
+                            <option value="">Private — only you</option>
+                            @foreach (var team in Model.Teams)
+                            {
+                                <option value="@team.Id">Shared with @team.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <div class="dfh-field is-wide">
+                        <span class="dfh-field-label" id="categories-label">Categories</span>
+                        <div class="dfh-toggle-chips" role="group" aria-labelledby="categories-label">
+                            @foreach (var category in Model.Categories)
+                            {
+                                <label class="dfh-toggle-chip">
+                                    <input type="checkbox" name="SelectedCategoryIds" value="@category.Id" checked="@Model.SelectedCategoryIds.Contains(category.Id)" />
+                                    <span>@category.Name</span>
                                 </label>
-                                <select asp-for="ProjectId" asp-items="Model.ProjectSelectList" class="form-select" id="projectSelectUpload"></select>
-                                <span asp-validation-for="ProjectId" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="FolderId" class="form-label fw-bold">
-                                    <i class="bi bi-folder me-1"></i> Folder (optional)
-                                </label>
-                                <select asp-for="FolderId" asp-items="Model.FolderSelectList" class="form-select"></select>
-                                <span asp-validation-for="FolderId" class="text-danger"></span>
-                            </div>
+                            }
                         </div>
+                    </div>
+                    <label class="dfh-field is-wide">
+                        <span class="dfh-field-label">Description</span>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Optional. What is this document about?"></textarea>
+                    </label>
+                </div>
+            </fieldset>
 
-                        <!-- Document Metadata -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Title" class="form-label fw-bold">
-                                        <i class="bi bi-card-text me-1"></i> Document Title
-                                    </label>
-                                    <input asp-for="Title" class="form-control" placeholder="Enter document title..." />
-                                    <span asp-validation-for="Title" class="text-danger"></span>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">
-                                        <i class="bi bi-tags me-1"></i> Categories
-                                    </label>
-                                    <div class="category-selection">
-                                        @if (Model.Categories.Any())
-                                        {
-                                            <div class="row">
-                                                @foreach (var category in Model.Categories)
-                                                {
-                                                    <div class="col-md-6">
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" 
-                                                                   name="SelectedCategoryIds" value="@category.Id" id="category-@category.Id">
-                                                            <label class="form-check-label" for="category-@category.Id">
-                                                                @category.Name
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <p class="text-muted mb-0">No categories available</p>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label fw-bold">
-                                <i class="bi bi-card-list me-1"></i> Description
-                            </label>
-                            <textarea asp-for="Description" class="form-control" rows="3"
-                                      placeholder="Enter a brief description of the document..."></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
-                        </div>
-
-                        <!-- Team Sharing -->
-                        @if (Model.Teams.Any())
-                        {
-                            <div class="mb-4">
-                                <label asp-for="TeamId" class="form-label fw-bold">
-                                    <i class="bi bi-people me-1"></i> Share with Team (Optional)
-                                </label>
-                                <select asp-for="TeamId" class="form-select">
-                                    <option value="">Keep private</option>
-                                    @foreach (var team in Model.Teams)
-                                    {
-                                        <option value="@team.Id">@team.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                        </div><!-- /col-lg-6 RIGHT -->
-                        </div><!-- /row upload-grid -->
-
-                        <!-- AI Settings (full width) -->
-                        @if (Model.AIFeaturesEnabled)
-                        {
-                            <div class="mb-4">
-                                <div class="card ai-features-card">
-                                    <div class="card-header ai-features-header">
-                                        <h6 class="card-title mb-0">
-                                            <i class="bi bi-robot me-2"></i>
-                                            AI-Powered Features
-                                            <small class="badge ai-smart-badge ms-2">✨ Smart Analysis</small>
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <!-- Generate AI Summary -->
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-check form-switch mb-3">
-                                                    <input asp-for="GenerateAISummary" class="form-check-input" type="checkbox" 
-                                                           id="ai-summary-toggle">
-                                                    <label class="form-check-label fw-bold" for="ai-summary-toggle">
-                                                        <i class="bi bi-magic me-1 text-info"></i>
-                                                        Generate AI Summary
-                                                    </label>
-                                                    <div class="form-text">
-                                                        <small class="text-muted">
-                                                            <i class="bi bi-info-circle me-1"></i>
-                                                            Automatically create an intelligent summary of your document content
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6" id="ai-model-section">
-                                                <div class="mb-3">
-                                                    <label asp-for="SelectedAIModel" class="form-label fw-bold">
-                                                        <i class="bi bi-cpu me-1 text-primary"></i>
-                                                        AI Model
-                                                    </label>
-                                                    <select asp-for="SelectedAIModel" class="form-select" id="ai-model-select">
-                                                        @foreach (var aiModel in Model.AvailableAIModels)
-                                                        {
-                                                            <option value="@aiModel.Model" 
-                                                                    data-cost="@aiModel.Description"
-                                                                    selected="@(Model.SelectedAIModel == aiModel.Model)">
-                                                                @aiModel.Name@(aiModel.IsRecommended ? " ⭐" : "")
-                                                            </option>
-                                                        }
-                                                    </select>
-                                                    <div class="form-text">
-                                                        <small class="text-muted" id="model-cost-info">
-                                                            <i class="bi bi-info-circle me-1"></i>
-                                                            <span id="cost-description">Good quality, lowest cost</span>
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- AI Quality Settings -->
-                                        <div class="row" id="ai-quality-section">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label asp-for="AIQuality" class="form-label fw-bold">
-                                                        <i class="bi bi-sliders me-1 text-success"></i>
-                                                        AI Quality Level
-                                                        <span class="badge bg-secondary ms-2" id="quality-display">@((Model.AIQuality * 100).ToString("F0"))%</span>
-                                                    </label>
-                                                    <input asp-for="AIQuality" type="range" class="form-range" 
-                                                           min="0.3" max="1.0" step="0.1" value="@Model.AIQuality" 
-                                                           id="quality-slider">
-                                                    <div class="d-flex justify-content-between small text-muted">
-                                                        <span>⚡ Fast</span>
-                                                        <span>⚖️ Balanced</span>
-                                                        <span>🎯 Precise</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                                                        <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold text-muted">
-                                        <i class="bi bi-calculator me-1"></i>
-                                        AI Processing Estimate
-                                    </label>
-                                    <div class="alert alert-light mb-0 py-2">
-                                        <div class="row g-2 text-center">
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Cost</small>
-                                                <span class="fw-bold text-success" id="estimated-cost">@Model.EstimatedCost</span>
-                                            </div>
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Time</small>
-                                                <span class="fw-bold text-info" id="estimated-time">@Model.EstimatedProcessingTime</span>
-                                            </div>
-                                            <div class="col-4">
-                                                <small class="text-muted d-block">Quality</small>
-                                                <span class="fw-bold text-primary" id="quality-level">@AISettingsHelper.GetQualityDisplayName(Model.AIQuality)</span>
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <small class="text-muted" id="model-capabilities">
-                                                <i class="bi bi-lightbulb me-1"></i><span id="capabilities-text">@Model.ModelCapabilities</span>
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                                        </div>
-
-                                        <!-- AI Settings Status -->
-                                        @if (Model.UserAISettings != null)
-                                        {
-                                            <div class="row mt-3">
-                                                <div class="col-12">
-                                                    <div class="alert alert-info py-2 mb-0">
-                                                        <small>
-                                                            <i class="bi bi-gear me-1"></i>
-                                                            <strong>Your AI Preferences:</strong>
-                                                            @if (Model.UserAISettings.UseCustomApiKey)
-                                                            {
-                                                                <span class="badge bg-success ms-1">Custom API Key</span>
-                                                            }
-                                                            else
-                                                            {
-                                                                <span class="badge bg-primary ms-1">System API</span>
-                                                            }
-                                                            <a asp-page="/Settings/AI" class="btn btn-sm btn-outline-info ms-2">
-                                                                <i class="bi bi-gear-fill me-1"></i>Manage Settings
-                                                            </a>
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <!-- AI Features Disabled Message -->
-                            <div class="mb-4">
-                                <div class="alert alert-secondary">
-                                    <i class="bi bi-robot me-2"></i>
-                                    <strong>AI Features Available!</strong>
-                                    Enable AI-powered document analysis in your 
-                                    <a asp-page="/Settings/AI" class="alert-link">AI Settings</a>
-                                    to automatically generate summaries and intelligent insights.
-                                </div>
-                            </div>
-                        }
-
-                        <!-- Action Buttons -->
-                        <div class="d-flex justify-content-between upload-actions">
-                            <a asp-page="./Index" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Cancel
-                            </a>
-                            
-                            <button type="submit" class="btn btn-primary btn-enhanced" id="submit-btn">
-                                <i class="bi bi-cloud-upload me-1"></i> Upload Document
-                            </button>
-                        </div>
-                    </form>
-            </div>
+            <fieldset class="dfh-form-section">
+                <legend class="dfh-form-heading"><i class="bi bi-stars" aria-hidden="true"></i>AI</legend>
+                <label class="dfh-check-row">
+                    <input type="checkbox" class="form-check-input" name="GenerateSummary" value="true" checked="@Model.GenerateSummary" disabled="@(!Model.AIFeaturesEnabled)" />
+                    <span>
+                        Generate a summary after upload <span class="dfh-mono">1 request</span>
+                        <small>@(Model.AIFeaturesEnabled ? "Uses your preferred model from Settings · AI. The summary appears on the document a few seconds later." : "AI features are turned off for your account in Settings · AI.")</small>
+                    </span>
+                </label>
+                <input type="hidden" name="GenerateSummary" value="false" />
+            </fieldset>
         </div>
     </div>
-</div>
+
+    <div class="dfh-form-footer">
+        <span class="dfh-mono" data-dfh-upload-summary>No file chosen</span>
+        <a class="btn btn-secondary" asp-page="/Documents/Index">Cancel</a>
+        @if (DemoMode.IsEnabled)
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — uploads are disabled">
+                <button type="button" class="btn btn-primary" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
+            </span>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary" data-dfh-upload-submit disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
+        }
+    </div>
+</form>
 
 @section Scripts {
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            EnhancedUploadProgress.init();
-
-            const projectSelect = document.getElementById('projectSelectUpload');
-            const folderSelect = document.querySelector('select[name="FolderId"]');
-            async function loadFolders(projectId){
-                folderSelect.options.length = 0;
-                folderSelect.add(new Option('None', ''));
-                if(!projectId) return;
-                try{
-                    const resp = await fetch(`/Documents/Upload?handler=Folders&projectId=${projectId}`);
-                    const data = await resp.json();
-                    if(data.success){
-                        data.folders.forEach(f=> folderSelect.add(new Option(f.name, f.id)));
-                    }
-                }catch(err){ console.error(err); }
-            }
-            if(projectSelect){
-                loadFolders(projectSelect.value);
-                projectSelect.addEventListener('change', ()=> loadFolders(projectSelect.value));
-            }
-
-            // File input change handler - THE MISSING FUNCTIONALITY!
-            const fileInput = document.getElementById('file-input');
-            const selectedFileDiv = document.getElementById('selected-file');
-            const fileNameSpan = document.getElementById('file-name');
-            const fileSizeSpan = document.getElementById('file-size');
-            const titleInput = document.querySelector('input[name="Title"]');
-            const fileDropZone = document.getElementById('file-drop-zone');
-
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    
-                    if (file) {
-                        // Show selected file information
-                        showSelectedFile(file);
-                        
-                        // Auto-fill title if empty
-                        if (titleInput && (!titleInput.value || titleInput.value.trim() === '')) {
-                            const fileName = file.name;
-                            const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
-                            titleInput.value = nameWithoutExtension;
-                        }
-                        
-                        // Add success styling
-                        fileInput.classList.add('field-success');
-                        fileInput.classList.remove('field-error');
-                        
-                        // Provide user feedback
-                        if (window.DocFlowHub) {
-                            window.DocFlowHub.showSuccess(`File "${file.name}" selected successfully`);
-                        }
-                    }
-                });
-            }
-
-            // Drag and drop functionality
-            if (fileDropZone) {
-                fileDropZone.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    fileDropZone.classList.add('dragover');
-                });
-
-                fileDropZone.addEventListener('dragleave', function(e) {
-                    e.preventDefault();
-                    fileDropZone.classList.remove('dragover');
-                });
-
-                fileDropZone.addEventListener('drop', function(e) {
-                    e.preventDefault();
-                    fileDropZone.classList.remove('dragover');
-                    
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        const file = files[0];
-                        
-                        // Validate file type
-                        if (isValidFileType(file)) {
-                            fileInput.files = files;
-                            
-                            // Trigger the change event manually
-                            const changeEvent = new Event('change', { bubbles: true });
-                            fileInput.dispatchEvent(changeEvent);
-                        } else {
-                            if (window.DocFlowHub) {
-                                window.DocFlowHub.showError('File type not supported. Please select a valid document file.');
-                            }
-                        }
-                    }
-                });
-
-                // Make the entire drop zone clickable
-                fileDropZone.addEventListener('click', function(e) {
-                    if (e.target === fileDropZone || e.target.closest('.upload-text')) {
-                        fileInput.click();
-                    }
-                });
-            }
-
-            // Helper functions
-            function showSelectedFile(file) {
-                const fileName = file.name;
-                const fileSize = formatFileSize(file.size);
-                
-                fileNameSpan.textContent = fileName;
-                fileSizeSpan.textContent = `(${fileSize})`;
-                
-                selectedFileDiv.classList.remove('d-none');
-            }
-
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 B';
-                
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-            }
-
-            function isValidFileType(file) {
-                const validTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif'];
-                const fileName = file.name.toLowerCase();
-                return validTypes.some(type => fileName.endsWith(type));
-            }
-        });
-
-                    function clearFile() {
-            const fileInput = document.getElementById('file-input');
-            const selectedFileDiv = document.getElementById('selected-file');
-            const fileNameSpan = document.getElementById('file-name');
-            const fileSizeSpan = document.getElementById('file-size');
-            
-            fileInput.value = '';
-            selectedFileDiv.classList.add('d-none');
-            fileInput.classList.remove('field-success', 'field-error');
-            
-            // Clear file info
-            fileNameSpan.textContent = '';
-            fileSizeSpan.textContent = '';
-            
-            if (window.DocFlowHub) {
-                window.DocFlowHub.showInfo('File selection cleared');
-            }
-        }
-
-        // AI Controls Functionality
-        const initAIControls = () => {
-            const aiToggle = document.getElementById('ai-summary-toggle');
-            const aiModelSection = document.getElementById('ai-model-section');
-            const aiQualitySection = document.getElementById('ai-quality-section');
-            const qualitySlider = document.getElementById('quality-slider');
-            const qualityDisplay = document.getElementById('quality-display');
-            const modelSelect = document.getElementById('ai-model-select');
-            const costDescription = document.getElementById('cost-description');
-            const processingEstimate = document.getElementById('processing-estimate');
-
-            if (!aiToggle) return; // AI features not enabled
-
-            // Toggle AI sections based on checkbox
-            const toggleAISections = () => {
-                const isEnabled = aiToggle.checked;
-                aiModelSection.style.opacity = isEnabled ? '1' : '0.5';
-                aiQualitySection.style.opacity = isEnabled ? '1' : '0.5';
-                
-                const inputs = aiModelSection.querySelectorAll('select, input');
-                inputs.forEach(input => input.disabled = !isEnabled);
-                
-                const qualityInputs = aiQualitySection.querySelectorAll('input');
-                qualityInputs.forEach(input => input.disabled = !isEnabled);
-            };
-
-            // Update quality display and cost estimation
-            const updateQualityDisplay = () => {
-                const value = Math.round(qualitySlider.value * 100);
-                qualityDisplay.textContent = value + '%';
-                updateCostEstimation();
-            };
-
-            const updateCostEstimation = () => {
-                if (!aiToggle || !aiToggle.checked) {
-                    // Update cost estimation elements when AI is disabled
-                    const estimatedCost = document.getElementById('estimated-cost');
-                    const estimatedTime = document.getElementById('estimated-time');
-                    const qualityLevel = document.getElementById('quality-level');
-                    const capabilitiesText = document.getElementById('capabilities-text');
-                    
-                    if (estimatedCost) estimatedCost.textContent = 'No AI processing - Free';
-                    if (estimatedTime) estimatedTime.textContent = 'No AI processing';
-                    if (qualityLevel) qualityLevel.textContent = 'N/A';
-                    if (capabilitiesText) capabilitiesText.textContent = 'AI features disabled for this upload';
-                    return;
-                }
-
-                const selectedModel = modelSelect ? modelSelect.value : 'ClaudeHaiku45';
-                const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
-
-                // Calculate real-time estimates
-                const cost = calculateEstimatedCost(selectedModel, quality);
-                const time = calculateEstimatedTime(selectedModel, quality);
-                const capabilities = getModelCapabilities(selectedModel);
-                const qualityText = getQualityDisplayName(quality);
-
-                // Update UI elements
-                const estimatedCost = document.getElementById('estimated-cost');
-                const estimatedTime = document.getElementById('estimated-time');
-                const qualityLevel = document.getElementById('quality-level');
-                const capabilitiesText = document.getElementById('capabilities-text');
-
-                if (estimatedCost) estimatedCost.textContent = cost;
-                if (estimatedTime) estimatedTime.textContent = time;
-                if (qualityLevel) qualityLevel.textContent = qualityText;
-                if (capabilitiesText) capabilitiesText.textContent = capabilities;
-            };
-
-            // Cost calculation functions
-            const calculateEstimatedCost = (model, quality) => {
-                const tokensPerOperation = 2000;
-                const costPerToken = getCostPerToken(model);
-                const estimatedCost = tokensPerOperation * costPerToken;
-
-                if (estimatedCost < 0.01) return '< $0.01';
-                if (estimatedCost < 0.10) return `≈ $${estimatedCost.toFixed(3)}`;
-                return `≈ $${estimatedCost.toFixed(2)}`;
-            };
-
-            const calculateEstimatedTime = (model, quality) => {
-                const baseTime = getBaseProcessingTime(model);
-                const qualityMultiplier = quality <= 0.3 ? 0.7 : quality <= 0.7 ? 1.0 : 1.4;
-                const estimatedSeconds = baseTime * qualityMultiplier;
-
-                if (estimatedSeconds < 60) return `≈ ${Math.round(estimatedSeconds)} seconds`;
-                return `≈ ${(estimatedSeconds / 60).toFixed(1)} minutes`;
-            };
-
-            const getCostPerToken = (model) => {
-                const costs = {
-                    'Gpt4oMini': 0.00015 / 1000,
-                    'Gpt4o': 0.005 / 1000,
-                    'Gpt41Mini': 0.003 / 1000,
-                    'Gpt41': 0.01 / 1000,
-                    'ClaudeHaiku45': 0.001 / 1000,
-                    'ClaudeSonnet5': 0.003 / 1000,
-                    'ClaudeOpus48': 0.005 / 1000
-                };
-                return costs[model] || 0.001 / 1000;
-            };
-
-            const getBaseProcessingTime = (model) => {
-                const times = {
-                    'Gpt4oMini': 8,
-                    'Gpt4o': 12,
-                    'Gpt41Mini': 18,
-                    'Gpt41': 25,
-                    'ClaudeHaiku45': 6,
-                    'ClaudeSonnet5': 12,
-                    'ClaudeOpus48': 20
-                };
-                return times[model] || 15;
-            };
-
-            const getModelCapabilities = (model) => {
-                const capabilities = {
-                    'Gpt4oMini': 'Fast, cost-effective, good for basic summaries',
-                    'Gpt4o': 'Balanced speed and quality, excellent for most documents',
-                    'Gpt41Mini': 'High quality analysis, ideal for important documents',
-                    'Gpt41': 'Highest quality insights, best for complex or critical content',
-                    'ClaudeHaiku45': 'Fast and cost-effective Claude model, great for summaries',
-                    'ClaudeSonnet5': 'Near-Opus quality, excellent for most documents',
-                    'ClaudeOpus48': 'Most capable Claude model, best for complex or critical content'
-                };
-                return capabilities[model] || 'AI-powered document analysis';
-            };
-
-            const getQualityDisplayName = (quality) => {
-                if (quality <= 0.3) return 'Speed Optimized';
-                if (quality <= 0.7) return 'Balanced';
-                return 'Quality Optimized';
-            };
-
-            // Update cost description based on model
-            const updateCostDescription = () => {
-                const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-                const cost = selectedOption.getAttribute('data-cost');
-                costDescription.textContent = cost;
-                updateCostEstimation(); // Update cost estimation when model changes
-            };
-
-            // Event listeners
-            aiToggle.addEventListener('change', () => {
-                toggleAISections();
-                updateCostEstimation(); // Update cost estimation when AI toggle changes
-            });
-            qualitySlider.addEventListener('input', updateQualityDisplay);
-            modelSelect.addEventListener('change', updateCostDescription);
-
-            // Initialize
-            toggleAISections();
-            updateQualityDisplay();
-            updateCostDescription();
-            updateCostEstimation(); // Initialize cost estimation
-
-            // Enhanced form submission with AI processing workflow
-            uploadForm.addEventListener('submit', function(e) {
-                const progressContainer = document.getElementById('upload-progress');
-                const progressSteps = document.getElementById('progress-steps');
-                const progressBar = document.getElementById('progress-bar');
-                const progressText = document.getElementById('progress-text');
-                const progressMessage = document.getElementById('progress-message-text');
-                const progressSpinner = document.getElementById('progress-spinner');
-                const aiProcessingDetails = document.getElementById('ai-processing-details');
-                
-                // Show progress indicators
-                progressContainer.classList.add('show');
-                progressSteps.style.display = 'block';
-                progressSpinner.style.display = 'inline-block';
-                
-                // Update upload step
-                const stepUpload = document.getElementById('step-upload');
-                stepUpload.classList.add('active');
-                progressBar.style.width = '25%';
-                progressText.textContent = '25%';
-                progressMessage.textContent = 'Uploading document...';
-                
-                if (aiToggle && aiToggle.checked) {
-                    // Show AI processing message
-                    const submitBtn = document.getElementById('submit-btn');
-                    submitBtn.innerHTML = '<i class="bi bi-robot me-1"></i> Uploading & Processing with AI...';
-                    
-                    // Simulate AI processing stages after a delay
-                    setTimeout(() => {
-                        // File uploaded, start AI processing
-                        stepUpload.classList.remove('active');
-                        stepUpload.classList.add('completed');
-                        document.querySelector('.step-line').classList.add('completed');
-                        
-                        const stepAI = document.getElementById('step-ai');
-                        stepAI.classList.add('active');
-                        aiProcessingDetails.style.display = 'block';
-                        
-                        progressBar.style.width = '60%';
-                        progressText.textContent = '60%';
-                        progressMessage.textContent = 'AI analyzing document content...';
-                        
-                        // Simulate AI completion
-                        setTimeout(() => {
-                            stepAI.classList.remove('active');
-                            stepAI.classList.add('completed');
-                            document.querySelectorAll('.step-line')[1].classList.add('completed');
-                            
-                            const stepComplete = document.getElementById('step-complete');
-                            stepComplete.classList.add('active');
-                            
-                            progressBar.style.width = '100%';
-                            progressText.textContent = '100%';
-                            progressMessage.textContent = 'AI processing complete!';
-                            
-                            document.getElementById('ai-stage-title').textContent = 'Processing Complete';
-                            document.getElementById('ai-stage-description').textContent = 'AI summary generated successfully';
-                            document.getElementById('ai-time-remaining').textContent = 'Done!';
-                        }, 3000);
-                    }, 2000);
-                    
-                    if (window.DocFlowHub) {
-                        window.DocFlowHub.showInfo('Document will be processed with AI after upload');
-                    }
-                } else {
-                    // No AI processing, just show upload progress
-                    setTimeout(() => {
-                        stepUpload.classList.remove('active');
-                        stepUpload.classList.add('completed');
-                        
-                        const stepComplete = document.getElementById('step-complete');
-                        stepComplete.classList.add('active');
-                        
-                        progressBar.style.width = '100%';
-                        progressText.textContent = '100%';
-                        progressMessage.textContent = 'Upload complete!';
-                    }, 1500);
-                }
-            });
-        };
-
-        // ============================================================================
-        // AI PROCESSING WORKFLOW ENHANCEMENT - PHASE 3.3: REAL-TIME FEEDBACK
-        // ============================================================================
-
-        // Enhanced Upload Progress with AI Processing Stages
-        const initUploadProgress = () => {
-            const uploadForm = document.getElementById('upload-form');
-            const progressContainer = document.getElementById('upload-progress');
-            const progressSteps = document.getElementById('progress-steps');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            const progressSpinner = document.getElementById('progress-spinner');
-            const progressMessage = document.getElementById('progress-message-text');
-            const aiProcessingDetails = document.getElementById('ai-processing-details');
-            const aiStageTitle = document.getElementById('ai-stage-title');
-            const aiStageDescription = document.getElementById('ai-stage-description');
-            const aiTimeRemaining = document.getElementById('ai-time-remaining');
-
-            // AI Processing stages configuration
-            const aiStages = [
-                {
-                    name: 'extracting',
-                    title: 'Extracting Content',
-                    description: 'Reading and parsing document content...',
-                    duration: 3000,
-                    progress: 30
-                },
-                {
-                    name: 'analyzing',
-                    title: 'AI Analysis',
-                    description: 'Analyzing content with AI model...',
-                    duration: 8000,
-                    progress: 70
-                },
-                {
-                    name: 'generating',
-                    title: 'Generating Summary',
-                    description: 'Creating intelligent summary and insights...',
-                    duration: 4000,
-                    progress: 95
-                }
-            ];
-
-            // Show upload progress
-            const showUploadProgress = () => {
-                progressContainer.classList.add('show');
-                progressSteps.style.display = 'block';
-                updateStep('upload', 'active');
-                updateProgressBar(0, 'Starting upload...');
-            };
-
-            // Update progress step states
-            const updateStep = (step, state) => {
-                const stepElement = document.getElementById(`step-${step}`);
-                const stepLines = document.querySelectorAll('.step-line');
-                
-                if (stepElement) {
-                    stepElement.className = `step-item ${state}`;
-                }
-
-                // Update step lines for completed steps
-                if (state === 'completed') {
-                    if (step === 'upload' && stepLines[0]) {
-                        stepLines[0].classList.add('completed');
-                    } else if (step === 'ai' && stepLines[1]) {
-                        stepLines[1].classList.add('completed');
-                    }
-                }
-            };
-
-            // Update progress bar and message
-            const updateProgressBar = (percentage, message) => {
-                progressBar.style.width = `${percentage}%`;
-                progressText.textContent = `${Math.round(percentage)}%`;
-                progressMessage.textContent = message;
-            };
-
-            // Show AI processing details
-            const showAIProcessing = () => {
-                updateStep('upload', 'completed');
-                updateStep('ai', 'active');
-                updateProgressBar(25, 'AI processing started...');
-                aiProcessingDetails.style.display = 'block';
-                progressSpinner.style.display = 'inline-block';
-            };
-
-            // Process AI stages with realistic timing
-            const processAIStages = async (selectedModel, quality) => {
-                const baseTime = getBaseProcessingTime(selectedModel || 'ClaudeHaiku45');
-                const qualityMultiplier = quality <= 0.3 ? 0.7 : quality <= 0.7 ? 1.0 : 1.4;
-                
-                for (let i = 0; i < aiStages.length; i++) {
-                    const stage = aiStages[i];
-                    const adjustedDuration = (stage.duration * qualityMultiplier);
-                    
-                    // Update AI stage display
-                    aiStageTitle.textContent = stage.title;
-                    aiStageDescription.textContent = stage.description;
-                    
-                    // Add stage-specific styling
-                    aiProcessingDetails.className = `ai-processing-details mt-2 ai-stage-${stage.name}`;
-                    
-                    // Update progress and time estimate
-                    updateProgressBar(stage.progress, stage.description);
-                    
-                    // Calculate time remaining
-                    const remainingStages = aiStages.slice(i + 1);
-                    const remainingTime = remainingStages.reduce((total, s) => total + (s.duration * qualityMultiplier), 0);
-                    const timeDisplay = remainingTime > 0 ? `${Math.round(remainingTime / 1000)}s` : 'Almost done!';
-                    aiTimeRemaining.textContent = timeDisplay;
-                    
-                    // Animate progress during stage
-                    await animateStageProgress(stage.progress, adjustedDuration);
-                }
-            };
-
-            // Animate progress within a stage
-            const animateStageProgress = (targetProgress, duration) => {
-                return new Promise(resolve => {
-                    const startProgress = parseInt(progressBar.style.width) || 0;
-                    const progressDiff = targetProgress - startProgress;
-                    const steps = 50;
-                    const stepDuration = duration / steps;
-                    let currentStep = 0;
-
-                    const interval = setInterval(() => {
-                        currentStep++;
-                        const currentProgress = startProgress + (progressDiff * currentStep / steps);
-                        updateProgressBar(currentProgress, aiStageDescription.textContent);
-                        
-                        if (currentStep >= steps) {
-                            clearInterval(interval);
-                            resolve();
-                        }
-                    }, stepDuration);
-                });
-            };
-
-            // Complete AI processing
-            const completeAIProcessing = () => {
-                updateStep('ai', 'completed');
-                updateStep('complete', 'active');
-                updateProgressBar(100, 'AI processing complete!');
-                
-                // Update AI processing details to show completion
-                aiStageTitle.textContent = 'Processing Complete';
-                aiStageDescription.textContent = 'AI summary generated successfully';
-                aiTimeRemaining.textContent = 'Done!';
-                
-                // Hide spinner and show checkmark
-                const spinner = aiProcessingDetails.querySelector('.spinner-border');
-                if (spinner) {
-                    spinner.style.display = 'none';
-                    const checkIcon = document.createElement('i');
-                    checkIcon.className = 'bi bi-check-circle-fill text-success';
-                    spinner.parentNode.appendChild(checkIcon);
-                }
-
-                // Auto-hide after delay and redirect
-                setTimeout(() => {
-                    progressMessage.innerHTML = '<i class="bi bi-check-circle me-1 text-success"></i>Upload and AI processing completed successfully!';
-                    progressSpinner.style.display = 'none';
-                    
-                    setTimeout(() => {
-                        window.location.href = '/Documents';
-                    }, 2000);
-                }, 1500);
-            };
-
-            // Handle upload with AI processing
-            const handleUploadWithAI = async (form) => {
-                const aiToggle = document.getElementById('ai-summary-toggle');
-                const modelSelect = document.getElementById('ai-model-select');
-                const qualitySlider = document.getElementById('quality-slider');
-                
-                const aiEnabled = aiToggle && aiToggle.checked;
-                const selectedModel = modelSelect ? modelSelect.value : 'ClaudeHaiku45';
-                const quality = qualitySlider ? parseFloat(qualitySlider.value) : 0.7;
-                
-                showUploadProgress();
-                
-                try {
-                    // Simulate file upload progress
-                    await animateStageProgress(20, 2000);
-                    updateProgressBar(25, 'File uploaded successfully');
-                    
-                    if (aiEnabled) {
-                        showAIProcessing();
-                        await processAIStages(selectedModel, quality);
-                        completeAIProcessing();
-                    } else {
-                        updateStep('upload', 'completed');
-                        updateStep('complete', 'active');
-                        updateProgressBar(100, 'Upload complete!');
-                        
-                        setTimeout(() => {
-                            window.location.href = '/Documents';
-                        }, 1500);
-                    }
-                } catch (error) {
-                    updateProgressBar(0, 'Upload failed. Please try again.');
-                    progressContainer.classList.remove('show');
-                    console.error('Upload error:', error);
-                }
-            };
-
-            // Override form submission for enhanced progress
-            if (uploadForm) {
-                uploadForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    handleUploadWithAI(this);
-                    
-                    // Also submit the form normally (this will be enhanced in real implementation)
-                    setTimeout(() => {
-                        this.submit();
-                    }, 100);
-                });
-            }
-        };
-
-        // Initialize upload progress system
-        initUploadProgress();
-
-        // Initialize AI controls when page loads
-        initAIControls();
-    </script>
-
-    <!-- Enhanced Upload Progress JavaScript -->
-    <script>
-        // Enhanced Upload Progress System - Phase 3.3: Real-time Feedback
-        const EnhancedUploadProgress = {
-            elements: {},
-            
-            init() {
-                this.cacheElements();
-                this.enhanceFormSubmission();
-                console.log('Enhanced Upload Progress initialized');
-            },
-
-            cacheElements() {
-                this.elements = {
-                    uploadForm: document.getElementById('upload-form'),
-                    progressContainer: document.getElementById('upload-progress'),
-                    progressSteps: document.getElementById('progress-steps'),
-                    progressBar: document.getElementById('progress-bar'),
-                    progressText: document.getElementById('progress-text'),
-                    progressSpinner: document.getElementById('progress-spinner'),
-                    progressMessage: document.getElementById('progress-message-text'),
-                    aiProcessingDetails: document.getElementById('ai-processing-details'),
-                    aiStageTitle: document.getElementById('ai-stage-title'),
-                    aiStageDescription: document.getElementById('ai-stage-description'),
-                    aiTimeRemaining: document.getElementById('ai-time-remaining'),
-                    aiToggle: document.getElementById('ai-summary-toggle'),
-                    submitBtn: document.getElementById('submit-btn')
-                };
-            },
-
-            enhanceFormSubmission() {
-                if (this.elements.uploadForm) {
-                    // Add enhanced progress workflow
-                    this.elements.uploadForm.addEventListener('submit', (e) => {
-                        this.showEnhancedProgress();
-                    });
-                }
-            },
-
-            showEnhancedProgress() {
-                const isAIEnabled = this.elements.aiToggle && this.elements.aiToggle.checked;
-                
-                // Show progress container with animations
-                this.elements.progressContainer.classList.add('show');
-                this.elements.progressSteps.style.display = 'block';
-                this.elements.progressSpinner.style.display = 'inline-block';
-                
-                // Activate upload step
-                const stepUpload = document.getElementById('step-upload');
-                stepUpload.classList.add('active');
-                
-                // Start progress animation
-                this.animateUploadProgress(isAIEnabled);
-            },
-
-            async animateUploadProgress(isAIEnabled) {
-                // Stage 1: Upload
-                await this.animateProgressTo(25, 'Uploading document...', 1500);
-                this.completeStep('upload');
-                
-                if (isAIEnabled) {
-                    // Stage 2: AI Processing
-                    this.startAIProcessing();
-                    await this.animateProgressTo(60, 'AI analyzing content...', 3000);
-                    await this.animateProgressTo(85, 'Generating AI summary...', 2000);
-                    this.completeStep('ai');
-                }
-                
-                // Stage 3: Complete
-                this.activateStep('complete');
-                await this.animateProgressTo(100, 'Processing complete!', 500);
-            },
-
-            async animateProgressTo(targetPercent, message, duration) {
-                const startPercent = parseInt(this.elements.progressBar.style.width) || 0;
-                const steps = 30;
-                const stepDuration = duration / steps;
-                const increment = (targetPercent - startPercent) / steps;
-                
-                for (let i = 0; i <= steps; i++) {
-                    const currentPercent = startPercent + (increment * i);
-                    this.updateProgress(currentPercent, message);
-                    await this.delay(stepDuration);
-                }
-            },
-
-            updateProgress(percent, message) {
-                this.elements.progressBar.style.width = `${percent}%`;
-                this.elements.progressText.textContent = `${Math.round(percent)}%`;
-                this.elements.progressMessage.textContent = message;
-            },
-
-            completeStep(stepName) {
-                const step = document.getElementById(`step-${stepName}`);
-                if (step) {
-                    step.classList.remove('active');
-                    step.classList.add('completed');
-                }
-                
-                // Update connecting line
-                const lines = document.querySelectorAll('.step-line');
-                if (stepName === 'upload' && lines[0]) {
-                    lines[0].classList.add('completed');
-                } else if (stepName === 'ai' && lines[1]) {
-                    lines[1].classList.add('completed');
-                }
-            },
-
-            activateStep(stepName) {
-                const step = document.getElementById(`step-${stepName}`);
-                if (step) {
-                    step.classList.add('active');
-                }
-            },
-
-            startAIProcessing() {
-                this.activateStep('ai');
-                this.elements.aiProcessingDetails.style.display = 'block';
-                
-                // Animate AI stages
-                this.animateAIStages();
-            },
-
-            async animateAIStages() {
-                const stages = [
-                    { title: 'Extracting Content', desc: 'Reading document content...', time: '25s' },
-                    { title: 'AI Analysis', desc: 'Analyzing with AI model...', time: '15s' },
-                    { title: 'Generating Summary', desc: 'Creating intelligent summary...', time: '5s' }
-                ];
-
-                for (let i = 0; i < stages.length; i++) {
-                    const stage = stages[i];
-                    this.elements.aiStageTitle.textContent = stage.title;
-                    this.elements.aiStageDescription.textContent = stage.desc;
-                    this.elements.aiTimeRemaining.textContent = stage.time;
-                    
-                    // Add stage-specific styling
-                    this.elements.aiProcessingDetails.className = `ai-processing-details mt-2 ai-stage-${i === 0 ? 'extracting' : i === 1 ? 'analyzing' : 'generating'}`;
-                    
-                    await this.delay(2000);
-                }
-
-                // Complete AI processing
-                this.elements.aiStageTitle.textContent = 'Processing Complete';
-                this.elements.aiStageDescription.textContent = 'AI summary generated successfully';
-                this.elements.aiTimeRemaining.textContent = 'Done!';
-                
-                // Replace spinner with success icon
-                const spinner = this.elements.aiProcessingDetails.querySelector('.spinner-border');
-                if (spinner) {
-                    spinner.style.display = 'none';
-                    const checkIcon = document.createElement('i');
-                    checkIcon.className = 'bi bi-check-circle-fill text-success';
-                    checkIcon.style.fontSize = '1.2rem';
-                    spinner.parentNode.appendChild(checkIcon);
-                }
-            },
-
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            }
-        };
-
-        // Initialize enhanced progress when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            EnhancedUploadProgress.init();
-        });
-    </script>
+    <script src="~/js/dfh/upload.js" asp-append-version="true"></script>
 }
-
-<style>
-    /* Progress Steps Styling */
-    .progress-steps {
-        margin-bottom: 1rem;
-    }
-
-    .step-item {
-        text-align: center;
-        position: relative;
-    }
-
-    .step-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto;
-        border: 2px solid var(--border-color);
-        background: var(--surface-secondary);
-        color: var(--text-secondary);
-        transition: all 0.3s ease;
-    }
-
-    .step-icon i {
-        font-size: 1.1rem;
-    }
-
-    .step-label {
-        display: block;
-        margin-top: 0.5rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-
-    .step-line {
-        flex: 1;
-        height: 2px;
-        background: var(--border-color);
-        margin: 0 1rem;
-        align-self: center;
-        margin-top: -20px;
-        transition: all 0.3s ease;
-    }
-
-    /* Step States */
-    .step-item.active .step-icon {
-        border-color: var(--accent-color);
-        background: var(--accent-color);
-        color: white;
-    }
-
-    .step-item.active .step-label {
-        color: var(--accent-color);
-        font-weight: 600;
-    }
-
-    .step-item.completed .step-icon {
-        border-color: var(--success-color);
-        background: var(--success-color);
-        color: white;
-    }
-
-    .step-item.completed .step-label {
-        color: var(--success-color);
-    }
-
-    .step-line.completed {
-        background: var(--success-color);
-    }
-
-    /* AI Processing Animations */
-    .ai-processing-details {
-        animation: slideIn 0.3s ease;
-    }
-
-    @@keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Progress Enhancements */
-    .upload-progress {
-        border: 1px solid var(--border-color);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        background: var(--surface-secondary);
-        display: none;
-    }
-
-    .upload-progress.show {
-        display: block;
-    }
-
-    .progress-message {
-        font-weight: 500;
-    }
-
-    .progress-message i {
-        color: var(--accent-color);
-    }
-
-    /* AI Stage Specific Colors */
-    .ai-stage-extracting .step-icon {
-        border-color: #fd7e14;
-        background: #fd7e14;
-        color: white;
-    }
-
-    .ai-stage-analyzing .step-icon {
-        border-color: #6f42c1;
-        background: #6f42c1;
-        color: white;
-    }
-
-    .ai-stage-generating .step-icon {
-        border-color: #20c997;
-        background: #20c997;
-        color: white;
-    }
-
-    /* File Upload Enhancements */
-    .file-upload-container {
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: 2px dashed var(--border-color);
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
-        background: var(--surface-secondary);
-    }
-
-    .file-upload-container:hover {
-        border-color: var(--accent-color);
-        background: var(--surface-hover, var(--surface-secondary));
-    }
-
-    .file-upload-container.dragover {
-        border-color: var(--success-color);
-        background: rgba(16, 185, 129, 0.12);
-        transform: scale(1.02);
-    }
-
-    /* File input success/error states */
-    .field-success {
-        border-color: var(--success-color) !important;
-        background-color: rgba(16, 185, 129, 0.08);
-    }
-
-    .field-error {
-        border-color: var(--error-color) !important;
-        background-color: rgba(239, 68, 68, 0.08);
-    }
-
-    /* Selected file display */
-    .selected-file .alert {
-        margin-bottom: 0;
-    }
-
-    /* AI-Powered Features panel — theme-aware so it isn't a white/blue slab in dark mode. */
-    .ai-features-card {
-        background: var(--surface-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    }
-    .ai-features-card .card-body {
-        background: var(--surface-primary);
-        color: var(--text-primary);
-    }
-    .ai-features-header {
-        /* Violet "AI" banner — deep, theme-independent (matches Details AI card). */
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-        border-bottom: none;
-        padding: 0.85rem 1.1rem;
-    }
-    .ai-features-header .card-title { color: #fff; }
-    .ai-smart-badge {
-        background: rgba(255, 255, 255, 0.22);
-        color: #fff;
-        font-weight: 600;
-    }
-    /* Neutral estimate/preferences alerts inside the panel follow the theme. */
-    .ai-features-card .alert-light,
-    .ai-features-card .alert-info {
-        background: var(--surface-secondary);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-    }
-    .ai-features-card .form-check-label,
-    .ai-features-card .form-label { color: var(--text-primary); }
-
-    /* Compact two-column layout: file on the left, details on the right. */
-    @@media (min-width: 992px) {
-        .upload-grid > .col-lg-6:first-child {
-            border-right: 1px solid var(--border-color);
-            padding-right: 1.75rem;
-        }
-        .upload-grid > .col-lg-6:last-child {
-            padding-left: 1.75rem;
-        }
-    }
-    .upload-actions {
-        margin-top: 1.5rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid var(--border-color);
-    }
-</style>

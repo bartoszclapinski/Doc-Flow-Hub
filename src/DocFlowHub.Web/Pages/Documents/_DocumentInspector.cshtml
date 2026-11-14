@@ -4,7 +4,7 @@
     var (label, kind) = Dfh.FileType(d.FileType);
     var location = d.Location ?? "No project";
     var canChange = d.IsOwner && !Model.IsDemo;
-    var changeTip = Model.IsDemo ? "Read-only demo — changes are disabled" : "Only the owner can change this document";
+    var changeTip = Model.IsDemo ? "Read-only demo — changes are disabled" : "Only the owner can move or delete this document";
     var sizeInfo = $"{Dfh.FileSize(d.FileSize)} · {d.VersionCount} {Dfh.Noun(d.VersionCount, "version")}"
                    + (d.VersionCount > 1 ? $" · {Dfh.FileSize(d.VersionBytes)} total" : "");
 }
@@ -27,9 +27,17 @@
                 <i class="bi bi-three-dots" aria-hidden="true"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                @if (canChange)
+                @* Anyone who can open the document may edit it; moving and deleting are the owner's (S12-4). *@
+                @if (!Model.IsDemo)
                 {
                     <li><a class="dropdown-item" href="/Documents/Edit/@d.Id"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</a></li>
+                }
+                else
+                {
+                    <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</span></li>
+                }
+                @if (canChange)
+                {
                     <li>
                         <button type="button" class="dropdown-item" data-dfh-action="move" data-id="@d.Id" data-title="@d.Title" data-location="@location">
                             <i class="bi bi-arrows-move" aria-hidden="true"></i>Move to…
@@ -38,7 +46,6 @@
                 }
                 else
                 {
-                    <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-pencil" aria-hidden="true"></i>Edit details…</span></li>
                     <li><span class="dropdown-item disabled" title="@changeTip"><i class="bi bi-arrows-move" aria-hidden="true"></i>Move to…</span></li>
                 }
                 @if (d.VersionCount > 1)
@@ -93,7 +100,7 @@
     }
     else
     {
-        <p class="dfh-ai-text-block is-muted">No summary yet.@(Model.IsDemo ? "" : " Open the document to generate one.")</p>
+        <p class="dfh-ai-text-block is-muted">No summary yet.@(Model.IsDemo ? "" : " You can generate one in the document's AI tab.")</p>
     }
 </section>
 

@@ -304,6 +304,45 @@ public static class DemoDataSeeder
         }
         await context.SaveChangesAsync();
 
+        // ---- Saved AI comparisons of consecutive versions (decision D4) -------
+        // The demo blocks POSTs, so the Compare page can only show comparisons that already exist.
+        var comparisonTemplates = new[]
+        {
+            ("Figures updated with the latest actuals; the conclusions are unchanged.",
+             "• Revenue table updated with final numbers\n• Totals in the appendix corrected\n• Wording of the summary tightened",
+             ChangeType.ContentModification, ChangeSignificance.Medium),
+            ("A new section was added and an outdated note removed.",
+             "• Added a section on regional results\n• Removed the note about pending estimates\n• Updated the table of contents",
+             ChangeType.ContentAddition | ChangeType.ContentDeletion, ChangeSignificance.High),
+            ("Formatting and structure changes only; the content is the same.",
+             "• Tables reformatted\n• Headings renumbered\n• Typos fixed",
+             ChangeType.StructuralChange, ChangeSignificance.Low),
+        };
+        foreach (var doc in documents)
+        {
+            var ordered = doc.Versions.OrderBy(v => v.VersionNumber).ToList();
+            for (var i = 1; i < ordered.Count; i++)
+            {
+                var (summary, changes, type, significance) = comparisonTemplates[rng.Next(comparisonTemplates.Length)];
+                context.VersionComparisons.Add(new VersionComparison
+                {
+                    DocumentId = doc.Id,
+                    FromVersionId = ordered[i - 1].Id,
+                    ToVersionId = ordered[i].Id,
+                    ChangeSummary = summary,
+                    DetailedChanges = changes,
+                    ChangeType = type,
+                    Significance = significance,
+                    AIModel = "claude-haiku-4-5",
+                    ConfidenceScore = Math.Round(0.8 + rng.NextDouble() * 0.15, 2),
+                    TokensUsed = rng.Next(900, 2400),
+                    ProcessingTimeMs = rng.Next(1200, 4200),
+                    GeneratedAt = Min(ordered[i].CreatedAt.AddMinutes(rng.Next(5, 600)), now),
+                });
+            }
+        }
+        await context.SaveChangesAsync();
+
         // ---- AI usage logs (time-distributed, for admin charts) --------------
         // Saved before the slow file uploads, so an interrupted upload can't lose them
         // (the next startup takes the "already seeded" path and only backfills files).

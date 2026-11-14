@@ -430,93 +430,9 @@
     }
 </div>
 
-@* 7g: delete one document *@
-<div class="modal" id="dfh-delete-modal" tabindex="-1" aria-labelledby="dfh-delete-title" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content" method="post" asp-page-handler="Delete" data-dfh-busy="Deleting…">
-            <div class="modal-header">
-                <h2 class="modal-title" id="dfh-delete-title">Delete document?</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body dfh-modal-stack">
-                <p class="m-0">The document and <span data-dfh-delete-versions>its versions</span> will be removed from DocFlowHub. It can't be restored from the app.</p>
-                <dl class="dfh-kv dfh-kv--box">
-                    <dt>Location</dt><dd class="dfh-mono" data-dfh-delete-location></dd>
-                    <dt>Size</dt><dd class="dfh-mono" data-dfh-delete-size></dd>
-                </dl>
-                <input type="hidden" name="documentId" value="" />
-                <input type="hidden" name="returnUrl" value="@returnUrl" />
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-danger"><i class="bi bi-trash" aria-hidden="true"></i>Delete document</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-@* 7h: delete several documents, one result per document *@
-<div class="modal" id="dfh-bulk-delete-modal" tabindex="-1" aria-labelledby="dfh-bulk-delete-title" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="dfh-bulk-delete-title">Delete documents?</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body dfh-modal-stack">
-                <p class="m-0" data-dfh-bulk-intro>Documents you don't own are skipped. Deleted documents can't be restored from the app.</p>
-                <ul class="dfh-resultlist" data-dfh-bulk-list></ul>
-                <div class="dfh-progress-block" data-dfh-bulk-progress hidden>
-                    <div class="dfh-progress"><div class="dfh-progress-fill"></div></div>
-                    <span class="dfh-mono dfh-muted" data-dfh-bulk-caption aria-live="polite"></span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-dfh-bulk-cancel>Cancel</button>
-                <button type="button" class="btn btn-danger" data-dfh-bulk-confirm><i class="bi bi-trash" aria-hidden="true"></i><span>Delete</span></button>
-                <button type="button" class="btn btn-primary" data-dfh-bulk-close hidden>Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@* 7i: move to a project or folder *@
-<div class="modal" id="dfh-move-modal" tabindex="-1" aria-labelledby="dfh-move-title" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="dfh-move-title">Move</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body dfh-modal-stack">
-                @if (tree.Projects.Count == 0)
-                {
-                    <p class="m-0">You have no projects yet. Create a project first, then move documents into it.</p>
-                }
-                else
-                {
-                    <label class="dfh-search">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                        <input type="search" class="dfh-search-input" placeholder="Filter projects and folders" aria-label="Filter projects and folders" autocomplete="off" data-dfh-move-filter />
-                    </label>
-                    <div class="dfh-tree-picker" role="listbox" aria-label="Destination" data-dfh-move-tree></div>
-                    <p class="dfh-move-route">
-                        <span class="dfh-mono" data-dfh-move-from></span>
-                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        <span class="dfh-mono" data-dfh-move-to>choose a destination</span>
-                    </p>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" data-dfh-move-confirm disabled>Move here</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script type="application/json" id="dfh-move-data">@Html.Raw(Model.MoveTreeJson())</script>
+<partial name="_DocumentDialogs" model="new DocumentDialogsView(returnUrl, tree)" />
 
 @section Scripts {
+    <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/documents.js" asp-append-version="true"></script>
 }

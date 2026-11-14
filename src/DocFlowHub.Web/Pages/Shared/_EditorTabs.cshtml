@@ -1,0 +1,31 @@
+@model EditorTabsView
+@* Editor tabs (design 3b/3i/3c). The active tab comes from the server; editor-tabs.js adds the other
+   recently opened documents (sessionStorage) when DocumentId is set. *@
+@{
+    var (label, kind) = Dfh.FileType(Model.FileType);
+}
+<nav class="dfh-editor-tabs" aria-label="Open documents" data-dfh-editor-tabs="@(Model.DocumentId != null ? "on" : null)"
+     data-doc-id="@Model.DocumentId" data-title="@Model.Title" data-ext="@label" data-kind="@kind"
+     data-compare="@(Model.Icon != null ? "true" : null)">
+    <div class="dfh-editor-tab is-active@(Model.Closable ? "" : " is-fixed")" data-tab-id="@(Model.Icon == null ? Model.DocumentId : null)">
+        <span class="dfh-editor-tab-link" aria-current="page">
+            @if (Model.Icon != null)
+            {
+                <i class="bi @Model.Icon" aria-hidden="true"></i>
+            }
+            else
+            {
+                <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+            }
+            <span class="dfh-editor-tab-title">@Model.Title</span>
+            @if (Model.Suffix != null)
+            {
+                <span class="dfh-editor-tab-suffix">@Model.Suffix</span>
+            }
+        </span>
+        @if (Model.Closable)
+        {
+            <button type="button" class="dfh-editor-tab-close" data-dfh-tab-close aria-label="Close @Model.Title"><i class="bi bi-x" aria-hidden="true"></i></button>
+        }
+    </div>
+</nav>
