@@ -1,37 +1,38 @@
+using DocFlowHub.Core.Models.Workspace;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
+using DocFlowHub.Web.Ui;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Models.Common;
-using DocFlowHub.Core.Models.Projects.Dto;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Projects;
 
+/// <summary>Projects (design 8a, decision S13-3): table of active or archived projects with an inspector.</summary>
 [Authorize]
 public class IndexModel : PageModel
 {
+    private readonly IWorkspaceBrowserService _workspace;
     private readonly IProjectService _projectService;
+    private readonly IDemoModeService _demoMode;
 
-    public IndexModel(IProjectService projectService)
+    public IndexModel(IWorkspaceBrowserService workspace, IProjectService projectService, IDemoModeService demoMode)
     {
+        _workspace = workspace;
         _projectService = projectService;
+        _demoMode = demoMode;
     }
 
-    public PagedResult<ProjectDto> Projects { get; set; } = new();
-    public string? ErrorMessage { get; set; }
-
+    /// <summary>"archived" shows archived projects; anything else the active ones.</summary>
     [BindProperty(SupportsGet = true)]
-    public ProjectFilter Filter { get; set; } = new();
+    public string? Status { get; set; }
 
-    [BindProperty(SupportsGet = true)]
-    public string? SortBy { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public string? SortDirection { get; set; }
+    public bool Archived => string.Equals(Status, "archived", StringComparison.OrdinalIgnoreCase);
+    public IReadOnlyList<ProjectRow> Projects { get; private set; } = Array.Empty<ProjectRow>();
+    public ProjectInspector? Selected { get; private set; }
+    public string? ErrorMessage { get; private set; }
+    public bool IsDemo => _demoMode.IsEnabled;
+    public string ReturnUrl => Archived ? "/Projects?status=archived" : "/Projects";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -41,29 +42,23 @@ public class IndexModel : PageModel
             return RedirectToPage("/Account/Login");
         }
 
-        // Handle sorting
-        if (!string.IsNullOrEmpty(SortBy))
+        var result = await _workspace.GetProjectsAsync(userId, Archived);
+        if (!result.Succeeded || result.Data == null)
         {
-            Filter.SortBy = SortBy;
-            Filter.SortDescending = SortDirection == "desc";
-        }
-
-        // Set ViewData for sorting indicators
-        SetSortViewData();
-
-        // Get user's projects with filtering and pagination
-        var projectsResult = await _projectService.GetUserProjectsAsync(userId, Filter);
-        if (!projectsResult.Succeeded)
-        {
-            ErrorMessage = projectsResult.Error;
+            ErrorMessage = result.Error ?? "The projects could not be loaded.";
             return Page();
         }
+        Projects = result.Data;
 
-        Projects = projectsResult.Data;
+        if (Projects.Count > 0)
+        {
+            var first = await _workspace.GetProjectAsync(userId, Projects[0].Id);
+            Selected = first.Succeeded ? first.Data : null;
+        }
         return Page();
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(int projectId)
+    public async Task<IActionResult> OnGetInspectorAsync(int id, string? returnUrl)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -71,36 +66,25 @@ public class IndexModel : PageModel
             return Unauthorized();
         }
 
-        // Get project details first to check ownership
-        var projectResult = await _projectService.GetProjectByIdAsync(projectId, userId);
-        if (!projectResult.Succeeded)
+        var result = await _workspace.GetProjectAsync(userId, id);
+        if (!result.Succeeded || result.Data == null)
         {
-            TempData["ErrorMessage"] = projectResult.Error;
-            return RedirectToPage();
+            Response.StatusCode = StatusCodes.Status404NotFound;
+            return Content("This project is no longer available.", "text/plain");
         }
-
-        var project = projectResult.Data;
-
-        // Verify user owns this project (only owners can delete)
-        if (project.OwnerId != userId)
-        {
-            TempData["ErrorMessage"] = "You can only delete projects that you own.";
-            return RedirectToPage();
-        }
-
-        // Delete the project
-        var deleteResult = await _projectService.DeleteProjectAsync(projectId, userId);
-        if (!deleteResult.Succeeded)
-        {
-            TempData["ErrorMessage"] = deleteResult.Error;
-            return RedirectToPage();
-        }
-
-        TempData["SuccessMessage"] = $"Project '{project.Name}' has been successfully deleted.";
-        return RedirectToPage();
+        return Partial("_ProjectInspector", new ProjectInspectorView(result.Data, IsDemo, OnProjectPage: false, Safe(returnUrl)));
     }
 
-    public async Task<IActionResult> OnPostArchiveAsync(int projectId)
+    public async Task<IActionResult> OnPostArchiveAsync(int projectId, string? returnUrl) =>
+        await RunAsync(returnUrl, userId => _projectService.ArchiveProjectAsync(projectId, userId), "Project archived");
+
+    public async Task<IActionResult> OnPostRestoreAsync(int projectId, string? returnUrl) =>
+        await RunAsync(returnUrl, userId => _projectService.RestoreProjectAsync(projectId, userId), "Project restored");
+
+    public async Task<IActionResult> OnPostDeleteAsync(int projectId) =>
+        await RunAsync("/Projects", userId => _projectService.DeleteProjectAsync(projectId, userId), "Project deleted");
+
+    private async Task<IActionResult> RunAsync(string? returnUrl, Func<string, Task<Core.Models.Common.ServiceResult>> action, string success)
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -108,57 +92,12 @@ public class IndexModel : PageModel
             return Unauthorized();
         }
 
-        var result = await _projectService.ArchiveProjectAsync(projectId, userId);
-        if (!result.Succeeded)
-        {
-            TempData["ErrorMessage"] = result.Error;
-            return RedirectToPage();
-        }
-
-        TempData["SuccessMessage"] = "Project has been archived successfully.";
-        return RedirectToPage();
+        var result = await action(userId);
+        if (result.Succeeded) TempData["ToastSuccess"] = success;
+        else TempData["ToastError"] = result.Error ?? "The project could not be changed.";
+        return LocalRedirect(Safe(returnUrl));
     }
 
-    public async Task<IActionResult> OnPostRestoreAsync(int projectId)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Unauthorized();
-        }
-
-        var result = await _projectService.RestoreProjectAsync(projectId, userId);
-        if (!result.Succeeded)
-        {
-            TempData["ErrorMessage"] = result.Error;
-            return RedirectToPage();
-        }
-
-        TempData["SuccessMessage"] = "Project has been restored successfully.";
-        return RedirectToPage();
-    }
-
-    private void SetSortViewData()
-    {
-        ViewData["NameSortClass"] = Filter.SortBy == "name" && !Filter.SortDescending ? "sort-asc" : 
-                                   Filter.SortBy == "name" && Filter.SortDescending ? "sort-desc" : "";
-        ViewData["CreatedSortClass"] = Filter.SortBy == "createdat" && !Filter.SortDescending ? "sort-asc" : 
-                                      Filter.SortBy == "createdat" && Filter.SortDescending ? "sort-desc" : "";
-        ViewData["UpdatedSortClass"] = Filter.SortBy == "updatedat" && !Filter.SortDescending ? "sort-asc" : 
-                                      Filter.SortBy == "updatedat" && Filter.SortDescending ? "sort-desc" : "";
-    }
-
-    public string GetSortUrl(string sortBy, string sortDirection, int? pageNumber = null)
-    {
-        return Url.Page("/Projects/Index", new { 
-            Filter.SearchTerm, 
-            Filter.IsActive,
-            Filter.CreatedAfter,
-            Filter.CreatedBefore,
-            PageNumber = pageNumber ?? Filter.PageNumber,
-            Filter.PageSize,
-            SortBy = sortBy, 
-            SortDirection = sortDirection 
-        }) ?? "";
-    }
-} 
+    private string Safe(string? returnUrl) =>
+        !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : "/Projects";
+}

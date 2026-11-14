@@ -110,6 +110,32 @@ test('document screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/edit.png` });
 });
 
+// Projects (8a), project / folder (8b), Teams, team (3d) and their forms.
+test('workspace screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  for (const [name, path] of [['projects', '/Projects'], ['projects-archived', '/Projects?status=archived'], ['teams', '/Teams'], ['project-create', '/Projects/Create'], ['team-create', '/Teams/Create']] as const) {
+    await page.goto(path);
+    await page.screenshot({ path: `${dir}/${name}.png` });
+  }
+  await page.goto('/Projects');
+  const project = await page.locator('[data-dfh-select-table] tbody tr[data-id]').first().getAttribute('data-id');
+  await page.goto(`/Projects/Details/${project}`);
+  await page.screenshot({ path: `${dir}/project.png` });
+  const folder = page.locator('.dfh-tree a.dfh-tree-link[href*="/Folders/Details"]').first();
+  if (await folder.count()) {
+    await folder.click();
+    await page.screenshot({ path: `${dir}/folder.png` });
+    await page.goto(page.url().replace('/Folders/Details', '/Folders/Edit'));
+    await page.screenshot({ path: `${dir}/folder-edit.png` });
+  }
+  await page.goto(`/Projects/Edit?id=${project}`);
+  await page.screenshot({ path: `${dir}/project-edit.png` });
+  await page.goto('/Teams');
+  const team = await page.locator('#teams-table tbody tr[data-dfh-href]').first().getAttribute('data-dfh-href');
+  await page.goto(team!);
+  await page.screenshot({ path: `${dir}/team.png` });
+});
+
 test('admin screens', async ({ page }) => {
   await signIn(page, DEMO_ADMIN);
   for (const [name, path] of ADMIN_PAGES) {

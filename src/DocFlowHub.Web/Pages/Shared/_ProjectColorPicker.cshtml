@@ -1,0 +1,29 @@
+@model string?
+@* Project colour swatches (decision S13-8). Posts "Color"; an existing custom colour stays selectable. *@
+@{
+    var current = ProjectPalette.Clean(Model);
+    var custom = current != null && ProjectPalette.Colors.All(c => c.Hex != current);
+}
+<div class="dfh-color-options" role="radiogroup" aria-labelledby="color-label">
+    <label class="dfh-color-option" title="No colour">
+        <input type="radio" name="Color" value="" checked="@(current == null)" />
+        <span class="dfh-color-swatch is-none" aria-hidden="true"><i class="bi bi-slash-lg"></i></span>
+        <span class="visually-hidden">No colour</span>
+    </label>
+    @foreach (var (name, hex) in ProjectPalette.Colors)
+    {
+        <label class="dfh-color-option" title="@name">
+            <input type="radio" name="Color" value="@hex" checked="@(current == hex)" />
+            <span class="dfh-color-swatch" style="background: @Dfh.ProjectColor(hex, 0)" aria-hidden="true"></span>
+            <span class="visually-hidden">@name</span>
+        </label>
+    }
+    @if (custom)
+    {
+        <label class="dfh-color-option" title="Current colour">
+            <input type="radio" name="Color" value="@current" checked />
+            <span class="dfh-color-swatch" style="background: @Dfh.ProjectColor(current, 0)" aria-hidden="true"></span>
+            <span class="visually-hidden">Current colour</span>
+        </label>
+    }
+</div>

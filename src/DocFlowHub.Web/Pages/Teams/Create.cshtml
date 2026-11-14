@@ -1,146 +1,34 @@
 @page
 @model DocFlowHub.Web.Pages.Teams.CreateModel
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
-    ViewData["Title"] = "Create Team";
+    ViewData["Title"] = "New team";
+    ViewData["FullBleed"] = true;
+    var nameError = ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage;
 }
 
-<div class="page-container page-transition">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb-modern">
-            <li><a asp-page="/Index">Home</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li><a asp-page="./Index">Teams</a></li>
-            <li class="breadcrumb-sep">/</li>
-            <li class="active" aria-current="page">Create</li>
-        </ol>
-    </nav>
-
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">
-            <div class="page-icon">👥</div>
-            Create New Team
-        </h1>
-        <p class="page-subtitle">Set up a team to collaborate on shared documents</p>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-    {
-        <div class="validation-summary" style="display:block;">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
-        </div>
-    }
-
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="form-card">
-                <form method="post" id="createTeamForm">
-                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
-
-                    <div class="form-group full-width">
-                        <label asp-for="Name" class="form-label">
-                            <i class="bi bi-people"></i> Team Name *
-                        </label>
-                        <input asp-for="Name" class="form-input" placeholder="Enter team name" maxlength="100" />
-                        <span asp-validation-for="Name" class="validation-message"></span>
-                        <div class="form-hint">Choose a descriptive name for your team (3-100 characters)</div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label asp-for="Description" class="form-label">
-                            <i class="bi bi-card-text"></i> Description
-                        </label>
-                        <textarea asp-for="Description" class="form-textarea" rows="4"
-                                  placeholder="Describe the purpose and goals of your team..." maxlength="500"></textarea>
-                        <span asp-validation-for="Description" class="validation-message"></span>
-                        <div class="form-hint">Optional — helps team members understand the team's purpose (max 500 characters)</div>
-                    </div>
-
-                    <div class="info-box">
-                        <h6><i class="bi bi-info-circle"></i> Team Information</h6>
-                        <ul>
-                            <li>You will be the team owner and can manage all team settings</li>
-                            <li>You can invite members by email after creating the team</li>
-                            <li>Team members can view and collaborate on shared documents</li>
-                            <li>You can modify team details and member permissions anytime</li>
-                        </ul>
-                    </div>
-
-                    <div class="form-actions justify-content-between">
-                        <a asp-page="./Index" class="cancel-btn">
-                            <i class="bi bi-arrow-left"></i> Back to Teams
-                        </a>
-                        <button type="submit" class="submit-btn" id="submitBtn">
-                            <span class="btn-text"><i class="bi bi-plus-circle"></i> Create Team</span>
-                            <span class="btn-loading d-none"><i class="bi bi-arrow-clockwise spin"></i> Creating...</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Styles {
-<style>
-    .info-box {
-        background: var(--surface-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-    }
-    .info-box h6 {
-        display: flex; align-items: center; gap: 0.5rem;
-        color: var(--text-primary); font-weight: 600; margin-bottom: 0.5rem;
-    }
-    .info-box h6 i { color: var(--accent-color); }
-    .info-box ul { margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.875rem; }
-    .info-box li { margin-bottom: 0.25rem; }
-    .spin { animation: spin 1s linear infinite; }
-    @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-</style>
-}
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('createTeamForm');
-            const submitBtn = document.getElementById('submitBtn');
-            const btnText = submitBtn.querySelector('.btn-text');
-            const btnLoading = submitBtn.querySelector('.btn-loading');
-            const nameInput = document.querySelector('input[name="Name"]');
-            const descInput = document.querySelector('textarea[name="Description"]');
-
-            if (descInput) {
-                const maxLength = 500;
-                const counter = document.createElement('div');
-                counter.className = 'form-hint text-end';
-                counter.innerHTML = `<span id="charCount">0</span>/${maxLength} characters`;
-                descInput.parentNode.appendChild(counter);
-                const charCountSpan = document.getElementById('charCount');
-                descInput.addEventListener('input', function () {
-                    charCountSpan.textContent = this.value.length;
-                });
-                descInput.dispatchEvent(new Event('input'));
+<form class="dfh-column" method="post" data-dfh-busy="Creating…">
+    <partial name="_EditorTabs" model='new EditorTabsView("New team", Icon: "bi-people")' />
+    <div class="dfh-form-scroll">
+        <div class="dfh-form-body">
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
-
-            form.addEventListener('submit', function () {
-                if (form.checkValidity()) {
-                    submitBtn.disabled = true;
-                    btnText.classList.add('d-none');
-                    btnLoading.classList.remove('d-none');
-                    setTimeout(() => {
-                        submitBtn.disabled = false;
-                        btnText.classList.remove('d-none');
-                        btnLoading.classList.add('d-none');
-                    }, 10000);
-                }
-            });
-
-            if (nameInput) { nameInput.focus(); }
-        });
-    </script>
-}
+            <partial name="_TeamFields" model="(Model.Name, Model.Description, nameError)" />
+            <p class="dfh-insp-note">You become the team's owner and first admin. Then add members by their e-mail address.</p>
+        </div>
+    </div>
+    <div class="dfh-form-footer">
+        <span class="dfh-mono"></span>
+        <a class="btn btn-secondary" asp-page="/Teams/Index">Cancel</a>
+        @if (DemoMode.IsEnabled)
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — changes are disabled"><button type="button" class="btn btn-primary" disabled>Create team</button></span>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary">Create team</button>
+        }
+    </div>
+</form>

@@ -1,0 +1,89 @@
+@model ProjectInspectorView
+@* Project inspector (design 8a): Projects list (loaded per row) and the project page. *@
+@{
+    var p = Model.Project;
+    var color = Dfh.ProjectColor(p.Color, p.Id);
+    var empty = p.FolderCount == 0 && p.DocumentCount == 0;
+    var demoTip = "Read-only demo — changes are disabled";
+}
+<div class="dfh-insp-block">
+    <div class="dfh-entity-title">
+        <span class="dfh-swatch dfh-swatch--12" style="background: @color" aria-hidden="true"></span>
+        <h2 class="dfh-insp-title">@p.Name</h2>
+        @if (!p.IsActive)
+        {
+            <span class="dfh-chip dfh-chip--warning">archived</span>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(p.Description))
+    {
+        <p class="dfh-insp-desc">@p.Description</p>
+    }
+</div>
+<div class="dfh-insp-block">
+    <dl class="dfh-kv dfh-kv--side dfh-kv--84">
+        <dt>Owner</dt>
+        <dd>@p.OwnerName</dd>
+        <dt>Created</dt>
+        <dd class="dfh-mono">@p.CreatedAt.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)</dd>
+        <dt>Updated</dt>
+        <dd title="@Dfh.Timestamp(p.UpdatedAt)">@Dfh.Relative(p.UpdatedAt)</dd>
+        <dt>Storage</dt>
+        <dd class="dfh-mono">@Dfh.FileSize(p.Bytes) · @p.DocumentCount @Dfh.Noun(p.DocumentCount, "doc")</dd>
+        <dt>AI</dt>
+        <dd>@(p.DocumentCount == 0 ? "No documents yet" : $"{p.SummarizedCount} of {p.DocumentCount} summarized")</dd>
+    </dl>
+</div>
+<div class="dfh-insp-block dfh-insp-block--list">
+    <span class="dfh-insp-block-head"><span>Folders</span><span class="dfh-mono dfh-muted">@p.FolderCount</span></span>
+    @if (p.Folders.Count == 0)
+    {
+        <p class="dfh-insp-note">No folders yet.</p>
+    }
+    else
+    {
+        <ul class="dfh-mini-list">
+            @foreach (var f in p.Folders)
+            {
+                <li class="@(f.IsArchived ? "is-archived" : null)" style="--level: @f.Level">
+                    <a href="@WorkspaceLinks.Folder(p.Id, f.Id)">
+                        <i class="bi @(f.IsArchived ? "bi-archive" : "bi-folder2")" aria-hidden="true"></i>
+                        <span class="dfh-ellipsis">@f.Name</span>
+                        <span class="dfh-mono">@(f.IsArchived ? "archived" : f.DocumentCount.ToString())</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    }
+</div>
+<div class="dfh-toolwindow-spacer"></div>
+<div class="dfh-insp-actionbar">
+    @if (!Model.OnProjectPage)
+    {
+        <a class="btn btn-primary btn-sm dfh-grow" href="@WorkspaceLinks.Project(p.Id)">Open project</a>
+    }
+    @if (Model.IsDemo)
+    {
+        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-pencil" aria-hidden="true"></i>Edit</button></span>
+        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled aria-label="Archive"><i class="bi bi-archive" aria-hidden="true"></i></button></span>
+        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-secondary btn-sm btn-icon" disabled aria-label="Delete"><i class="bi bi-trash" aria-hidden="true"></i></button></span>
+    }
+    else
+    {
+        <a class="btn btn-secondary btn-sm" asp-page="/Projects/Edit" asp-route-id="@p.Id"><i class="bi bi-pencil" aria-hidden="true"></i>Edit</a>
+        <form method="post" asp-page="/Projects/Index" asp-page-handler="@(p.IsActive ? "Archive" : "Restore")">
+            <input type="hidden" name="projectId" value="@p.Id" />
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="@(p.IsActive ? "Archive: hide it from the lists and the tree" : "Restore")" aria-label="@(p.IsActive ? "Archive" : "Restore")">
+                <i class="bi @(p.IsActive ? "bi-archive" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+            </button>
+        </form>
+        <form method="post" asp-page="/Projects/Index" asp-page-handler="Delete"
+              data-dfh-confirm-title="Delete “@p.Name”?" data-dfh-confirm="The project will be removed. It can't be undone." data-dfh-confirm-button="Delete project">
+            <input type="hidden" name="projectId" value="@p.Id" />
+            <span class="dfh-btn-disabled-wrap" title="@(empty ? "Delete the project" : "Only an empty project can be deleted. Move or delete its folders and documents first.")">
+                <button type="submit" class="btn btn-secondary btn-sm btn-icon dfh-btn-danger-hover" disabled="@(!empty)" aria-label="Delete"><i class="bi bi-trash" aria-hidden="true"></i></button>
+            </span>
+        </form>
+    }
+</div>

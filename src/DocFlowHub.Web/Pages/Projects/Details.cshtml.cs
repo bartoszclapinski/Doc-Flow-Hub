@@ -1,42 +1,39 @@
+using DocFlowHub.Core.Models.Documents.Browser;
+using DocFlowHub.Core.Models.Workspace;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Models.Projects.Dto;
-using DocFlowHub.Core.Models.Documents.Dto;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Web.Extensions;
-using System.Threading.Tasks;
-using System.Security.Claims;
 
 namespace DocFlowHub.Web.Pages.Projects;
 
+/// <summary>
+/// A project's root (design 8b, decision S13-4): project tree, root folders above root documents and
+/// the project inspector. Archive / restore / delete post to Projects/Index.
+/// </summary>
 [Authorize]
 public class DetailsModel : PageModel
 {
-    private readonly IProjectService _projectService;
-    private readonly IDocumentService _documentService;
-    private readonly IFolderService _folderService;
+    private readonly IWorkspaceBrowserService _workspace;
+    private readonly IDocumentBrowserService _documents;
+    private readonly IDemoModeService _demoMode;
 
-    public DetailsModel(
-        IProjectService projectService,
-        IDocumentService documentService,
-        IFolderService folderService)
+    public DetailsModel(IWorkspaceBrowserService workspace, IDocumentBrowserService documents, IDemoModeService demoMode)
     {
-        _projectService = projectService;
-        _documentService = documentService;
-        _folderService = folderService;
+        _workspace = workspace;
+        _documents = documents;
+        _demoMode = demoMode;
     }
 
-    public ProjectDto? Project { get; set; }
-    public string? ErrorMessage { get; set; }
-    public bool IsOwner { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int Id { get; set; }
 
-    // Quick stats for the project
-    public int TotalDocuments { get; set; }
-    public int TotalFolders { get; set; }
-    public long TotalSize { get; set; }
+    public FolderView View { get; private set; } = new();
+    public DocumentTree Tree { get; private set; } = new();
+    public bool IsDemo => _demoMode.IsEnabled;
 
-    public async Task<IActionResult> OnGetAsync(int id)
+    public async Task<IActionResult> OnGetAsync()
     {
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
@@ -44,88 +41,18 @@ public class DetailsModel : PageModel
             return RedirectToPage("/Account/Login");
         }
 
-        // Get project details
-        var projectResult = await _projectService.GetProjectByIdAsync(id, userId);
-        if (!projectResult.Succeeded)
+        // Projects are owner-only: someone else's project is simply not found.
+        var view = await _workspace.GetFolderViewAsync(userId, Id, null);
+        if (!view.Succeeded || view.Data == null)
         {
-            ErrorMessage = projectResult.Error ?? "Project not found.";
-            return Page();
+            return NotFound();
         }
+        View = view.Data;
 
-        Project = projectResult.Data;
-        if (Project == null)
-        {
-            ErrorMessage = "Project not found.";
-            return Page();
-        }
+        var tree = await _documents.GetTreeAsync(userId);
+        if (tree.Succeeded && tree.Data != null) Tree = tree.Data;
 
-        // Check if user is the owner
-        IsOwner = Project.OwnerId == userId;
-
-        // Load project statistics from the existing data
-        TotalDocuments = Project.DocumentCount;
-        TotalFolders = Project.FolderCount;
-        TotalSize = 0; // Will be calculated when documents are implemented
-
+        ViewData["StatusPath"] = View.Project.Name;
         return Page();
     }
-
-    public async Task<IActionResult> OnPostDeleteAsync(int id)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return RedirectToPage("/Account/Login");
-        }
-
-        var result = await _projectService.DeleteProjectAsync(id, userId);
-        if (!result.Succeeded)
-        {
-            ErrorMessage = result.Error;
-            return Page();
-        }
-
-        TempData["SuccessMessage"] = "Project has been deleted successfully.";
-        return RedirectToPage("./Index");
-    }
-
-    public async Task<IActionResult> OnPostArchiveAsync(int id)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return RedirectToPage("/Account/Login");
-        }
-
-        var result = await _projectService.ArchiveProjectAsync(id, userId);
-        if (!result.Succeeded)
-        {
-            ErrorMessage = result.Error;
-            return Page();
-        }
-
-        TempData["SuccessMessage"] = "Project has been archived successfully.";
-        return RedirectToPage("./Index");
-    }
-
-    public async Task<IActionResult> OnPostRestoreAsync(int id)
-    {
-        var userId = User.GetUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            return RedirectToPage("/Account/Login");
-        }
-
-        var result = await _projectService.RestoreProjectAsync(id, userId);
-        if (!result.Succeeded)
-        {
-            ErrorMessage = result.Error;
-            return Page();
-        }
-
-        TempData["SuccessMessage"] = "Project has been restored successfully.";
-        return RedirectToPage("./Index");
-    }
-
-
-} 
+}

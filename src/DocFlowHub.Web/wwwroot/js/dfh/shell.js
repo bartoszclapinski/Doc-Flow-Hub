@@ -91,7 +91,8 @@
         },
         postJson: postJson,
         reportFailure: reportFailure,
-        toastAfterReload: toastAfterReload
+        toastAfterReload: toastAfterReload,
+        confirm: confirmDialog
     });
 
     /**
@@ -140,6 +141,40 @@
         else showToast('error', message);
     }
 
+    /** One shared danger-confirm modal; onConfirm runs when the user presses the action button. */
+    function confirmDialog(title, text, actionLabel, onConfirm) {
+        let el = document.getElementById('dfh-confirm-modal');
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'modal';
+            el.id = 'dfh-confirm-modal';
+            el.tabIndex = -1;
+            el.setAttribute('aria-labelledby', 'dfh-confirm-title');
+            el.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered"><div class="modal-content">' +
+                '<div class="modal-header"><h2 class="modal-title" id="dfh-confirm-title"></h2>' +
+                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>' +
+                '<div class="modal-body"><p class="m-0" data-dfh-confirm-text></p></div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="btn btn-danger" data-dfh-confirm-ok></button></div>' +
+                '</div></div>';
+            document.body.appendChild(el);
+            el.addEventListener('shown.bs.modal', function () {
+                el.querySelector('[data-bs-dismiss="modal"].btn').focus();
+            });
+        }
+        el.querySelector('#dfh-confirm-title').textContent = title;
+        el.querySelector('[data-dfh-confirm-text]').textContent = text || '';
+        const ok = el.querySelector('[data-dfh-confirm-ok]');
+        ok.textContent = actionLabel;
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        ok.onclick = function () {
+            modal.hide();
+            onConfirm();
+        };
+        modal.show();
+    }
+
     /** Queues a toast for the next page load (e.g. after a list reload). */
     function toastAfterReload(type, message, options) {
         try {
@@ -163,6 +198,27 @@
             sessionStorage.removeItem('dfh-toasts');
             pending.forEach(function (t) { showToast(t.type, t.message, t.options); });
         } catch (e) { /* storage unavailable */ }
+
+        // Confirmation dialog (design 7g) for forms with data-dfh-confirm="Text"; optional
+        // data-dfh-confirm-title and data-dfh-confirm-button. Replaces window.confirm().
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!form.matches || !form.matches('form[data-dfh-confirm]') || form.dataset.dfhConfirmed === 'yes') return;
+            if (!window.bootstrap || !bootstrap.Modal) return; // no dialog available: submit as is
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            confirmDialog(form.dataset.dfhConfirmTitle || 'Are you sure?', form.dataset.dfhConfirm,
+                form.dataset.dfhConfirmButton || 'Delete', function () {
+                    form.dataset.dfhConfirmed = 'yes';
+                    form.requestSubmit();
+                });
+        }, true);
+
+        // <select data-dfh-autosubmit> posts its form as soon as the value changes (inline role select).
+        document.addEventListener('change', function (event) {
+            const select = event.target.closest && event.target.closest('select[data-dfh-autosubmit]');
+            if (select && select.form) select.form.requestSubmit();
+        });
 
         // Opt-in double-submit protection: <form data-dfh-busy="Saving…">.
         document.querySelectorAll('form[data-dfh-busy]').forEach(function (form) {

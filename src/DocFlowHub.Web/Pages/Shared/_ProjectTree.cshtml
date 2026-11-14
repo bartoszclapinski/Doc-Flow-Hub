@@ -1,0 +1,64 @@
+@model ProjectTreeView
+@* Project tree tool window of the project / folder pages (design 8b). Folder rows can be dragged
+   onto another folder or the project root of the same project (tree.js) when Movable. *@
+@{
+    var tree = Model.Tree;
+}
+<aside class="dfh-toolwindow" aria-label="Projects">
+    <div class="dfh-panel-header">
+        <span class="dfh-panel-title">Projects</span>
+        @if (Model.Movable)
+        {
+            <a class="dfh-icon-btn" asp-page="/Projects/Create" title="New project" aria-label="New project"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
+        }
+        <a class="dfh-icon-btn" asp-page="/Projects/Index" title="All projects" aria-label="All projects"><i class="bi bi-three-dots" aria-hidden="true"></i></a>
+    </div>
+    <ul class="dfh-tree" role="tree" aria-label="Projects" data-dfh-tree-move="@(Model.Movable ? "on" : null)">
+        @foreach (var project in tree.Projects)
+        {
+            var selected = Model.ProjectId == project.Id && Model.FolderId == null;
+            var hasFolders = project.Folders.Count > 0;
+            var open = hasFolders && (Model.ProjectId == project.Id || Model.ProjectId == null);
+            <li role="treeitem" aria-selected="@(selected ? "true" : "false")" aria-expanded="@(hasFolders ? (open ? "true" : "false") : null)">
+                <div class="dfh-tree-row@(selected ? " is-selected" : "")" style="--level: 0"
+                     data-dfh-drop-project="@project.Id" data-dfh-drop-folder="">
+                    @if (hasFolders)
+                    {
+                        <button type="button" class="dfh-tree-toggle" data-dfh-tree-toggle aria-label="Expand or collapse @project.Name"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    }
+                    else
+                    {
+                        <span class="dfh-tree-toggle" aria-hidden="true"></span>
+                    }
+                    <a class="dfh-tree-link" href="@WorkspaceLinks.Project(project.Id)" aria-current="@(selected ? "page" : null)">
+                        <span class="dfh-swatch" style="background: @Dfh.ProjectColor(project.Color, project.Id)" aria-hidden="true"></span>
+                        <span class="dfh-tree-name">@project.Name</span>
+                        <span class="dfh-tree-count">@project.DocumentCount</span>
+                    </a>
+                </div>
+                @if (hasFolders)
+                {
+                    <ul role="group">
+                        @foreach (var folder in project.Folders)
+                        {
+                            <partial name="_ProjectTreeFolder" model="new ProjectTreeFolderNode(folder, project.Id, 1, Model)" />
+                        }
+                    </ul>
+                }
+            </li>
+        }
+    </ul>
+    @if (tree.Projects.Count == 0)
+    {
+        <p class="dfh-tree-note">No active projects.</p>
+    }
+    @if (Model.Movable && tree.Projects.Any(p => p.Folders.Count > 0))
+    {
+        <p class="dfh-tree-note">Drag a folder onto another folder or a project name to move it.</p>
+    }
+    <div class="dfh-toolwindow-spacer"></div>
+    <div class="dfh-toolwindow-footer">
+        <span>Storage</span>
+        <span class="dfh-mono" title="@Dfh.Number(tree.TotalDocuments) @Dfh.Noun(tree.TotalDocuments, "document")">@Dfh.FileSize(tree.StorageBytes)</span>
+    </div>
+</aside>

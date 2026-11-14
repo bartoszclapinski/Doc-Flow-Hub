@@ -1,114 +1,106 @@
+using System.ComponentModel.DataAnnotations;
+using DocFlowHub.Core.Models.Workspace;
+using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using DocFlowHub.Core.Services.Interfaces;
-using DocFlowHub.Core.Models.Teams;
-using DocFlowHub.Web.Extensions;
-using System.ComponentModel.DataAnnotations;
 
-namespace DocFlowHub.Web.Pages.Teams
+namespace DocFlowHub.Web.Pages.Teams;
+
+/// <summary>Team settings (decision S13-9): rename, describe or delete. The owner only.</summary>
+[Authorize]
+public class EditModel : PageModel
 {
-    [Authorize]
-    public class EditModel : PageModel
+    private readonly IWorkspaceBrowserService _workspace;
+    private readonly ITeamService _teamService;
+
+    public EditModel(IWorkspaceBrowserService workspace, ITeamService teamService)
     {
-        private readonly ITeamService _teamService;
-
-        public EditModel(ITeamService teamService)
-        {
-            _teamService = teamService;
-        }
-
-        [BindProperty]
-        [Required(ErrorMessage = "Team name is required")]
-        [StringLength(100, ErrorMessage = "Team name cannot exceed 100 characters")]
-        public string Name { get; set; } = string.Empty;
-
-        [BindProperty]
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        public string? Description { get; set; }
-
-        [BindProperty]
-        public int TeamId { get; set; }
-
-        public string? TeamName { get; set; }
-        public string? ErrorMessage { get; set; }
-        public string? SuccessMessage { get; set; }
-
-        public async Task<IActionResult> OnGetAsync(int id)
-        {
-            TeamId = id;
-            var userId = User.GetUserId();
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return RedirectToPage("/Account/Login");
-            }
-
-            var result = await _teamService.GetTeamByIdAsync(id);
-            if (!result.Succeeded)
-            {
-                ErrorMessage = result.Error ?? "Team not found";
-                return Page();
-            }
-
-            var team = result.Data;
-            
-            // Check if user is the owner
-            if (team.OwnerId != userId)
-            {
-                ErrorMessage = "You can only edit teams you own";
-                return RedirectToPage("/Teams/Details", new { id });
-            }
-
-            TeamName = team.Name;
-            Name = team.Name;
-            Description = team.Description;
-
-            return Page();
-        }
-
-        public async Task<IActionResult> OnPostUpdateAsync()
-        {
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
-
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return RedirectToPage("/Account/Login");
-            }
-
-            var result = await _teamService.UpdateTeamAsync(TeamId, Name, Description, userId);
-            if (result.Succeeded)
-            {
-                SuccessMessage = "Team updated successfully!";
-                TeamName = Name; // Update display name
-                return Page();
-            }
-
-            ErrorMessage = result.Error ?? "Failed to update team";
-            return Page();
-        }
-
-        public async Task<IActionResult> OnPostDeleteAsync()
-        {
-            var userId = User.GetUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return RedirectToPage("/Account/Login");
-            }
-
-            var result = await _teamService.DeleteTeamAsync(TeamId, userId);
-            if (result.Succeeded)
-            {
-                TempData["SuccessMessage"] = "Team deleted successfully!";
-                return RedirectToPage("/Teams/Index");
-            }
-
-            ErrorMessage = result.Error ?? "Failed to delete team";
-            return Page();
-        }
+        _workspace = workspace;
+        _teamService = teamService;
     }
-} 
+
+    [BindProperty(SupportsGet = true)]
+    public int Id { get; set; }
+
+    [BindProperty]
+    [Required(ErrorMessage = "Enter a name")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "The name needs 3 to 100 characters")]
+    public string Name { get; set; } = string.Empty;
+
+    [BindProperty]
+    [StringLength(500, ErrorMessage = "The description can have at most 500 characters")]
+    public string? Description { get; set; }
+
+    public TeamView Team { get; private set; } = new();
+    public string? ErrorMessage { get; private set; }
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var load = await LoadAsync();
+        if (load != null) return load;
+        Name = Team.Name;
+        Description = Team.Description;
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostUpdateAsync()
+    {
+        var load = await LoadAsync();
+        if (load != null) return load;
+        if (!ModelState.IsValid)
+        {
+            return Page();
+        }
+
+        var result = await _teamService.UpdateTeamAsync(Id, Name.Trim(),
+            string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(), User.GetUserId()!);
+        if (!result.Succeeded)
+        {
+            ErrorMessage = result.Error ?? "The team could not be saved.";
+            return Page();
+        }
+
+        TempData["ToastSuccess"] = "Team saved";
+        return RedirectToPage("/Teams/Details", new { id = Id });
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync()
+    {
+        var load = await LoadAsync();
+        if (load != null) return load;
+
+        var result = await _teamService.DeleteTeamAsync(Id, User.GetUserId()!);
+        if (!result.Succeeded)
+        {
+            TempData["ToastError"] = result.Error ?? "The team could not be deleted.";
+            return RedirectToPage(new { id = Id });
+        }
+
+        TempData["ToastSuccess"] = $"Deleted team \"{Team.Name}\"";
+        return RedirectToPage("/Teams/Index");
+    }
+
+    /// <summary>The team, if the user owns it; members see the team page instead.</summary>
+    private async Task<IActionResult?> LoadAsync()
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return RedirectToPage("/Account/Login");
+        }
+        var team = await _workspace.GetTeamAsync(userId, Id);
+        if (!team.Succeeded || team.Data == null)
+        {
+            return NotFound();
+        }
+        if (!team.Data.IsOwner)
+        {
+            TempData["ToastError"] = "Only the owner can change the team's settings.";
+            return RedirectToPage("/Teams/Details", new { id = Id });
+        }
+        Team = team.Data;
+        return null;
+    }
+}
