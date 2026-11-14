@@ -1515,6 +1515,26 @@ img.dfh-avatar { object-fit: cover; }
 .dfh-banner--info > .bi { color: var(--dfh-info); }
 .dfh-banner--warning { background: oklch(0.80 0.12 80 / 0.10); border-bottom-color: oklch(0.80 0.12 80 / 0.35); }
 .dfh-banner--warning > .bi { color: var(--dfh-warning); }
+.dfh-banner--danger { background: var(--dfh-danger-tint); border-bottom-color: var(--dfh-danger-tint-border); }
+.dfh-banner--danger > .bi { color: var(--dfh-danger); }
+.dfh-banner--ai { background: var(--dfh-ai-tint); border-bottom-color: var(--dfh-ai-tint-border); }
+.dfh-banner--ai > .bi { color: var(--dfh-ai); }
+.dfh-banner[hidden] { display: none; }
+.dfh-banner .dfh-grow { flex: 1 1 auto; min-width: 0; }
+.dfh-banner-close {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--dfh-radius-xs);
+    background: transparent;
+    color: var(--dfh-text-muted);
+}
+.dfh-banner-close:hover { color: var(--dfh-text); background: var(--dfh-bg-hover); }
 
 /* Inline meter in a table (User limits) */
 .dfh-meter-track--inline { display: block; width: 100%; height: 6px; }
@@ -1779,3 +1799,44 @@ img.dfh-avatar { object-fit: cover; }
 .dfh-row-menu-btn:hover { background: var(--dfh-bg-hover); color: var(--dfh-text); }
 tr:hover .dfh-row-menu-btn, tr.is-selected .dfh-row-menu-btn, .dfh-row-menu-btn:focus-visible { visibility: visible; }
 @media (hover: none) { .dfh-row-menu-btn { visibility: visible; } }
+
+/* ==================== Sprint 15: AI states (7d) ==================== */
+.dfh-ai-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--dfh-bg-panel);
+    border: 1px solid var(--dfh-border);
+    border-radius: var(--dfh-radius);
+    font-size: 12.5px;
+    color: var(--dfh-text-2);
+}
+.dfh-ai-card[hidden] { display: none; }
+.dfh-ai-card p { margin: 0; line-height: 1.5; }
+.dfh-ai-card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--dfh-font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--dfh-ai);
+}
+.dfh-ai-card.is-failed .dfh-ai-card-head { color: var(--dfh-danger); }
+.dfh-ai-card.is-off .dfh-ai-card-head { color: var(--dfh-text-muted); }
+.dfh-ai-card-actions { display: flex; gap: 12px; font-size: 12px; }
+.dfh-ai-card-actions .dfh-link-btn:disabled { color: var(--dfh-text-muted); opacity: .6; }
+.dfh-ai-skel { display: block; height: 8px; border-radius: 2px; background: var(--dfh-ai-skeleton); }
+
+/* ==================== Sprint 15: text pages (Privacy) ==================== */
+.dfh-doc-page { max-width: 680px; padding: 32px 24px 48px; font-size: 14px; line-height: 1.6; color: var(--dfh-text-2); }
+.dfh-doc-page h1 { margin: 0 0 8px; }
+.dfh-doc-page h2 { margin: 24px 0 6px; font-size: 14px; font-weight: 600; color: var(--dfh-text); }
+.dfh-doc-page p, .dfh-doc-page ul { margin: 0 0 8px; }
+.dfh-doc-page ul { padding-left: 18px; }
+.dfh-doc-page li + li { margin-top: 4px; }
+.dfh-doc-page b { color: var(--dfh-text); font-weight: 500; }
+.dfh-doc-lead { color: var(--dfh-text-muted); }
+.dfh-doc-note { margin: 12px 0 4px; border: 1px solid var(--dfh-ai-tint-border); border-radius: var(--dfh-radius); }

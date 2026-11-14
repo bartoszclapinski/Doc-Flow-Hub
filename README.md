@@ -1,292 +1,139 @@
-# 📄 DocFlowHub
+# DocFlowHub
 
-**Enterprise Document Management Platform with AI Intelligence**
+**Document management with versions, teams and AI summaries — an ASP.NET Core portfolio project.**
 
 [![Build Status](https://github.com/bartoszclapinski/Doc-Flow-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/bartoszclapinski/Doc-Flow-Hub/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)](https://dotnet.microsoft.com/)
-[![Azure](https://img.shields.io/badge/Azure-Storage-blue.svg)](https://azure.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10-purple.svg)](https://dotnet.microsoft.com/)
 
-## 🚀 Overview
+**Live demo:** [docflowhub-demo.onrender.com](https://docflowhub-demo.onrender.com) — read-only. Sign in as
+`demo@docflowhub.com` or `demo-admin@docflowhub.com`, password `Demo123!`. The free server sleeps when
+idle, so the first visit can take a minute.
 
-DocFlowHub is a **comprehensive enterprise document management platform** designed for modern organizations requiring sophisticated document organization, team collaboration, and AI-powered insights. Built with cutting-edge technologies, it provides a scalable, secure, and intelligent solution for managing documents across large enterprises.
+![Documents: project tree, table and inspector](docs/screenshots/documents.png)
 
-### 🎯 **Key Differentiators**
-- **AI-Powered Intelligence**: Automatic document summarization and intelligent version comparison
-- **Enterprise-Grade User Management**: Advanced admin capabilities for 1000+ users with real-time analytics
-- **Hierarchical Organization**: Unlimited project and folder nesting with professional tree navigation
-- **Real-Time Collaboration**: Team-based sharing with granular permissions and live updates
-- **Professional Interface**: Azure Portal-inspired design with responsive, accessible UI
-- **Security-First Architecture**: Comprehensive threat detection and enterprise-grade security
+## What it does
 
----
+**Documents**
+- Upload files (PDF, Word, text, Markdown, images) with a title, description and categories.
+- Upload a new version of a document; older versions stay and can be downloaded or deleted.
+- Projects with nested folders; drag a folder onto another to move it.
+- Documents list with a project tree, filters (type, owner, category), sorting, paging, bulk move and
+  bulk delete with a per-document result.
 
-## ✨ Core Features
+**Teams**
+- Teams with Owner, Admin and Member roles. Share a document with a team and every member can open it,
+  edit its details and upload new versions; only the owner can move, unshare or delete it.
 
-### 🏗️ **Enterprise Document Organization**
+**AI**
+- A summary with key points for a document, and a comparison of two versions, from OpenAI or Anthropic
+  models (each user picks a default model).
+- Every AI request is logged (model, tokens, estimated cost, time). Each user has fixed limits of 1,000
+  requests a day and 100 an hour.
 
-#### **Hierarchical Project Structure**
-- **Multi-Level Projects**: Create project containers with unlimited folder nesting
-- **Visual Organization**: Professional tree navigation with drag-and-drop functionality
-- **Custom Branding**: Project colors, icons, and metadata for visual identification
-- **Team Integration**: Project-level sharing with role-based access control
+**Administration**
+- Users: search, status and role filters, bulk lock / unlock / assign role / delete, with your own
+  account protected.
+- Roles, AI usage per user today, analytics for 7 / 30 / 90 days (sign-ups, uploads, AI requests,
+  storage per user, recorded actions).
 
-#### **Intelligent Document Management**
-- **Complete Lifecycle**: Upload → Organize → Collaborate → Analyze → Archive
-- **Version Control**: Automatic versioning with detailed change tracking
-- **Bulk Operations**: Professional multi-select operations with progress tracking
-- **Smart Search**: Advanced filtering by content, metadata, teams, and organization
+**Interface**
+- A dense, IDE-like dark interface: title bar, icon rail, tool windows, editor tabs, inspector, status bar.
+- Command palette (`Ctrl K`) for documents, folders and actions; keyboard shortcuts (`?` lists them);
+  a right-click menu on document rows.
+- Responsive: the inspector becomes an overlay below 1024 px, the tree a drawer below 768 px, and phones
+  get a bottom navigation bar and a two-line document list.
 
-### 🤖 **AI-Powered Intelligence**
+| | |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Document with its AI summary](docs/screenshots/document-ai.png) |
+| ![Command palette](docs/screenshots/palette.png) | ![Admin analytics](docs/screenshots/admin-analytics.png) |
 
-#### **Document Analysis**
-- **Automatic Summarization**: AI-generated summaries on upload with confidence scoring
-- **Version Comparison**: Intelligent analysis of document changes and differences
-- **Content Insights**: Key points extraction and document classification
-- **Cost Optimization**: Smart API usage with caching and performance optimization
+<img src="docs/screenshots/mobile-documents.png" alt="Documents on a phone" width="260" />
 
-#### **Configurable AI Engine**
-- **Multiple Models**: GPT-4o, GPT-4o-mini, and future model support
-- **User Preferences**: Personalized AI settings and feature toggles
-- **Usage Analytics**: Comprehensive monitoring and cost tracking
-- **Enterprise Controls**: Admin-managed rate limits and usage policies
+## Not there yet
 
-### 👥 **Advanced Team Collaboration**
+Being clear about the gaps:
+- **System settings** (admin) and most **AI preferences** are saved but not read by the app yet; the pages
+  say so. The AI limits are fixed in code.
+- **No e-mail and no inbox**: e-mails are only written to the log, and messages an administrator sends
+  are saved but users have nowhere to read them.
+- **No file preview** (the page offers a download) and **no line-by-line diff**; version comparison is the
+  AI's description of the changes.
+- No invitations, notifications, comments or real-time updates.
 
-#### **Team Management**
-- **Flexible Teams**: Create teams with custom roles and permissions
-- **Invitation System**: Secure team member invitations with email workflows
-- **Activity Tracking**: Real-time team activity monitoring and notifications
-- **Hierarchical Access**: Project and folder-level team permissions
+## Tech stack
 
-#### **Collaboration Features**
-- **Document Sharing**: Granular sharing controls with team-based access
-- **Real-Time Updates**: Live collaboration with instant feedback
-- **Comment System**: Contextual discussions and review workflows
-- **Notification Engine**: Smart notifications for team activities
+- ASP.NET Core 10 Razor Pages, ASP.NET Core Identity
+- Entity Framework Core 10 with SQL Server, or SQLite (used by the demo)
+- File storage in Azure Blob Storage or a local folder
+- OpenAI and Anthropic SDKs for the AI features
+- Bootstrap 5 restyled with design tokens, plain JavaScript (no front-end framework), self-hosted
+  IBM Plex Sans and JetBrains Mono
+- xUnit unit tests (in-memory and SQLite), Playwright end-to-end tests
+- Docker image and GitHub Actions CI (build, tests, container smoke test)
 
-### 🔐 **Enterprise Security & Compliance**
+```
+src/
+  DocFlowHub.Core/            entities, DTOs, service interfaces
+  DocFlowHub.Infrastructure/  EF Core, migrations, storage, AI and other services
+  DocFlowHub.Web/             Razor Pages, view components, wwwroot (css/dfh, js/dfh)
+tests/
+  DocFlowHub.Tests/           xUnit
+  e2e/                        Playwright
+```
 
-#### **Advanced User Management**
-- **Scalable Administration**: Manage 1000+ users with enterprise-grade tools
-- **Advanced Search**: Multi-criteria user filtering with real-time results
-- **Bulk Operations**: Efficient user lifecycle management with progress tracking
-- **Activity Analytics**: Comprehensive user behavior analysis and reporting
+## Running it locally
 
-#### **Security Monitoring**
-- **Threat Detection**: Real-time security scoring and suspicious activity monitoring
-- **Device Management**: Device fingerprinting with trust level assessment
-- **Audit Trails**: Comprehensive logging for compliance and security analysis
-- **Access Controls**: Role-based permissions with granular security policies
+Requirements: .NET 10 SDK and SQL Server LocalDB (or use SQLite, below). AI keys are optional.
 
-#### **Compliance Ready**
-- **Data Protection**: GDPR-compliant data handling and user rights management
-- **Audit Logging**: Detailed activity logs for regulatory compliance
-- **Secure Storage**: Encrypted file storage with access control
-- **Privacy Controls**: User data management with transparency and control
-
-### 📊 **Real-Time Analytics & Insights**
-
-#### **System Analytics**
-- **Usage Metrics**: Comprehensive system utilization and performance monitoring
-- **User Engagement**: Detailed analytics on user behavior and feature adoption
-- **Growth Tracking**: Real-time statistics with trend analysis
-- **Performance Insights**: System optimization recommendations and bottleneck identification
-
-#### **Administrative Dashboard**
-- **Live Statistics**: Real-time user metrics with growth indicators
-- **Security Monitoring**: Active threat detection and security event tracking
-- **Resource Management**: Storage usage, AI consumption, and cost analysis
-- **System Health**: Performance monitoring with automated alerts
-
----
-
-## 🏗️ **Technical Architecture**
-
-### **Modern Technology Stack**
-- **Backend**: ASP.NET Core 9 with Clean Architecture principles
-- **Database**: SQL Server with Entity Framework Core and optimized indexing
-- **Storage**: Azure Blob Storage with secure access and CDN integration
-- **AI Integration**: OpenAI API with intelligent caching and cost optimization
-- **Frontend**: Responsive Razor Pages with Bootstrap 5 and custom components
-- **Authentication**: ASP.NET Core Identity with enhanced security patterns
-
-### **Scalability & Performance**
-- **Enterprise Scale**: Optimized for 1000+ concurrent users
-- **Efficient Queries**: Strategic indexing and query optimization
-- **Caching Strategy**: Multi-level caching for optimal performance
-- **Responsive Design**: Mobile-first approach with touch support
-
-### **Security Architecture**
-- **Defense in Depth**: Multiple security layers with comprehensive protection
-- **Data Encryption**: End-to-end encryption for data at rest and in transit
-- **Access Control**: Fine-grained permissions with role-based security
-- **Vulnerability Management**: Regular security assessments and updates
-
----
-
-## 🚀 **Getting Started**
-
-### **Prerequisites**
-- .NET 9 SDK
-- SQL Server (LocalDB or full instance)
-- Azure Storage Account
-- OpenAI API Key (for AI features)
-
-### **Quick Setup**
-
-1. **Clone Repository**
 ```bash
 git clone https://github.com/bartoszclapinski/Doc-Flow-Hub.git
 cd Doc-Flow-Hub
+dotnet run --project src/DocFlowHub.Web
 ```
 
-2. **Configure Application**
-   
-   Create `appsettings.Development.json`:
+The database is migrated on start and a default administrator, `admin@docflowhub.com`, is created
+(the initial password is in `DbInitializer.cs`; change it). Settings go in
+`src/DocFlowHub.Web/appsettings.Development.json` (git-ignored) or environment variables:
+
 ```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DocFlowHub;Trusted_Connection=True;MultipleActiveResultSets=true"
   },
-  "Storage": {
-       "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=your_account;AccountKey=your_key;EndpointSuffix=core.windows.net"
+  "DocumentStorage": {
+    "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net",
+    "ContainerName": "documents"
   },
-  "OpenAI": {
-       "ApiKey": "your_openai_api_key",
-    "Model": "gpt-4o-mini",
-    "Temperature": 0.7
-  }
+  "OpenAI": { "ApiKey": "..." },
+  "Anthropic": { "ApiKey": "..." }
 }
 ```
 
-3. **Setup Database**
+- Without Azure: `"DocumentStorage": { "Provider": "Local", "LocalPath": "C:/temp/docflowhub-files" }`.
+- Without SQL Server: `"Database": { "Provider": "Sqlite" }` and
+  `"ConnectionStrings": { "DefaultConnection": "Data Source=docflowhub.db" }`.
+- The demo with sample data: `"DemoMode": { "Enabled": true }` (seeds the data and makes the app read-only).
+
+## Tests
+
 ```bash
-dotnet ef database update --project src/DocFlowHub.Infrastructure --startup-project src/DocFlowHub.Web
+dotnet test tests/DocFlowHub.Tests --filter "Category!=LiveStorage"
+
+cd tests/e2e
+npm ci && npx playwright install chromium
+BASE_URL=http://localhost:5118 npx playwright test smoke.spec.ts
 ```
 
-4. **Launch Application**
-```bash
-dotnet run --project src/DocFlowHub.Web
-```
+`smoke.spec.ts` runs against the demo (CI runs it in the Docker image). The `*-actions.spec.ts` files
+change data and skip themselves on the demo: run them against an instance seeded with demo data and
+started with `DemoMode:Enabled=false`.
 
-### **Configuration Options**
+## Deployment
 
-#### **Azure Storage Setup**
-1. Create Azure Storage Account
-2. Generate access keys from Azure Portal
-3. Configure blob container for document storage
-4. Update connection string in application settings
+The public demo is one Docker container on Render (SQLite and local files, seeded on start), deployed
+from `master` after CI passes. See [docs/demo-deployment.md](docs/demo-deployment.md).
 
-#### **OpenAI Integration**
-1. Create OpenAI API account
-2. Generate API key with appropriate permissions
-3. Configure model preferences and rate limits
-4. Set up usage monitoring and cost controls
+## License
 
----
-
-## 📁 **Project Structure**
-
-```
-DocFlowHub/
-├── src/
-│   ├── DocFlowHub.Core/              # Domain logic and interfaces
-│   │   ├── Models/                   # Entity models and DTOs
-│   │   ├── Services/                 # Service interfaces
-│   │   └── Identity/                 # User management
-│   ├── DocFlowHub.Infrastructure/    # Data access and external services
-│   │   ├── Data/                     # EF Core configurations
-│   │   ├── Services/                 # Service implementations
-│   │   └── Migrations/               # Database migrations
-│   └── DocFlowHub.Web/              # Web application
-│       ├── Pages/                    # Razor Pages
-│       ├── wwwroot/                  # Static assets
-│       └── Services/                 # Web-specific services
-├── tests/
-│   └── DocFlowHub.Tests/            # Unit and integration tests
-└── docs/                            # Documentation and guides
-```
-
-### **Architecture Principles**
-- **Clean Architecture**: Separation of concerns with dependency inversion
-- **Domain-Driven Design**: Rich domain models with business logic encapsulation
-- **SOLID Principles**: Maintainable and extensible code structure
-- **Async/Await**: Non-blocking operations for optimal performance
-
----
-
-## 🔧 **Advanced Configuration**
-
-### **Performance Optimization**
-- **Caching Strategy**: Configure Redis for distributed caching
-- **Database Tuning**: Optimize indexes and query performance
-- **CDN Integration**: Azure CDN for static asset delivery
-- **Load Balancing**: Horizontal scaling configuration
-
-### **Security Hardening**
-- **SSL/TLS**: Configure HTTPS with proper certificates
-- **API Security**: Rate limiting and API key management
-- **Data Protection**: Configure encryption keys and secure storage
-- **Audit Logging**: Enhanced logging for security monitoring
-
-### **Enterprise Integration**
-- **Single Sign-On**: SAML/OAuth provider integration
-- **LDAP/AD**: Active Directory integration for user management
-- **API Access**: RESTful APIs for third-party integration
-- **Webhook Support**: Real-time notifications and event handling
-
----
-
-## 🧪 **Testing & Quality**
-
-### **Comprehensive Test Suite**
-- **Unit Tests**: Core business logic validation
-- **Integration Tests**: Database and external service testing
-- **End-to-End Tests**: Complete user workflow validation
-- **Performance Tests**: Load testing and scalability validation
-
-### **Quality Assurance**
-- **Code Coverage**: Comprehensive test coverage reporting
-- **Static Analysis**: Code quality and security scanning
-- **Automated Testing**: CI/CD pipeline with automated test execution
-- **Performance Monitoring**: Real-time application performance tracking
-
----
-
-## 🚀 **Deployment**
-
-### **Production Deployment**
-- **Azure App Service**: Scalable cloud hosting
-- **Docker Support**: Containerized deployment options
-- **Database Migration**: Safe production database updates
-- **Monitoring**: Application insights and performance tracking
-
-### **Public Demo**
-- **Read-only demo on Render (free)**: one self-contained Docker container (SQLite + local files, seeded on start), deployed from `master` after CI passes. See [docs/demo-deployment.md](docs/demo-deployment.md).
-
-### **CI/CD Pipeline**
-- **GitHub Actions**: Automated build and deployment
-- **Quality Gates**: Automated testing and quality checks
-- **Environment Management**: Staging and production environments
-- **Rollback Support**: Safe deployment with rollback capabilities
-
----
-
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
-
----
-
-## 🔗 **Links**
-
-- **Live Demo**: [docflowhub-demo.onrender.com](https://docflowhub-demo.onrender.com) — read-only; log in as `demo@docflowhub.com` or `demo-admin@docflowhub.com` (password `Demo123!`). The free server sleeps when idle, so the first visit can take a minute.
-- **Documentation**: [Full Documentation](https://docs.docflowhub.com) *(Coming Soon)*
-- **API Reference**: [API Documentation](https://api.docflowhub.com) *(Coming Soon)*
-- **Support**: [GitHub Issues](https://github.com/bartoszclapinski/Doc-Flow-Hub/issues)
-
----
-
-*Built with ❤️ for modern enterprises requiring sophisticated document management solutions.* 
+MIT.

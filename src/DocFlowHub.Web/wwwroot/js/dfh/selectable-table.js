@@ -99,9 +99,16 @@
         table.dfhSelect = select;
 
         const tbody = table.tBodies[0];
+        const phone = window.matchMedia('(max-width: 599.98px)');
         tbody.addEventListener('click', function (e) {
             if (e.target.closest('a, button, input, label')) return;
-            select(e.target.closest('tr'), false);
+            const row = e.target.closest('tr');
+            // Phones have no inspector: a tap opens the item (design 9a).
+            if (phone.matches && row && row.dataset.id && openUrl) { open(row); return; }
+            select(row, false);
+            // ≤1024px the inspector is an overlay: a row click opens it (design Responsive).
+            const P = window.DocFlowHub && window.DocFlowHub.panels;
+            if (P && P.isOverlay('inspector')) P.open('inspector');
         });
         tbody.addEventListener('dblclick', function (e) {
             if (e.target.closest('a, button, input, label')) return;

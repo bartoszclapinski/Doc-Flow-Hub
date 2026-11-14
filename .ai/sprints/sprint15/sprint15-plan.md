@@ -5,7 +5,7 @@ decisions and the sprint map. Design source: `DocFlowHub States.dc.html` (7d AI 
 7j context menu, 7k command palette) and `DocFlowHub Responsive.dc.html` (breakpoints, mobile 9a–9d)
 in `.ai/design/Doc-Flow-Hub redesign direction/design_handoff_docflowhub_ui/`.
 
-Status: **in progress** · Branch: `redesign/sprint15-interactions-responsive` → PR into `redesign/ide` (D1).
+Status: **done** (2026-11-14, see [`sprint15-log.md`](sprint15-log.md)) · Branch: `redesign/sprint15-interactions-responsive` → PR into `redesign/ide` (D1).
 Merging `redesign/ide` into `master` (which redeploys the demo) needs the user's separate approval.
 User decisions 2026-11-14: palette on a small JSON endpoint, the full responsive spec, an honest Privacy page (all as recommended).
 
@@ -38,24 +38,24 @@ User decisions 2026-11-14: palette on a small JSON endpoint, the full responsive
 ## Tasks
 
 ### 15.1 Palette and shortcuts
-- [ ] `Search` page with `Palette` JSON handler; `palette.js` (open/close, debounce 150ms, groups, highlight, ↑/↓, Enter, Ctrl+Enter, focus return, ARIA combobox/listbox).
-- [ ] Shortcut handler in `shell.js` + shortcut help dialog.
+- [x] `Search` page with `Palette` JSON handler; `palette.js` (open/close, debounce 150ms, groups, highlight, ↑/↓, Enter, Ctrl+Enter, focus return, ARIA combobox/listbox).
+- [x] Shortcut handler in `shell.js` + shortcut help dialog.
 
 ### 15.2 Context menu
-- [ ] `dfh-menu` component (`menu.js`: right click / ⋯, viewport clamping, arrow keys, Esc, outside click).
-- [ ] Documents rows: ⋯ button + menu items wired to existing handlers and dialogs.
+- [x] `dfh-menu` component (`menu.js`: right click / ⋯, viewport clamping, arrow keys, Esc, outside click).
+- [x] Documents rows: ⋯ button + menu items wired to existing handlers and dialogs.
 
 ### 15.3 States
-- [ ] AI card variants (generating / failed · limit / off) in Details and the inspector.
-- [ ] Banner variants; demo read-only banner.
+- [x] AI card variants (generating / failed · limit / off) in Details and the inspector.
+- [x] Banner variants; demo read-only banner.
 
 ### 15.4 Responsive
-- [ ] `dfh/responsive.css`; inspector overlay, tool-window drawer, bottom nav, two-line list, mobile details.
-- [ ] Screenshots at 1440 / 1024 / 768 / 390.
+- [x] `dfh/responsive.css`; inspector overlay, tool-window drawer, bottom nav, two-line list, mobile details.
+- [x] Screenshots at 1440 / 1024 / 768 / 390.
 
 ### 15.5 Cleanup and docs
-- [ ] Delete legacy CSS; Privacy page.
-- [ ] README, `.ai` docs, memory.
+- [x] Delete legacy CSS; Privacy page.
+- [x] README, `.ai` docs, memory.
 
 ### 15.6 Verification
-- [ ] Build, unit tests; smoke tests for palette, shortcuts, context menu, responsive overlays; write specs; crawler on a fresh demo DB; full screenshot pass.
+- [x] Build, unit tests; smoke tests for palette, shortcuts, context menu, responsive overlays; write specs; crawler on a fresh demo DB; full screenshot pass.

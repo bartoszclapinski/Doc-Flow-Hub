@@ -67,11 +67,11 @@ test('demo: a blocked form post shows the read-only toast', async ({ page }) => 
   await expect(page.locator('.dfh-toast')).toContainText('read-only');
 });
 
-test('Ctrl K focuses the global search', async ({ page }) => {
+test('Ctrl K opens the command palette with the search box focused', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents');
   await page.keyboard.press('Control+k');
-  await expect(page.locator('#dfh-global-search')).toBeFocused();
+  await expect(page.locator('#dfh-palette-q')).toBeFocused();
 });
 
 // Sprint 10: sign in, dashboard, admin overview.
@@ -392,4 +392,11 @@ test('documents: right click and ⋯ open the row menu; demo disables changes', 
   await expect(menu).toBeVisible();
   await menu.locator('.dropdown-item', { hasText: 'Open' }).click();
   await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+});
+
+test('privacy page describes what the app stores, signed in or not', async ({ page }) => {
+  await page.goto('/Privacy');
+  await expect(page.locator('h1')).toHaveText('Privacy');
+  await expect(page.locator('.dfh-doc-page')).toContainText('salted hash');
+  await expect(page.locator('body')).not.toContainText('Use this page to detail');
 });

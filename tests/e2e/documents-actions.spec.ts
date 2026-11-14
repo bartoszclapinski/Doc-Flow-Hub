@@ -143,3 +143,26 @@ test('row shortcuts: Del opens delete, M opens move; the row menu deletes', asyn
   await expect(page.locator('.dfh-toast')).toContainText(`Deleted "${title}"`);
   await expect(page.locator(`tbody tr[data-id="${id}"]`)).toHaveCount(0);
 });
+
+test('AI card says "off" when summaries are turned off in Settings · AI', async ({ page }) => {
+  const toggle = async (on: boolean) => {
+    await page.goto('/Settings/AI');
+    const box = page.locator('input[name="Input.SummarizationEnabled"][type="checkbox"]');
+    if ((await box.isChecked()) === on) return;
+    await box.setChecked(on);
+    await page.locator('.dfh-form-footer button.btn-primary').click();
+    await expect(page.locator('.dfh-toast')).toContainText('AI settings saved');
+  };
+  await page.goto('/Documents');
+  const row = page.locator('tbody tr[data-ai="0"]').first();
+  test.skip((await row.count()) === 0, 'every document has a summary');
+  const id = await row.getAttribute('data-id');
+  await toggle(false);
+  try {
+    await page.goto(`/Documents/Details/${id}?tab=ai`);
+    await expect(page.locator('.dfh-ai-card.is-off')).toContainText('Summaries are turned off');
+    await expect(page.locator('form[data-dfh-ai-generate] button')).toHaveText(/Summarize this document/);
+  } finally {
+    await toggle(true);
+  }
+});

@@ -8,7 +8,7 @@ body.dfh-shell {
     height: 100vh;
     overflow: hidden;
     display: grid;
-    grid-template-rows: var(--dfh-titlebar-h) minmax(0, 1fr) var(--dfh-statusbar-h);
+    grid-template-rows: var(--dfh-titlebar-h) auto minmax(0, 1fr) var(--dfh-statusbar-h);
 }
 
 .dfh-workbench {

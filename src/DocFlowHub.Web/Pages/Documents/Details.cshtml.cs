@@ -24,6 +24,7 @@ public class DetailsModel : PageModel
     private readonly IDocumentService _documentService;
     private readonly IDocumentSummaryService _summaryService;
     private readonly IAISettingsService _aiSettings;
+    private readonly IAIUsageTrackingService _aiUsage;
     private readonly ITeamService _teamService;
     private readonly IDemoModeService _demoMode;
     private readonly ILogger<DetailsModel> _logger;
@@ -33,6 +34,7 @@ public class DetailsModel : PageModel
         IDocumentService documentService,
         IDocumentSummaryService summaryService,
         IAISettingsService aiSettings,
+        IAIUsageTrackingService aiUsage,
         ITeamService teamService,
         IDemoModeService demoMode,
         ILogger<DetailsModel> logger)
@@ -41,6 +43,7 @@ public class DetailsModel : PageModel
         _documentService = documentService;
         _summaryService = summaryService;
         _aiSettings = aiSettings;
+        _aiUsage = aiUsage;
         _teamService = teamService;
         _demoMode = demoMode;
         _logger = logger;
@@ -65,6 +68,15 @@ public class DetailsModel : PageModel
     public bool CanManage => Doc.IsOwner && !IsDemo;
 
     public string ActiveTab => Tabs.Contains(Tab) ? Tab! : "info";
+
+    /// <summary>"Summaries" switch in Settings · AI (it only hides the AI option when uploading).</summary>
+    public bool SummariesOn { get; private set; } = true;
+
+    /// <summary>Today's AI requests and the fixed limits (design 7d "failed · limit").</summary>
+    public UserRateLimits? Limits { get; private set; }
+
+    public bool LimitReached => Limits != null &&
+        (Limits.CurrentDailyOperations >= Limits.DailyOperationLimit || Limits.CurrentHourlyOperations >= Limits.HourlyOperationLimit);
     public string DemoTip => "Read-only demo — changes are disabled";
     public string OwnerTip => IsDemo ? DemoTip : "Only the owner can do this";
 
@@ -92,6 +104,22 @@ public class DetailsModel : PageModel
 
             var teams = await _teamService.GetUserTeamsAsync(userId, new TeamFilter { PageSize = 100 });
             if (teams.Succeeded && teams.Data != null) Teams = teams.Data.Items.OrderBy(t => t.Name).ToList();
+        }
+
+        if (Doc.Summary == null)
+        {
+            // Only needed for the "no summary yet" card; a failure leaves the plain card.
+            try
+            {
+                var settings = await _aiSettings.GetUserSettingsAsync(userId);
+                if (settings.Succeeded && settings.Data != null) SummariesOn = settings.Data.SummarizationEnabled;
+                var limits = await _aiUsage.GetUserRateLimitsAsync(userId);
+                if (limits.Succeeded) Limits = limits.Data;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not load the AI state of document {DocumentId}", Id);
+            }
         }
 
         ViewData["StatusPath"] = string.Join(" / ",
@@ -205,6 +233,12 @@ public class DetailsModel : PageModel
         if (details.Data.Summary != null)
         {
             return Back("ai");
+        }
+
+        // The daily and hourly limits were only counted before; a manual summary now respects them.
+        if (!await _aiUsage.CheckRateLimitsAsync(userId, "Summary"))
+        {
+            return Back("ai", error: "Your AI limit is reached. It resets at midnight UTC (hourly limit: at the top of the hour).");
         }
 
         var settings = await _aiSettings.GetUserSettingsAsync(userId);

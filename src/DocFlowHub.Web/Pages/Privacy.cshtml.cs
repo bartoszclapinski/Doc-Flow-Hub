@@ -1,19 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace DocFlowHub.Web.Pages;
 
+/// <summary>What the app stores and where data goes (S15-7). Open to everyone.</summary>
 public class PrivacyModel : PageModel
 {
-    private readonly ILogger<PrivacyModel> _logger;
-
-    public PrivacyModel(ILogger<PrivacyModel> logger)
-    {
-        _logger = logger;
-    }
-
     public void OnGet()
     {
     }
 }
-

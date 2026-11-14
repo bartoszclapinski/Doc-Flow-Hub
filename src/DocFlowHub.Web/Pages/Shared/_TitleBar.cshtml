@@ -35,6 +35,13 @@
     }
 }
 <header class="dfh-titlebar">
+    @if (signedIn)
+    {
+        @* ≤768px: the page's tool window (tree, admin nav, settings) becomes a drawer (S15-6). *@
+        <button type="button" class="dfh-titlebar-btn" data-dfh-panel-toggle="toolwindow" aria-expanded="false" aria-label="Show the side panel" hidden>
+            <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+    }
     <a class="dfh-brand" asp-area="" asp-page="/Index" aria-label="DocFlowHub home">
         <partial name="_LogoMark" model="22" />
         <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
@@ -56,15 +63,23 @@
             </form>
         </div>
 
+        <button type="button" class="dfh-titlebar-btn dfh-titlebar-btn--search" data-dfh-open-palette aria-label="Search documents and folders">
+            <i class="bi bi-search" aria-hidden="true"></i>
+        </button>
+        @* ≤1024px: the page's inspector becomes an overlay. *@
+        <button type="button" class="dfh-titlebar-btn" data-dfh-panel-toggle="inspector" aria-expanded="false" aria-label="Show the details panel" hidden>
+            <i class="bi bi-layout-sidebar-inset-reverse" aria-hidden="true"></i>
+        </button>
+
         @if (DemoMode.IsEnabled)
         {
-            <span class="d-inline-block" tabindex="0" title="Read-only demo — uploads are disabled">
+            <span class="d-inline-block dfh-titlebar-upload" tabindex="0" title="Read-only demo — uploads are disabled">
                 <button type="button" class="btn btn-primary dfh-btn-26" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
             </span>
         }
         else
         {
-            <a class="btn btn-primary dfh-btn-26" asp-area="" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
+            <a class="btn btn-primary dfh-btn-26 dfh-titlebar-upload" asp-area="" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
         }
 
         <div class="dropdown">

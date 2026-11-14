@@ -6,7 +6,6 @@
     var actions = new List<(string Action, string Icon, string Label, bool Danger)>();
     if (row?.IsLocked == true) actions.Add(("unlock", "bi-unlock", "Unlock", false)); else actions.Add(("lock", "bi-lock", "Lock (block sign-in)", true));
     if (row?.EmailConfirmed == false) actions.Add(("confirm-email", "bi-patch-check", "Mark e-mail as confirmed", false));
-    actions.Add(("reset-password", "bi-key", "Send password reset", false));
 }
 @foreach (var (action, icon, label, danger) in actions)
 {
