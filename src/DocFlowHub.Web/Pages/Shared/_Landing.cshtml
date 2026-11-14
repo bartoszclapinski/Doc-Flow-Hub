@@ -1,0 +1,367 @@
+@inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
+@using DocFlowHub.Core.Constants
+@*
+    Public landing page at "/" for signed-out visitors (handoff "DocFlowHub Landing", Sprint 16).
+    A full HTML document returned by IndexModel as a partial, so it has no app chrome. The copy follows
+    the mock but only claims what the app does (fact check in .ai/sprints/sprint16/sprint16-plan.md).
+    Demo mode decides the calls to action: "Try the demo" (sign in with the demo account pre-filled)
+    or "Create account" / "Sign in" on a self-hosted install.
+*@
+@{
+    const string GitHub = "https://github.com/bartoszclapinski/Doc-Flow-Hub";
+    var demo = DemoMode.IsEnabled;
+    var demoUrl = Url.Page("/Account/Login", new { area = "", demo = 1 }) ?? "/Account/Login?demo=1";
+    var loginUrl = Url.Page("/Account/Login", new { area = "" }) ?? "/Account/Login";
+    var registerUrl = Url.Page("/Account/Register", new { area = "" }) ?? "/Account/Register";
+    var privacyUrl = Url.Page("/Privacy", new { area = "" }) ?? "/Privacy";
+
+    var history = new[]
+    {
+        (Ver: "v4", Message: "Updated revenue tables for September", Meta: "Anna Kowalska · 3f9a2c1", Time: "2h ago"),
+        (Ver: "v3", Message: "Fixed totals in the appendix", Meta: "Marta Nowak · 0e1b7d2", Time: "3d ago"),
+        (Ver: "v2", Message: "Reformatted tables", Meta: "Anna Kowalska · 9c41a03", Time: "1w ago"),
+        (Ver: "v1", Message: "Initial upload", Meta: "Anna Kowalska · 52d8e7f", Time: "3w ago"),
+    };
+
+    // Team permissions as the services enforce them (TeamService, DocumentService).
+    var perms = new[]
+    {
+        (Label: "Open and download shared documents", Cells: new[] { true, true, true }),
+        (Label: "Edit details, upload new versions", Cells: new[] { true, true, true }),
+        (Label: "Add and remove members", Cells: new[] { true, true, false }),
+        (Label: "Change member roles", Cells: new[] { true, true, false }),
+        (Label: "Rename or delete the team", Cells: new[] { true, false, false }),
+    };
+
+    var keys = new[]
+    {
+        (Label: "Command palette", Key: "Ctrl K"), (Label: "Search", Key: "/"),
+        (Label: "Upload", Key: "U"), (Label: "Move", Key: "M"),
+        (Label: "Edit details", Key: "F2"), (Label: "All shortcuts", Key: "?"),
+    };
+
+    var arch = new[]
+    {
+        (Icon: "bi-hdd-stack", Title: "Files outside the database", Text: "Every version of every document is a file in Azure Blob Storage or a local folder. The database keeps the metadata.", Mono: "Azure.Storage.Blobs"),
+        (Icon: "bi-database", Title: "Metadata in EF Core", Text: "Projects, folders, versions, teams and AI usage in SQL Server or SQLite. Migrations run on start.", Mono: "EF Core 10"),
+        (Icon: "bi-stars", Title: "AI behind one interface", Text: "A router sends requests to OpenAI or Anthropic and logs each one with its model, tokens and estimated cost.", Mono: "OpenAI · Anthropic"),
+        (Icon: "bi-shield-lock", Title: "Roles at two levels", Text: "System roles for administrators, team roles for everyone else. Access checks run on the server.", Mono: "ASP.NET Core Identity"),
+        (Icon: "bi-speedometer2", Title: "Admin panel", Text: "User management with bulk actions, AI usage per user, and analytics for 7, 30 or 90 days.", Mono: "users · analytics"),
+        (Icon: "bi-layout-text-window", Title: "Server-rendered UI", Text: "Razor Pages, Bootstrap 5 restyled with design tokens, and plain JavaScript. No front-end build step.", Mono: "Razor Pages · Bootstrap 5"),
+    };
+
+    // Real milestones from the git history (no release tags exist yet).
+    var releases = new[]
+    {
+        (Date: "Nov 2026", Title: "New interface", Text: "Dark, IDE-style layout with a command palette, keyboard shortcuts, a row menu and layouts for tablets and phones."),
+        (Date: "Nov 2026", Title: "Public demo", Text: "A read-only demo on SQLite with seeded projects, documents, versions and AI summaries."),
+        (Date: "Jul 2026", Title: "Anthropic models and text extraction", Text: "Claude models next to OpenAI, real PDF and Word text extraction for the AI, and a read-only demo mode."),
+        (Date: "Jul 2025", Title: "Admin panel", Text: "User management with bulk actions, AI usage tracking and analytics."),
+    };
+}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocFlowHub – version control for documents</title>
+    <meta name="description" content="Open-source document management with version history, team workspaces and AI summaries. ASP.NET Core 10." />
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/dfh/fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dfh/landing.css" asp-append-version="true" />
+</head>
+<body class="dfh-landing">
+    <a class="dfh-skip" href="#main">Skip to content</a>
+
+    <header class="dfh-lp-nav">
+        <div class="dfh-lp-wrap dfh-lp-nav-inner">
+            <a class="dfh-lp-brand" href="#top" aria-label="DocFlowHub, back to top">
+                <partial name="_LogoMark" model="24" />
+                <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
+            </a>
+            <nav class="dfh-lp-anchors" aria-label="Sections">
+                <a href="#versions">Versioning</a>
+                <a href="#ai">AI</a>
+                <a href="#teams">Teams</a>
+                <a href="#stack">Architecture</a>
+                <a href="#changelog">Changelog</a>
+            </nav>
+            <span class="dfh-lp-spacer"></span>
+            <a class="dfh-lp-navlink dfh-lp-hide-sm" href="@GitHub" rel="noopener"><i class="bi bi-github" aria-hidden="true"></i>GitHub</a>
+            <a class="dfh-lp-navlink" href="@loginUrl">Sign in</a>
+            @if (demo)
+            {
+                <a class="dfh-lp-btn dfh-lp-btn--primary dfh-lp-btn--sm" href="@demoUrl">Try the demo</a>
+            }
+            else
+            {
+                <a class="dfh-lp-btn dfh-lp-btn--primary dfh-lp-btn--sm" href="@registerUrl">Create account</a>
+            }
+        </div>
+    </header>
+
+    <main id="main">
+        @* Hero *@
+        <section id="top" class="dfh-lp-wrap dfh-lp-hero" aria-labelledby="lp-title">
+            <div class="dfh-lp-pills">
+                <span class="dfh-lp-pill"><span class="dfh-lp-dot" aria-hidden="true"></span>new interface · Nov 2026</span>
+                <span>open source · ASP.NET Core 10 · Azure</span>
+            </div>
+            <h1 id="lp-title">Version control for documents your whole team can read.</h1>
+            <p class="dfh-lp-lead">
+                Upload PDFs, Word files and notes. Every new upload of a document is kept as a version,
+                AI writes a short summary, and any two versions can be compared.
+            </p>
+            <div class="dfh-lp-ctas">
+                @if (demo)
+                {
+                    <a class="dfh-lp-btn dfh-lp-btn--primary" href="@demoUrl">Try the demo<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                }
+                else
+                {
+                    <a class="dfh-lp-btn dfh-lp-btn--primary" href="@registerUrl">Create account<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                }
+                <a class="dfh-lp-btn dfh-lp-btn--secondary" href="@GitHub" rel="noopener"><i class="bi bi-github" aria-hidden="true"></i>View on GitHub</a>
+                @if (demo)
+                {
+                    <span class="dfh-lp-mono-note">no sign-up · read-only demo account</span>
+                }
+            </div>
+            <figure class="dfh-lp-shot">
+                <img src="~/img/landing/documents.jpg" asp-append-version="true" width="1200" height="740"
+                     alt="The DocFlowHub documents view: project tree, document table and an inspector with the selected document's details" />
+            </figure>
+        </section>
+
+        @* Built on *@
+        <div class="dfh-lp-wrap">
+            <p class="dfh-lp-builton">
+                <span class="dfh-lp-builton-label">built on</span>
+                <span>ASP.NET Core 10</span><span>EF Core 10</span><span>SQL Server · SQLite</span>
+                <span>Azure Blob Storage</span><span>OpenAI · Anthropic</span><span>Bootstrap 5</span>
+            </p>
+        </div>
+
+        @* 01 Versioning *@
+        <section id="versions" class="dfh-lp-wrap dfh-lp-section dfh-lp-split" aria-labelledby="lp-versions">
+            <div class="dfh-lp-copy">
+                <span class="dfh-lp-eyebrow">01 · versioning</span>
+                <h2 id="lp-versions">Upload a new version. Keep every old one.</h2>
+                <p>
+                    Each document keeps its full history. Upload the next version from the document page or
+                    the row menu, and every earlier one stays one click away. No “final_v3_FINAL.pdf”.
+                </p>
+                <ul class="dfh-lp-checks">
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>History with author, date and a short file hash</li>
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>Compare any two versions, with an AI description of the changes</li>
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>Download any earlier version, or delete the ones you no longer need</li>
+                </ul>
+            </div>
+            <div class="dfh-lp-card" role="img" aria-label="Example: version history of a PDF with four versions and an AI comparison of the last two">
+                <div class="dfh-lp-card-head">
+                    <span class="dfh-lp-ft dfh-lp-ft--pdf">PDF</span>q3-financial-report.pdf
+                    <span class="dfh-lp-spacer"></span><span class="dfh-lp-meta">4 versions</span>
+                </div>
+                <ol class="dfh-lp-history">
+                    @for (var i = 0; i < history.Length; i++)
+                    {
+                        var h = history[i];
+                        <li class="@(i == 0 ? "is-current" : "")">
+                            <span class="dfh-lp-node" aria-hidden="true"></span>
+                            <b class="dfh-lp-ver">@h.Ver</b>
+                            <span class="dfh-lp-history-text"><span>@h.Message</span><span class="dfh-lp-meta">@h.Meta</span></span>
+                            <span class="dfh-lp-time">@h.Time</span>
+                        </li>
+                    }
+                </ol>
+                <div class="dfh-lp-compare">
+                    <span class="dfh-lp-ai-label"><i class="bi bi-stars" aria-hidden="true"></i>AI COMPARISON · v3 → v4</span>
+                    <p>September estimates are replaced with actuals. Q3 revenue is revised up and a regional appendix is added.</p>
+                    <ul>
+                        <li><span>Q3 revenue revised up</span><span class="dfh-lp-meta">3.93M → 4.10M</span></li>
+                        <li><span>September actuals replace the estimate</span><span class="dfh-lp-meta">1.33M → 1.50M</span></li>
+                        <li><span>Appendix B added</span><span class="dfh-lp-meta">regional breakdown</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        @* 02 AI *@
+        <section id="ai" class="dfh-lp-wrap dfh-lp-section dfh-lp-split dfh-lp-split--reverse" aria-labelledby="lp-ai">
+            <div class="dfh-lp-copy">
+                <span class="dfh-lp-eyebrow dfh-lp-eyebrow--ai">02 · ai</span>
+                <h2 id="lp-ai">Know what a document says before you open it.</h2>
+                <p>
+                    Ask for a summary with key points when you upload, or later from the document page.
+                    Comparing two versions gives a plain-language list of what changed.
+                </p>
+                <ul class="dfh-lp-checks">
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>The summary is written after the upload is saved, so uploads never wait for AI</li>
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>OpenAI or Anthropic models; each user picks a default</li>
+                    <li><i class="bi bi-check2" aria-hidden="true"></i>Per-user limits: 1,000 requests a day, 100 an hour</li>
+                </ul>
+            </div>
+            <div class="dfh-lp-card" role="img" aria-label="Example: an AI summary of a contract with three key points">
+                <div class="dfh-lp-ai-block">
+                    <span class="dfh-lp-ai-label"><i class="bi bi-stars" aria-hidden="true"></i>AI SUMMARY<span class="dfh-lp-spacer"></span><span class="dfh-lp-meta">generated after upload</span></span>
+                    <p class="dfh-lp-ai-summary">36-month enterprise agreement with committed spend tiers. Termination requires 90 days’ notice; data residency is set to EU West.</p>
+                </div>
+                <div class="dfh-lp-ai-block">
+                    <span class="dfh-lp-meta">KEY POINTS</span>
+                    <ul class="dfh-lp-dashes">
+                        <li>Committed spend: 3 tiers, reviewed yearly</li>
+                        <li>Notice period: 90 days</li>
+                        <li>Data residency: EU West</li>
+                    </ul>
+                </div>
+                <div class="dfh-lp-ai-foot dfh-lp-meta">
+                    <span>claude-haiku-4-5</span><span>or gpt-4o-mini</span><span>model, tokens and cost logged</span>
+                </div>
+            </div>
+        </section>
+
+        @* 03 Teams + keyboard *@
+        <section id="teams" class="dfh-lp-wrap dfh-lp-section" aria-labelledby="lp-teams">
+            <div class="dfh-lp-copy dfh-lp-copy--head">
+                <span class="dfh-lp-eyebrow">03 · teams</span>
+                <h2 id="lp-teams">Shared workspaces with clear permissions. Fast to navigate.</h2>
+            </div>
+            <div class="dfh-lp-grid dfh-lp-grid--2">
+                <div class="dfh-lp-card dfh-lp-card--flex">
+                    <div class="dfh-lp-card-intro">
+                        <h3>Three roles per team</h3>
+                        <p>Owners run the team, admins manage its members, members work on shared documents. Documents you don’t share stay private.</p>
+                    </div>
+                    <table class="dfh-lp-perms">
+                        <caption class="visually-hidden">What each team role can do</caption>
+                        <thead><tr><th scope="col"><span class="visually-hidden">Action</span></th><th scope="col">Owner</th><th scope="col">Admin</th><th scope="col">Member</th></tr></thead>
+                        <tbody>
+                            @foreach (var p in perms)
+                            {
+                                <tr>
+                                    <th scope="row">@p.Label</th>
+                                    @foreach (var allowed in p.Cells)
+                                    {
+                                        <td class="@(allowed ? "is-yes" : "is-no")">
+                                            <i class="bi @(allowed ? "bi-check-lg" : "bi-dash")" aria-hidden="true"></i>
+                                            <span class="visually-hidden">@(allowed ? "yes" : "no")</span>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="dfh-lp-card dfh-lp-card--flex">
+                    <div class="dfh-lp-card-intro">
+                        <h3>Keyboard first</h3>
+                        <p>One search box for documents, folders and actions. Common actions have a shortcut.</p>
+                    </div>
+                    <div class="dfh-lp-palette" role="img" aria-label="Example: the command palette searching for q3 rep">
+                        <div class="dfh-lp-palette-input"><i class="bi bi-search" aria-hidden="true"></i><span>q3 rep</span><span class="dfh-lp-spacer"></span><kbd class="dfh-kbd">Ctrl K</kbd></div>
+                        <div class="dfh-lp-palette-row is-active"><span class="dfh-lp-ft dfh-lp-ft--pdf">PDF</span><span>Q3 Financial Report</span></div>
+                        <div class="dfh-lp-palette-row"><i class="bi bi-folder2" aria-hidden="true"></i><span>Finance / reports</span></div>
+                        <div class="dfh-lp-palette-row"><i class="bi bi-upload" aria-hidden="true"></i><span>Upload a document</span></div>
+                    </div>
+                    <dl class="dfh-lp-keys">
+                        @foreach (var k in keys)
+                        {
+                            <div><dt>@k.Label</dt><dd><kbd class="dfh-kbd">@k.Key</kbd></dd></div>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </section>
+
+        @* 04 Architecture *@
+        <section id="stack" class="dfh-lp-wrap dfh-lp-section" aria-labelledby="lp-stack">
+            <div class="dfh-lp-copy dfh-lp-copy--head">
+                <span class="dfh-lp-eyebrow">04 · architecture</span>
+                <h2 id="lp-stack">Boring, proven parts. Run it yourself.</h2>
+                <p>A standard .NET stack you can read in an afternoon. SQL Server or SQLite for data, Azure Blob Storage or a local folder for files.</p>
+            </div>
+            <ul class="dfh-lp-arch">
+                @foreach (var a in arch)
+                {
+                    <li>
+                        <i class="bi @a.Icon" aria-hidden="true"></i>
+                        <h3>@a.Title</h3>
+                        <p>@a.Text</p>
+                        <span class="dfh-lp-meta">@a.Mono</span>
+                    </li>
+                }
+            </ul>
+            <div class="dfh-lp-card">
+                <div class="dfh-lp-card-head dfh-lp-meta"><i class="bi bi-terminal" aria-hidden="true"></i>run locally · .NET 10 SDK</div>
+<pre class="dfh-lp-terminal"><code>$ git clone @(GitHub).git
+$ cd Doc-Flow-Hub
+$ dotnet run --project src/DocFlowHub.Web
+<span class="dfh-lp-comment"># the database is migrated on start; settings and AI keys are in the README</span></code></pre>
+            </div>
+        </section>
+
+        @* 05 Changelog *@
+        <section id="changelog" class="dfh-lp-wrap dfh-lp-section dfh-lp-changelog" aria-labelledby="lp-changelog">
+            <div class="dfh-lp-copy">
+                <span class="dfh-lp-eyebrow">05 · changelog</span>
+                <h2 id="lp-changelog">Shipping in the open.</h2>
+                <a href="@(GitHub)/commits/master" rel="noopener">Full history on GitHub <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            </div>
+            <ol class="dfh-lp-releases">
+                @foreach (var r in releases)
+                {
+                    <li>
+                        <span class="dfh-lp-release-date">@r.Date</span>
+                        <span class="dfh-lp-release-text"><b>@r.Title</b><span>@r.Text</span></span>
+                    </li>
+                }
+            </ol>
+        </section>
+
+        @* Final call to action *@
+        <section class="dfh-lp-wrap dfh-lp-final" aria-labelledby="lp-final">
+            <div class="dfh-lp-final-card">
+                @if (demo)
+                {
+                    <div class="dfh-lp-copy">
+                        <h2 id="lp-final">Open the demo. Upload nothing, see everything.</h2>
+                        <p>A read-only workspace with seeded documents, versions and AI summaries.</p>
+                    </div>
+                    <div class="dfh-lp-final-actions">
+                        <a class="dfh-lp-btn dfh-lp-btn--primary" href="@demoUrl">Try the demo<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                        <span class="dfh-lp-mono-note">@DemoAccounts.UserEmail · @DemoAccounts.Password</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="dfh-lp-copy">
+                        <h2 id="lp-final">Start with your own documents.</h2>
+                        <p>Create an account on this server, or run your own copy from the source.</p>
+                    </div>
+                    <div class="dfh-lp-final-actions dfh-lp-final-actions--row">
+                        <a class="dfh-lp-btn dfh-lp-btn--primary" href="@registerUrl">Create account<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                        <a class="dfh-lp-btn dfh-lp-btn--secondary" href="@loginUrl">Sign in</a>
+                    </div>
+                }
+            </div>
+        </section>
+    </main>
+
+    <footer class="dfh-lp-wrap dfh-lp-footer">
+        <span class="dfh-lp-brand dfh-lp-brand--small">
+            <partial name="_LogoMark" model="18" />
+            <span class="dfh-wordmark"><b>DocFlow</b><span>Hub</span></span>
+        </span>
+        <span class="dfh-lp-meta">@Dfh.AppVersion · MIT</span>
+        <span class="dfh-lp-spacer"></span>
+        <a href="@GitHub" rel="noopener">GitHub</a>
+        <a href="#changelog">Changelog</a>
+        <a href="@privacyUrl">Privacy</a>
+        <a href="@loginUrl">Sign in</a>
+    </footer>
+</body>
+</html>

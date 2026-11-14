@@ -9,7 +9,8 @@ namespace DocFlowHub.Web.Pages;
 
 /// <summary>
 /// Dashboard (design 3a) for every signed-in user, administrators included; the system-wide view
-/// lives at /Admin. Signed-out visitors go straight to Sign in (the marketing page is gone).
+/// lives at /Admin. Signed-out visitors get the public landing page (Pages/Shared/_Landing.cshtml,
+/// Sprint 16), a standalone document without the app chrome.
 /// </summary>
 public class IndexModel : PageModel
 {
@@ -38,7 +39,7 @@ public class IndexModel : PageModel
         var userId = User.Identity?.IsAuthenticated == true ? User.GetUserId() : null;
         if (string.IsNullOrEmpty(userId))
         {
-            return RedirectToPage("/Account/Login");
+            return Partial("_Landing");
         }
 
         SelectedPeriod = DashboardPeriods.Parse(Period);

@@ -74,10 +74,50 @@ test('Ctrl K opens the command palette with the search box focused', async ({ pa
   await expect(page.locator('#dfh-palette-q')).toBeFocused();
 });
 
-// Sprint 10: sign in, dashboard, admin overview.
-test('signed out: / goes straight to Sign in', async ({ page }) => {
+// Sprint 16: signed-out / is the public landing page (Sprint 10 sent it straight to Sign in).
+test('signed out: / is the landing page with working calls to action', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveURL(/\/Account\/Login/);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Version control for documents your whole team can read.');
+  await expect(page.locator('.dfh-titlebar')).toHaveCount(0);
+  for (const id of ['versions', 'ai', 'teams', 'stack', 'changelog']) {
+    await expect(page.locator(`section#${id} h2`)).toBeVisible();
+  }
+  // The hero screenshot is a real image that loaded.
+  const hero = page.locator('.dfh-lp-shot img');
+  await hero.scrollIntoViewIfNeeded();
+  await expect.poll(() => hero.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('.dfh-lp-footer')).toContainText('MIT');
+
+  const demo = page.locator('.dfh-lp-hero a', { hasText: 'Try the demo' });
+  if (await demo.count()) {
+    // Demo: the call to action signs in with the demo account pre-filled.
+    await demo.click();
+    await expect(page).toHaveURL(/\/Account\/Login\?demo=1/);
+    await expect(page.locator('#Input_Email')).toHaveValue(DEMO_USER.email);
+  } else {
+    await page.locator('.dfh-lp-hero a', { hasText: 'Create account' }).click();
+    await expect(page).toHaveURL(/\/Account\/Register/);
+  }
+});
+
+test('landing: anchors scroll to their sections and phones get no sideways scroll', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.dfh-lp-anchors a[href="#stack"]').click();
+  await expect(page).toHaveURL(/#stack$/);
+  await expect(page.locator('#stack h2')).toBeInViewport();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('.dfh-lp-anchors')).toBeHidden();
+  await expect(page.locator('.dfh-lp-nav').getByRole('link', { name: 'Sign in' })).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('signed out: Sign in still works from the landing page', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.dfh-lp-nav').getByRole('link', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/Account\/Login$/);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 });
 
