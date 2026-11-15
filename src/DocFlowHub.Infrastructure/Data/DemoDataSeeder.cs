@@ -451,6 +451,36 @@ public static class DemoDataSeeder
     }
 
     /// <summary>
+    /// PDFs get two more pages (Sprint 19), so the demo shows the page thumbnails and navigation:
+    /// "Details" with the other body texts, and an appendix with the real version history up to this version.
+    /// </summary>
+    internal static IReadOnlyList<string> BuildPdfLines(Document doc, DocumentVersion version)
+    {
+        var lines = new List<string>(BuildContentLines(doc, version))
+        {
+            DemoFileFactory.PageBreak,
+            DemoFileFactory.HeadingPrefix + "Details",
+            string.Empty,
+        };
+        var first = (version.VersionNumber + doc.Title.Length) % BodyTemplates.Length;
+        for (var i = 1; i < BodyTemplates.Length; i++)
+        {
+            lines.Add(BodyTemplates[(first + i) % BodyTemplates.Length]);
+            lines.Add(string.Empty);
+        }
+        lines.Add($"Prepared by {version.UserName} on {version.CreatedAt:yyyy-MM-dd}.");
+
+        lines.Add(DemoFileFactory.PageBreak);
+        lines.Add(DemoFileFactory.HeadingPrefix + "Appendix: version history");
+        lines.Add(string.Empty);
+        foreach (var v in doc.Versions.Where(v => v.VersionNumber <= version.VersionNumber).OrderBy(v => v.VersionNumber))
+        {
+            lines.Add($"v{v.VersionNumber} - {v.CreatedAt:yyyy-MM-dd} - {v.UserName}: {v.ChangeSummary}");
+        }
+        return lines;
+    }
+
+    /// <summary>
     /// Generates and uploads one file per version (overwriting any existing blob), then
     /// stores the real size and hash. Saves after each document, so an interruption loses
     /// at most one document's metadata. Stops at the first failed upload (e.g. storage
@@ -474,7 +504,8 @@ public static class DemoDataSeeder
             var type = doc.FileType.TrimStart('.');
             foreach (var version in doc.Versions.OrderBy(v => v.VersionNumber))
             {
-                var content = DemoFileFactory.Create(type, doc.Title, BuildContentLines(doc, version));
+                var lines = type.Equals("pdf", StringComparison.OrdinalIgnoreCase) ? BuildPdfLines(doc, version) : BuildContentLines(doc, version);
+                var content = DemoFileFactory.Create(type, doc.Title, lines);
                 var file = DemoFileFactory.ToFormFile(content, $"{doc.Title}.{type}", type);
                 var result = await storage.UploadDocumentAsync(file, doc.Id, version.VersionNumber);
                 if (!result.Succeeded)

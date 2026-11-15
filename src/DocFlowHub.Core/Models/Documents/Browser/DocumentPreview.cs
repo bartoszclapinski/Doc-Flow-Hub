@@ -12,11 +12,17 @@ public enum DocumentPreviewKind
     /// <summary>Markdown (.md): sanitised HTML in <see cref="DocumentPreview.Html"/>, source in <see cref="DocumentPreview.Text"/>.</summary>
     Markdown,
 
-    /// <summary>Text extracted from a PDF or DOCX until a page-layout preview exists.</summary>
+    /// <summary>Text extracted from a DOCX until a page-layout preview exists.</summary>
     ExtractedText,
 
     /// <summary>JPG / PNG / GIF, loaded from the inline file handler.</summary>
     Image,
+
+    /// <summary>
+    /// PDF pages rendered in the browser by PDF.js from the inline file handler (Sprint 19).
+    /// <see cref="DocumentPreview.Text"/> holds the extracted text only when the text view asked for it.
+    /// </summary>
+    Pdf,
 }
 
 /// <summary>The preview of one document version. Built by <c>IDocumentPreviewService</c>.</summary>
@@ -52,7 +58,7 @@ public class DocumentPreview
     public const int TextLimitBytes = 256 * 1024;
 }
 
-/// <summary>An image (or later a PDF) served inline by the Details file handler.</summary>
+/// <summary>An image or a PDF served inline by the Details file handler.</summary>
 public class DocumentPreviewFile
 {
     public byte[] Content { get; set; } = Array.Empty<byte>();

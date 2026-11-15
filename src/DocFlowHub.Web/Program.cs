@@ -87,7 +87,14 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/StatusCode/{0}");
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+// PDF.js (Sprint 19) loads ES modules, CMaps, Type 1 fonts and ICC profiles; static files are only served
+// for known content types, so add those.
+var contentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+contentTypes.Mappings[".mjs"] = "text/javascript";
+contentTypes.Mappings[".bcmap"] = "application/octet-stream";
+contentTypes.Mappings[".pfb"] = "application/octet-stream";
+contentTypes.Mappings[".icc"] = "application/vnd.iccprofile";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = contentTypes });
 
 // The UI is English and posts numbers with a dot ("0.7"). Without a fixed culture the form binder
 // used the server's culture, so on a Polish (or German, …) host every decimal field failed validation.

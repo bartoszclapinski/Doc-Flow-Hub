@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { Page, test } from '@playwright/test';
 import { DEMO_ADMIN, DEMO_USER, signIn } from './helpers';
 
 // Full-page screenshots at 1280×800 for the sprint log (compare with the design mocks).
@@ -177,17 +177,41 @@ test('admin screens', async ({ page }) => {
 });
 
 // Sprint 18: the document preview for each kind, at desktop and phone width.
+// PDF pages draw after load (Sprint 19): wait for the first page and the thumbnails in view.
+async function settlePdf(page: Page) {
+  if (!(await page.locator('[data-dfh-pdf]').count())) return;
+  await page.locator('.dfh-pdf-page[data-page="1"][data-rendered="true"]').waitFor();
+  if (!(await page.locator('.dfh-pdf-thumbs').isVisible())) return; // one page, or a phone
+  const thumbs = page.locator('.dfh-pdf-thumb');
+  for (let i = 0; i < await thumbs.count(); i++) {
+    await page.locator(`.dfh-pdf-thumb:nth-child(${i + 1})[data-rendered="true"]`).waitFor();
+  }
+}
+
 test('preview screens', async ({ page }) => {
   await signIn(page, DEMO_USER);
   for (const [name, kind, extra] of [
     ['preview-md', 'md', ''], ['preview-md-source', 'md', '?view=source'], ['preview-txt', 'txt', ''],
-    ['preview-pdf', 'pdf', ''], ['preview-docx', 'docx', ''],
+    ['preview-pdf', 'pdf', ''], ['preview-pdf-text', 'pdf', '?view=text'], ['preview-docx', 'docx', ''],
   ] as const) {
     await page.goto('/Documents');
     const href = await page.locator(`tbody tr[data-ext="${kind.toUpperCase()}"] a[href*="/Documents/Details/"]`).first().getAttribute('href');
     await page.goto(href + extra);
+    await settlePdf(page);
     await page.screenshot({ path: `${dir}/${name}.png` });
   }
+  // PDF: the third page, then zoomed in.
+  await page.goto('/Documents');
+  const pdf = await page.locator('tbody tr[data-ext="PDF"] a[href*="/Documents/Details/"]').first().getAttribute('href');
+  await page.goto(pdf!);
+  await settlePdf(page);
+  await page.locator('.dfh-pdf-thumb').nth(2).click();
+  await page.locator('.dfh-pdf-page[data-page="3"][data-rendered="true"]').waitFor();
+  await page.screenshot({ path: `${dir}/preview-pdf-page3.png` });
+  await page.locator('[data-dfh-pdf-zoom-in]').click();
+  await page.locator('[data-dfh-pdf-zoom-in]').click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${dir}/preview-pdf-zoom.png` });
   await page.goto('/Documents');
   const older = await page.locator('tbody tr[data-version]:not([data-version="0"]):not([data-version="1"]) a[href*="/Documents/Details/"]').first().getAttribute('href');
   await page.goto(older + '?version=1&tab=versions');
@@ -197,6 +221,9 @@ test('preview screens', async ({ page }) => {
   const md = await page.locator('tbody tr[data-ext="MD"] a[href*="/Documents/Details/"]').first().getAttribute('href');
   await page.goto(md!);
   await page.screenshot({ path: `${dir}/preview-md-390.png`, fullPage: true });
+  await page.goto(pdf!);
+  await settlePdf(page);
+  await page.screenshot({ path: `${dir}/preview-pdf-390.png` });
 });
 
 test('landing page', async ({ page }) => {
@@ -341,8 +368,12 @@ test('readme screenshots', async ({ page }) => {
   await page.locator('tbody tr[data-id]').nth(2).click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${out}/documents.png` });
-  const href = await page.locator('tbody tr[data-ai="1"] a[href*="/Documents/Details/"]').first().getAttribute('href');
+  // A PDF with an AI summary shows the page preview (Sprint 19) next to the AI tab.
+  const withAi = 'tbody tr[data-ai="1"]';
+  const pdfRow = page.locator(`${withAi}[data-ext="PDF"] a[href*="/Documents/Details/"]`);
+  const href = await ((await pdfRow.count()) ? pdfRow : page.locator(`${withAi} a[href*="/Documents/Details/"]`)).first().getAttribute('href');
   await page.goto(href + '?tab=ai');
+  await settlePdf(page);
   await page.screenshot({ path: `${out}/document-ai.png` });
   await page.goto('/Documents');
   await page.keyboard.press('Control+k');
@@ -357,6 +388,7 @@ test('readme screenshots', async ({ page }) => {
   await hideBanner();
   await page.screenshot({ path: `${out}/mobile-dashboard.png` });
   await page.goto(href + '?tab=ai');
+  await settlePdf(page);
   await page.screenshot({ path: `${out}/mobile-document.png` });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.context().clearCookies();

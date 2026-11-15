@@ -371,7 +371,8 @@
     </div>
 
     @* Sprint 18: the document preview. Text and Markdown are rendered here (no extra request); images
-       come from ?handler=File. PDF and DOCX show their extracted text until a page preview exists. *@
+       come from ?handler=File. Sprint 19: PDF pages are drawn by PDF.js (pdf-preview.js) from the same
+       handler, with a "Text" view; DOCX shows its extracted text until a page preview exists. *@
     <section class="dfh-preview-pane" aria-label="Preview">
         @if (p != null && p.Kind != DocumentPreviewKind.None)
         {
@@ -391,7 +392,29 @@
                         <a class="dfh-segmented-item@(Model.ShowSource ? " is-active" : "")" href="@PreviewUrl(view: "source")" aria-current="@(Model.ShowSource ? "true" : null)">Source</a>
                     </nav>
                 }
-                @if (p.Kind is DocumentPreviewKind.Text or DocumentPreviewKind.ExtractedText || (p.Kind == DocumentPreviewKind.Markdown && Model.ShowSource))
+                @if (p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText)
+                {
+                    @* Page navigation and zoom (S19-6); pdf-preview.js shows them once the PDF is open. *@
+                    <div class="dfh-pdf-controls" data-dfh-pdf-controls hidden>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-pdf-prev aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                        <span class="dfh-mono">page <span data-dfh-pdf-page>1</span> / <span data-dfh-pdf-count>1</span></span>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-pdf-next aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                        <span class="dfh-pdf-sep" aria-hidden="true"></span>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-pdf-zoom-out aria-label="Zoom out"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
+                        <span class="dfh-mono dfh-pdf-zoom" data-dfh-pdf-zoom aria-label="Zoom">100%</span>
+                        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-pdf-zoom-in aria-label="Zoom in"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dfh-pdf-fit aria-pressed="true"><i class="bi bi-arrows" aria-hidden="true"></i>Fit width</button>
+                    </div>
+                }
+                @if (p.Kind == DocumentPreviewKind.Pdf)
+                {
+                    <nav class="dfh-segmented" aria-label="PDF view">
+                        <a class="dfh-segmented-item@(!Model.ShowPdfText ? " is-active" : "")" href="@PreviewUrl(view: "")" aria-current="@(!Model.ShowPdfText ? "true" : null)">Pages</a>
+                        <a class="dfh-segmented-item@(Model.ShowPdfText ? " is-active" : "")" href="@PreviewUrl(view: "text")" aria-current="@(Model.ShowPdfText ? "true" : null)">Text</a>
+                    </nav>
+                }
+                @if (p.Kind is DocumentPreviewKind.Text or DocumentPreviewKind.ExtractedText || (p.Kind == DocumentPreviewKind.Markdown && Model.ShowSource)
+                     || (p.Kind == DocumentPreviewKind.Pdf && Model.ShowPdfText && p.Text != null))
                 {
                     <a class="btn btn-secondary btn-sm" href="@PreviewUrl(wrap: Model.WrapLines ? "0" : "")" aria-pressed="@(Model.WrapLines ? "true" : "false")">
                         <i class="bi bi-text-wrap" aria-hidden="true"></i>Wrap lines
@@ -415,7 +438,8 @@
             </div>
         }
 
-        <div class="dfh-preview-body" tabindex="0" aria-label="Document content">
+        @{ var pdfPages = p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText; }
+        <div class="dfh-preview-body@(pdfPages ? " is-pdf" : "")" tabindex="@(pdfPages ? null : "0")" aria-label="Document content">
             @if (p == null || p.Kind == DocumentPreviewKind.None)
             {
                 <div class="dfh-preview">
@@ -438,6 +462,29 @@
             {
                 <div class="dfh-preview-image" data-dfh-image>
                     <img src="@Url.Page("/Documents/Details", "File", new { id = d.Id, version = p.VersionNumber })" alt="@d.Title (v@(p.VersionNumber))" />
+                </div>
+            }
+            else if (pdfPages)
+            {
+                <div class="dfh-pdf" data-dfh-pdf data-lib="@Url.Content("~/lib/pdfjs/")"
+                     data-src="@Url.Page("/Documents/Details", "File", new { id = d.Id, version = p.VersionNumber })"
+                     data-text-url="@PreviewUrl(view: "text")">
+                    <nav class="dfh-pdf-thumbs" aria-label="Pages" hidden></nav>
+                    <div class="dfh-pdf-pages" tabindex="0" aria-label="PDF pages">
+                        <noscript>
+                            <p class="dfh-pdf-status">Showing PDF pages needs JavaScript. <a href="@PreviewUrl(view: "text")">Show the text</a> or download the file.</p>
+                        </noscript>
+                    </div>
+                </div>
+            }
+            else if (p.Kind == DocumentPreviewKind.Pdf && p.Text == null)
+            {
+                <div class="dfh-preview">
+                    <div class="dfh-preview-page">
+                        <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                        <p class="dfh-preview-note">@p.Note</p>
+                        <a class="btn btn-secondary btn-sm" href="@PreviewUrl(view: "")"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>Show the pages</a>
+                    </div>
                 </div>
             }
             else if (p.Kind == DocumentPreviewKind.Markdown && !Model.ShowSource)
@@ -490,4 +537,8 @@
     <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/details.js" asp-append-version="true"></script>
+    @if (p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText)
+    {
+        <script type="module" src="~/js/dfh/pdf-preview.js" asp-append-version="true"></script>
+    }
 }

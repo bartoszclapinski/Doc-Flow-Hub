@@ -182,12 +182,31 @@ public class DocumentPreviewServiceTests
     }
 
     [Fact]
-    public async Task Pdf_ShowsExtractedText()
+    public async Task Pdf_IsDrawnInTheBrowser_WithoutReadingTheFile()
+    {
+        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1))).Data!;
+        preview.Kind.Should().Be(DocumentPreviewKind.Pdf);
+        preview.Text.Should().BeNull();
+        _storage.Verify(s => s.DownloadDocumentAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Pdf_TextView_HasTheExtractedText()
     {
         File(1, DemoFileFactory.Create("pdf", "Quarterly report", new[] { "Revenue grew in the third quarter." }));
-        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1))).Data!;
-        preview.Kind.Should().Be(DocumentPreviewKind.ExtractedText);
+        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), pdfText: true)).Data!;
+        preview.Kind.Should().Be(DocumentPreviewKind.Pdf);
         preview.Text.Should().Contain("Revenue grew");
+    }
+
+    [Fact]
+    public async Task Pdf_TextView_WithoutText_KeepsThePagesViewAndExplains()
+    {
+        File(1, Encoding.ASCII.GetBytes("%PDF-1.4 not really a pdf"));
+        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), pdfText: true)).Data!;
+        preview.Kind.Should().Be(DocumentPreviewKind.Pdf);
+        preview.Text.Should().BeNull();
+        preview.Note.Should().Contain("Pages view");
     }
 
     [Fact]
@@ -228,9 +247,25 @@ public class DocumentPreviewServiceTests
     }
 
     [Fact]
-    public async Task InlineFile_RefusesNonImages()
+    public async Task Pdf_IsServedInlineForPdfJs()
     {
-        _browser.Setup(b => b.GetDetailsAsync("u", 7)).ReturnsAsync(ServiceResult<DocumentDetails>.Success(Doc(".txt", 1)));
+        _browser.Setup(b => b.GetDetailsAsync("u", 7)).ReturnsAsync(ServiceResult<DocumentDetails>.Success(Doc(".pdf", 1, 2)));
+        File(1, DemoFileFactory.Create("pdf", "Old", new[] { "First draft." }));
+        var file = await _service.GetInlineFileAsync("u", 7, 1);
+        file.Data!.ContentType.Should().Be("application/pdf");
+        Encoding.ASCII.GetString(file.Data.Content, 0, 5).Should().Be("%PDF-");
+        file.Data.ETag.Should().Contain("7-1-");
+    }
+
+    [Theory]
+    [InlineData(".txt")]
+    [InlineData(".md")]
+    [InlineData(".docx")]
+    [InlineData(".doc")]
+    public async Task InlineFile_RefusesTypesThatAreNotImagesOrPdf(string type)
+    {
+        _browser.Setup(b => b.GetDetailsAsync("u", 7)).ReturnsAsync(ServiceResult<DocumentDetails>.Success(Doc(type, 1)));
+        File(1, new byte[] { 1, 2, 3 });
         (await _service.GetInlineFileAsync("u", 7)).Succeeded.Should().BeFalse();
     }
 }

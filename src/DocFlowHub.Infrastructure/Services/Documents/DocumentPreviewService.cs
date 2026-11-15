@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace DocFlowHub.Infrastructure.Services.Documents;
 
 /// <summary>
-/// Previews for the Details page (Sprint 18, decisions S18-1…S18-5). Access goes through
+/// Previews for the Details page (Sprint 18, decisions S18-1…S18-5; PDF pages: Sprint 19). Access goes through
 /// <see cref="IDocumentBrowserService.GetDetailsAsync"/>, the same check the Details page uses.
 /// Read-only, AI-free, so it works in the demo.
 /// </summary>
@@ -18,6 +18,12 @@ public class DocumentPreviewService : IDocumentPreviewService
         [".jpeg"] = "image/jpeg",
         [".png"] = "image/png",
         [".gif"] = "image/gif",
+    };
+
+    /// <summary>Files the inline handler serves: images, and PDFs for PDF.js.</summary>
+    private static readonly Dictionary<string, string> InlineTypes = new(ImageTypes, StringComparer.OrdinalIgnoreCase)
+    {
+        [".pdf"] = "application/pdf",
     };
 
     private static readonly Dictionary<string, string> ExtractedTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -43,17 +49,17 @@ public class DocumentPreviewService : IDocumentPreviewService
         _logger = logger;
     }
 
-    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(string userId, int documentId, int? versionNumber = null)
+    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(string userId, int documentId, int? versionNumber = null, bool pdfText = false)
     {
         var details = await _browser.GetDetailsAsync(userId, documentId);
         if (!details.Succeeded || details.Data == null)
         {
             return ServiceResult<DocumentPreview>.Failure("Document not found");
         }
-        return await GetPreviewAsync(details.Data, versionNumber);
+        return await GetPreviewAsync(details.Data, versionNumber, pdfText);
     }
 
-    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(DocumentDetails document, int? versionNumber = null)
+    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(DocumentDetails document, int? versionNumber = null, bool pdfText = false)
     {
         if (document.Versions.Count == 0)
         {
@@ -84,6 +90,13 @@ public class DocumentPreviewService : IDocumentPreviewService
         if (ImageTypes.ContainsKey(type))
         {
             preview.Kind = DocumentPreviewKind.Image;
+            return ServiceResult<DocumentPreview>.Success(preview);
+        }
+
+        // PDF pages are drawn by PDF.js in the browser; the file is only read here for the text view (S19-3).
+        if (type == ".pdf" && !pdfText)
+        {
+            preview.Kind = DocumentPreviewKind.Pdf;
             return ServiceResult<DocumentPreview>.Success(preview);
         }
 
@@ -122,7 +135,7 @@ public class DocumentPreviewService : IDocumentPreviewService
             return ServiceResult<DocumentPreview>.Success(preview);
         }
 
-        // PDF / DOCX: the text the AI features use, until a page-layout preview exists (S18-1).
+        // PDF text view / DOCX: the text the AI features use (S18-1, S19-4).
         string? extracted = null;
         try
         {
@@ -136,13 +149,16 @@ public class DocumentPreviewService : IDocumentPreviewService
 
         if (string.IsNullOrWhiteSpace(extracted))
         {
-            preview.Kind = DocumentPreviewKind.None;
-            preview.Note = $"No text could be found in this {Label(type)} file (it may be scanned images). Download it to open it.";
+            // A PDF keeps its kind, so the page still offers the "Pages" view; the note explains the empty text.
+            preview.Kind = type == ".pdf" ? DocumentPreviewKind.Pdf : DocumentPreviewKind.None;
+            preview.Note = type == ".pdf"
+                ? "No text could be found in this PDF (it may be scanned pages). The Pages view shows it as it looks."
+                : $"No text could be found in this {Label(type)} file (it may be scanned images). Download it to open it.";
             return ServiceResult<DocumentPreview>.Success(preview);
         }
 
         var (capped, cut) = PreviewRendering.CapText(extracted, DocumentPreview.TextLimitBytes);
-        preview.Kind = DocumentPreviewKind.ExtractedText;
+        preview.Kind = type == ".pdf" ? DocumentPreviewKind.Pdf : DocumentPreviewKind.ExtractedText;
         preview.Text = capped;
         preview.Truncated = cut;
         return ServiceResult<DocumentPreview>.Success(preview);
@@ -163,7 +179,7 @@ public class DocumentPreviewService : IDocumentPreviewService
         }
 
         var type = Normalize(string.IsNullOrEmpty(version.FileType) ? details.Data.FileType : version.FileType);
-        if (!ImageTypes.TryGetValue(type, out var contentType))
+        if (!InlineTypes.TryGetValue(type, out var contentType))
         {
             return ServiceResult<DocumentPreviewFile>.Failure("No inline preview for this file type");
         }
