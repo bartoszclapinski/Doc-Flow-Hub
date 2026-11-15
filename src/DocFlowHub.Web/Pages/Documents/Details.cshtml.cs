@@ -13,7 +13,8 @@ namespace DocFlowHub.Web.Pages.Documents;
 
 /// <summary>
 /// Document details (design 3b): editor tabs, toolbar, the document preview (Sprint 18: text, Markdown,
-/// images, extracted text for PDF / DOCX) and an inspector with Info / AI / Versions / Sharing tabs.
+/// images, extracted text for DOCX; Sprint 19: PDF pages through PDF.js) and an inspector with
+/// Info / AI / Versions / Sharing tabs.
 /// Delete and move use the shared dialogs (Documents handlers).
 /// </summary>
 [Authorize]
@@ -64,7 +65,7 @@ public class DetailsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? Version { get; set; }
 
-    /// <summary>"source" shows Markdown as text (S18-3).</summary>
+    /// <summary>"source" shows Markdown as text (S18-3); "text" shows a PDF's text instead of its pages (S19-4).</summary>
     [BindProperty(SupportsGet = true)]
     public string? View { get; set; }
 
@@ -73,6 +74,7 @@ public class DetailsModel : PageModel
     public string? Wrap { get; set; }
 
     public bool ShowSource => string.Equals(View, "source", StringComparison.OrdinalIgnoreCase);
+    public bool ShowPdfText => string.Equals(View, "text", StringComparison.OrdinalIgnoreCase);
     public bool WrapLines => Wrap != "0";
 
     public DocumentPreview? Preview { get; private set; }
@@ -118,7 +120,7 @@ public class DetailsModel : PageModel
         }
         Doc = details.Data;
 
-        var preview = await _preview.GetPreviewAsync(Doc, Version);
+        var preview = await _preview.GetPreviewAsync(Doc, Version, pdfText: ShowPdfText);
         if (!preview.Succeeded)
         {
             // Only a version number that does not exist gets here.
@@ -157,8 +159,9 @@ public class DetailsModel : PageModel
     }
 
     /// <summary>
-    /// Serves an image version inline for the preview (S18-5). Other types answer 404. The headers keep the
-    /// browser from sniffing or running anything: nosniff, a sandboxing CSP, private caching with an ETag.
+    /// Serves an image or PDF version inline for the preview (S18-5, S19-3; PDF.js fetches the PDF). Other
+    /// types answer 404. The headers keep the browser from sniffing or running anything: nosniff, a
+    /// sandboxing CSP, private caching with an ETag.
     /// </summary>
     public async Task<IActionResult> OnGetFileAsync()
     {

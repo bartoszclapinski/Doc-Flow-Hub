@@ -192,3 +192,31 @@ test('image upload is previewed inline with nosniff and a sandboxing CSP', async
   const text = await page.request.get(href + '?handler=File');
   expect(text.status()).toBe(404);
 });
+
+// Sprint 19: a PDF that PDF.js cannot open says so and offers the text view.
+test('a damaged PDF explains itself and links to the text view', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({
+    name: 'e2e-damaged.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nthis is not a real PDF body\n'),
+  });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  const ai = page.locator('input[name="GenerateSummary"][type="checkbox"]');
+  if (await ai.count()) await ai.uncheck();
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+
+  await expect(page.locator('[data-dfh-pdf]')).toHaveAttribute('data-state', 'error');
+  await expect(page.locator('.dfh-pdf-status')).toContainText('could not be shown');
+  await expect(page.locator('[data-dfh-pdf-controls]')).toBeHidden();
+  await page.locator('.dfh-pdf-status a', { hasText: 'Show the text' }).click();
+  await expect(page).toHaveURL(/view=text/);
+  await expect(page.locator('.dfh-preview-note')).toContainText('No text could be found');
+  await page.locator('.dfh-preview a', { hasText: 'Show the pages' }).click();
+  await expect(page.locator('[data-dfh-pdf]')).toHaveAttribute('data-state', 'error');
+
+  // Clean up: the demo-data PDF tests that may run next take the first PDF in the list.
+  await page.locator('button[aria-label="More actions"]').first().click();
+  await page.locator('[data-dfh-action="delete"]').click();
+  await page.locator('#dfh-delete-modal button[type="submit"]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Deleted "e2e-damaged"');
+});

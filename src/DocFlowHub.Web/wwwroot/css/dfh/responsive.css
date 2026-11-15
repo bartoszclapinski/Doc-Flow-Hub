@@ -230,6 +230,13 @@
     .dfh-preview { flex: none; padding: 12px; }
     .dfh-preview-page { width: auto; height: auto; aspect-ratio: auto; padding: 16px 12px; }
     .dfh-preview-note { max-width: none; }
+    /* PDF: no thumbnail strip; the pages flow with the page and fit its width. */
+    .dfh-preview-body.is-pdf { overflow: visible; }
+    .dfh-pdf, .dfh-pdf.has-thumbs { display: block; }
+    .dfh-pdf-thumbs { display: none; }
+    .dfh-pdf-pages { overflow: visible; padding: 12px; }
+    .dfh-pdf-controls { flex-wrap: wrap; }
+    .dfh-pdf-controls > .btn-secondary { margin-left: 0; }
 
     /* Dashboard strip: one panel per row. */
     .dfh-strip { grid-template-columns: minmax(0, 1fr); height: auto; }

@@ -524,10 +524,96 @@ test('preview: text files and the text of PDF / DOCX files', async ({ page }) =>
   await expect(page).toHaveURL(/wrap=0/);
   await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
 
-  for (const kind of ['pdf', 'docx']) {
-    await openDocument(page, `tbody tr[data-ext="${kind.toUpperCase()}"]`);
-    await expect(page.locator('.dfh-preview-badge')).toContainText('Text only');
-    await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+  await openDocument(page, 'tbody tr[data-ext="DOCX"]');
+  await expect(page.locator('.dfh-preview-badge')).toContainText('Text only');
+  await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+});
+
+// Sprint 19: PDF pages through the self-hosted PDF.js. Demo PDFs have three pages.
+test('preview: PDF pages render with thumbnails, page navigation and zoom', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await signIn(page, DEMO_USER);
+  await openDocument(page, 'tbody tr[data-ext="PDF"]');
+
+  const pdf = page.locator('[data-dfh-pdf]');
+  await expect(pdf).toHaveAttribute('data-state', 'ready');
+  await expect(pdf).toHaveAttribute('data-pages', '3');
+  const first = page.locator('.dfh-pdf-page[data-page="1"]');
+  await expect(first).toHaveAttribute('data-rendered', 'true');
+  // Something was drawn: dark pixels (text) on the white page.
+  const inked = await first.locator('canvas').evaluate((c: HTMLCanvasElement) => {
+    const data = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+    let dark = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] < 128) dark++;
+    return dark;
+  });
+  expect(inked).toBeGreaterThan(200);
+  // The text layer makes the text selectable.
+  await expect(first.locator('.textLayer')).toContainText('Page 1 of 3');
+  // The file comes from the inline handler with headers that stop sniffing and scripts.
+  const file = await page.request.get((await pdf.getAttribute('data-src'))!);
+  expect(file.headers()['content-type']).toBe('application/pdf');
+  expect(file.headers()['x-content-type-options']).toBe('nosniff');
+  expect(file.headers()['content-security-policy']).toContain('sandbox');
+
+  const current = page.locator('[data-dfh-pdf-page]');
+  await expect(page.locator('[data-dfh-pdf-count]')).toHaveText('3');
+  await expect(current).toHaveText('1');
+  await expect(page.locator('[data-dfh-pdf-prev]')).toBeDisabled();
+
+  // Thumbnails: three, drawn lazily; a click goes to that page.
+  const thumbs = page.locator('.dfh-pdf-thumb');
+  await expect(thumbs).toHaveCount(3);
+  await expect(thumbs.first()).toHaveAttribute('data-rendered', 'true');
+  await thumbs.nth(2).click();
+  await expect(current).toHaveText('3');
+  await expect(thumbs.nth(2)).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.dfh-pdf-page[data-page="3"]')).toHaveAttribute('data-rendered', 'true');
+  await expect(page.locator('.dfh-pdf-page[data-page="3"] .textLayer')).toContainText('version history');
+  await expect(page.locator('[data-dfh-pdf-next]')).toBeDisabled();
+  await page.locator('[data-dfh-pdf-prev]').click();
+  await expect(current).toHaveText('2');
+
+  // Zoom in, then back to fit width.
+  const zoom = page.locator('[data-dfh-pdf-zoom]');
+  const fitLabel = (await zoom.textContent())!;
+  const width = () => first.evaluate((e) => e.getBoundingClientRect().width);
+  const fitWidth = await width();
+  await page.locator('[data-dfh-pdf-zoom-in]').click();
+  await expect(zoom).not.toHaveText(fitLabel);
+  await expect(page.locator('[data-dfh-pdf-fit]')).toHaveAttribute('aria-pressed', 'false');
+  expect(await width()).toBeGreaterThan(fitWidth);
+  await page.locator('[data-dfh-pdf-fit]').click();
+  await expect(zoom).toHaveText(fitLabel);
+  await expect(page.locator('[data-dfh-pdf-fit]')).toHaveAttribute('aria-pressed', 'true');
+
+  // The text view.
+  await page.locator('.dfh-segmented a', { hasText: 'Text' }).click();
+  await expect(page).toHaveURL(/view=text/);
+  await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+  await expect(page.locator('[data-dfh-pdf]')).toHaveCount(0);
+  await page.locator('.dfh-segmented a', { hasText: 'Pages' }).click();
+  await expect(page.locator('[data-dfh-pdf]')).toHaveAttribute('data-state', 'ready');
+
+  expect(errors).toEqual([]);
+});
+
+test('PDF.js files are served with their content types', async ({ request }) => {
+  const files: [string, RegExp][] = [
+    ['/lib/pdfjs/build/pdf.min.mjs', /javascript/],
+    ['/lib/pdfjs/build/pdf.worker.min.mjs', /javascript/],
+    ['/lib/pdfjs/standard_fonts/FoxitSerif.pfb', /octet-stream/],
+    ['/lib/pdfjs/standard_fonts/LiberationSans-Regular.ttf', /font|ttf|octet/],
+    ['/lib/pdfjs/cmaps/Adobe-Japan1-UCS2.bcmap', /octet-stream/],
+    ['/lib/pdfjs/iccs/CGATS001Compat-v2-micro.icc', /iccprofile/],
+    ['/lib/pdfjs/wasm/openjpeg.wasm', /wasm/],
+  ];
+  for (const [path, type] of files) {
+    const response = await request.get(path);
+    expect(response.status(), path).toBe(200);
+    expect(response.headers()['content-type'], path).toMatch(type);
   }
 });
 
@@ -556,8 +642,17 @@ test('preview: an older version opens with a "viewing" banner', async ({ page })
 test('preview on a phone: content flows with the page, no sideways scroll', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.setViewportSize({ width: 390, height: 844 });
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   await openDocument(page, 'tbody tr[data-ext="MD"]');
   await expect(page.locator('.dfh-md')).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(0);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+
+  // PDF: no thumbnail strip, the page fits the width.
+  await openDocument(page, 'tbody tr[data-ext="PDF"]');
+  await expect(page.locator('.dfh-pdf-page[data-page="1"]')).toHaveAttribute('data-rendered', 'true');
+  await expect(page.locator('.dfh-pdf-thumbs')).toBeHidden();
+  const box = await page.locator('.dfh-pdf-page[data-page="1"]').boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });

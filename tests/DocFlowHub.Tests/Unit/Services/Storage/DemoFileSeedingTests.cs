@@ -71,6 +71,35 @@ public class DemoFileSeedingTests
     }
 
     [Fact]
+    public async Task Pdf_PageBreaksAndLongText_GiveSeveralPages()
+    {
+        var lines = new List<string> { "First page." , DemoFileFactory.PageBreak, DemoFileFactory.HeadingPrefix + "Details", "Second page." };
+        // 60 more lines do not fit on one page, so they flow onto a fourth page.
+        lines.Add(DemoFileFactory.PageBreak);
+        lines.AddRange(Enumerable.Range(1, 60).Select(i => $"Line {i} of the appendix."));
+        var bytes = DemoFileFactory.Create("pdf", "Report", lines);
+
+        using var pdf = UglyToad.PdfPig.PdfDocument.Open(bytes);
+        pdf.NumberOfPages.Should().Be(4);
+        pdf.GetPage(2).Text.Should().Contain("Details").And.Contain("Second page.").And.Contain("Page 2 of 4");
+        pdf.GetPage(4).Text.Should().Contain("Line 60 of the appendix.");
+        var text = (await CreateExtractor().ExtractTextAsync(bytes, "doc.pdf", "application/pdf")).Data;
+        text.Should().Contain("First page.").And.Contain("Line 1 of the appendix.");
+    }
+
+    [Theory]
+    [InlineData("txt")]
+    [InlineData("md")]
+    [InlineData("docx")]
+    public async Task OtherFormats_LeaveOutPdfPageBreaksAndHeadingMarkers(string type)
+    {
+        var lines = new[] { "Intro.", DemoFileFactory.PageBreak, DemoFileFactory.HeadingPrefix + "Details" };
+        var bytes = DemoFileFactory.Create(type, "Report", lines);
+        var text = (await CreateExtractor().ExtractTextAsync(bytes, $"doc.{type}", DemoFileFactory.GetContentType(type))).Data!;
+        text.Should().Contain("Details").And.NotContain("\f").And.NotContain("# Details");
+    }
+
+    [Fact]
     public void Create_AcceptsDottedFileType_AsStoredByTheApp()
     {
         DemoFileFactory.IsSupported(".pdf").Should().BeTrue();

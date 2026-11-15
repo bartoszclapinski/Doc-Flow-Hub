@@ -72,6 +72,23 @@
         "files/jetbrains-mono-latin-ext-600-normal.woff2",
         "LICENSE"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "pdfjs-dist@6.4.299",
+      "destination": "wwwroot/lib/pdfjs/",
+      "files": [
+        "LICENSE",
+        "build/pdf.min.mjs",
+        "build/pdf.worker.min.mjs",
+        "standard_fonts/*",
+        "cmaps/*",
+        "iccs/*",
+        "wasm/jbig2.wasm",
+        "wasm/openjpeg.wasm",
+        "wasm/qcms_bg.wasm",
+        "wasm/LICENSE_*"
+      ]
     }
   ]
 }
