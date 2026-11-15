@@ -530,7 +530,9 @@ test('preview: text files and the text of PDF / DOCX files', async ({ page }) =>
 });
 
 // Sprint 19: PDF pages through the self-hosted PDF.js. Demo PDFs have three pages.
+const PDFJS_LOAD = 60_000;
 test('preview: PDF pages render with thumbnails, page navigation and zoom', async ({ page }) => {
+  test.slow(); // loads PDF.js
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -538,10 +540,11 @@ test('preview: PDF pages render with thumbnails, page navigation and zoom', asyn
   await openDocument(page, 'tbody tr[data-ext="PDF"]');
 
   const pdf = page.locator('[data-dfh-pdf]');
-  await expect(pdf).toHaveAttribute('data-state', 'ready');
+  // The first PDF downloads PDF.js (about 1.7 MB); on a slow link to the live demo that takes a while.
+  await expect(pdf).toHaveAttribute('data-state', 'ready', { timeout: PDFJS_LOAD });
   await expect(pdf).toHaveAttribute('data-pages', '3');
   const first = page.locator('.dfh-pdf-page[data-page="1"]');
-  await expect(first).toHaveAttribute('data-rendered', 'true');
+  await expect(first).toHaveAttribute('data-rendered', 'true', { timeout: PDFJS_LOAD });
   // Something was drawn: dark pixels (text) on the white page.
   const inked = await first.locator('canvas').evaluate((c: HTMLCanvasElement) => {
     const data = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
@@ -595,7 +598,7 @@ test('preview: PDF pages render with thumbnails, page navigation and zoom', asyn
   await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
   await expect(page.locator('[data-dfh-pdf]')).toHaveCount(0);
   await page.locator('.dfh-segmented a', { hasText: 'Pages' }).click();
-  await expect(page.locator('[data-dfh-pdf]')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('[data-dfh-pdf]')).toHaveAttribute('data-state', 'ready', { timeout: PDFJS_LOAD });
 
   expect(errors).toEqual([]);
 });
@@ -640,6 +643,7 @@ test('preview: an older version opens with a "viewing" banner', async ({ page })
 });
 
 test('preview on a phone: content flows with the page, no sideways scroll', async ({ page }) => {
+  test.slow(); // loads PDF.js
   await signIn(page, DEMO_USER);
   await page.setViewportSize({ width: 390, height: 844 });
   const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -649,7 +653,7 @@ test('preview on a phone: content flows with the page, no sideways scroll', asyn
 
   // PDF: no thumbnail strip, the page fits the width.
   await openDocument(page, 'tbody tr[data-ext="PDF"]');
-  await expect(page.locator('.dfh-pdf-page[data-page="1"]')).toHaveAttribute('data-rendered', 'true');
+  await expect(page.locator('.dfh-pdf-page[data-page="1"]')).toHaveAttribute('data-rendered', 'true', { timeout: PDFJS_LOAD });
   await expect(page.locator('.dfh-pdf-thumbs')).toBeHidden();
   const box = await page.locator('.dfh-pdf-page[data-page="1"]').boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
