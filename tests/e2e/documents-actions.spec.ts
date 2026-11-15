@@ -166,3 +166,29 @@ test('AI card says "off" when summaries are turned off in Settings · AI', async
     await toggle(true);
   }
 });
+
+// Sprint 18: images are previewed inline with safe headers; other types have no inline file.
+test('image upload is previewed inline with nosniff and a sandboxing CSP', async ({ page }) => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-image.png', mimeType: 'image/png', buffer: png });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  const ai = page.locator('input[name="GenerateSummary"][type="checkbox"]');
+  if (await ai.count()) await ai.uncheck();
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+
+  const img = page.locator('.dfh-preview-image img');
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth)).toBe(1);
+  const response = await page.request.get((await img.getAttribute('src'))!);
+  expect(response.status()).toBe(200);
+  expect(response.headers()['content-type']).toBe('image/png');
+  expect(response.headers()['x-content-type-options']).toBe('nosniff');
+  expect(response.headers()['content-security-policy']).toContain('sandbox');
+
+  // A text document has no inline file.
+  await page.goto('/Documents');
+  const href = (await page.locator('tbody tr[data-ext="TXT"] a[href*="/Documents/Details/"]').first().getAttribute('href'))!;
+  const text = await page.request.get(href + '?handler=File');
+  expect(text.status()).toBe(404);
+});

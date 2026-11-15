@@ -216,10 +216,20 @@
     /* Buttons never wrap their labels ("New / version"); the toolbar scrolls instead. */
     .dfh-toolbar .btn, .dfh-toolbar .dfh-btn-disabled-wrap { flex: none; white-space: nowrap; }
 
-    /* Document preview placeholder: a short band, not a page (design 9c). */
-    .dfh-preview { flex: none; height: 220px; padding: 12px; }
-    .dfh-preview-page { width: auto; height: 100%; aspect-ratio: auto; padding: 12px; }
-    .dfh-preview-note { display: none; }
+    /* Document preview: flows with the page (no inner scroll); the "no preview" card is a short band. */
+    .dfh-preview-pane, .dfh-preview-body { flex: none; overflow: visible; }
+    .dfh-preview-bar { flex-wrap: wrap; padding: 6px 12px; }
+    .dfh-preview-badge { white-space: normal; }
+    .dfh-code { padding-right: 12px; font-size: 12px; }
+    .dfh-code-line { padding-left: 44px; }
+    .dfh-code-line::before { width: 32px; }
+    .dfh-code.is-nowrap { overflow-x: auto; }
+    .dfh-md { width: auto; margin: 12px; padding: 18px 16px; font-size: 14px; }
+    .dfh-preview-image { padding: 12px; }
+    .dfh-preview-image img { max-height: 70vh; }
+    .dfh-preview { flex: none; padding: 12px; }
+    .dfh-preview-page { width: auto; height: auto; aspect-ratio: auto; padding: 16px 12px; }
+    .dfh-preview-note { max-width: none; }
 
     /* Dashboard strip: one panel per row. */
     .dfh-strip { grid-template-columns: minmax(0, 1fr); height: auto; }
