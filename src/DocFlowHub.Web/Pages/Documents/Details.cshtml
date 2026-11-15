@@ -14,6 +14,20 @@
     var previous = d.Versions.Count > 1 ? d.Versions[1] : null;
     string Iso(DateTime utc) => utc.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
     string Tab(string name) => tab == name ? "true" : "false";
+    var p = Model.Preview;
+    // Text preview lines; the file's final newline ends the last line, it is not an extra empty line.
+    static string[] Lines(string? text) =>
+        (text ?? string.Empty) is var t && t.EndsWith('\n') ? t[..^1].Split('\n') : (text ?? string.Empty).Split('\n');
+    // Links that change one preview setting and keep the others (S18-3, S18-4, S18-6).
+    string PreviewUrl(int? version = null, string? view = null, string? wrap = null, bool keepVersion = true) =>
+        Url.Page("/Documents/Details", new
+        {
+            id = d.Id,
+            tab = Model.Tab,
+            version = version ?? (keepVersion && p != null && !p.IsLatest ? p.VersionNumber : (int?)null),
+            view = view ?? Model.View,
+            wrap = wrap ?? Model.Wrap,
+        }) ?? "#";
 }
 
 @section Inspector {
@@ -219,9 +233,11 @@
                         <span class="dfh-mono">v@(v.Number)</span>
                         <span class="dfh-version-main">
                             <span>@message</span>
-                            <span class="dfh-version-meta">@v.Author · <span title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span> · @Dfh.FileSize(v.FileSize)@(v.Hash != null ? $" · {v.Hash}" : "")@(isCurrent ? " · current" : "")</span>
+                            <span class="dfh-version-meta">@v.Author · <span title="@Dfh.Timestamp(v.CreatedAt)">@Dfh.Relative(v.CreatedAt)</span> · @Dfh.FileSize(v.FileSize).Replace(" ", "\u00a0")@(v.Hash != null ? $" · {v.Hash}" : "")@(isCurrent ? " · current" : "")</span>
                         </span>
                         <span class="dfh-version-actions">
+                            <a class="dfh-icon-action@(p != null && p.VersionNumber == v.Number ? " is-active" : "")" href="@PreviewUrl(version: isCurrent ? null : v.Number, keepVersion: false)"
+                               title="Preview v@(v.Number)" aria-label="Preview v@(v.Number)"><i class="bi bi-eye" aria-hidden="true"></i></a>
                             <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
                                 <input type="hidden" name="versionId" value="@v.Id" />
                                 <button type="submit" class="dfh-icon-action" title="Download v@(v.Number)" aria-label="Download v@(v.Number)"><i class="bi bi-download" aria-hidden="true"></i></button>
@@ -354,18 +370,98 @@
         </div>
     </div>
 
-    @* D5: placeholder until a real preview (PDF.js) exists *@
-    <div class="dfh-preview">
-        <div class="dfh-preview-page">
-            <span class="dfh-filetype dfh-filetype--@kind">@label</span>
-            <h2 class="dfh-preview-title">@d.Title</h2>
-            <span class="dfh-preview-meta">@Dfh.FileSize(d.FileSize)@(current != null ? $" · v{current.Number}" : "") · modified @Dfh.Relative(d.ModifiedAt)</span>
-            <p class="dfh-preview-note">A preview isn't available yet. Download the file to open it on your computer.</p>
-            <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
-                <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download @label</button>
-            </form>
+    @* Sprint 18: the document preview. Text and Markdown are rendered here (no extra request); images
+       come from ?handler=File. PDF and DOCX show their extracted text until a page preview exists. *@
+    <section class="dfh-preview-pane" aria-label="Preview">
+        @if (p != null && p.Kind != DocumentPreviewKind.None)
+        {
+            var (pLabel, pKind) = Dfh.FileType(p.FileType);
+            <div class="dfh-preview-bar">
+                <span class="dfh-filetype dfh-filetype--@pKind">@pLabel</span>
+                <span class="dfh-mono dfh-muted">v@(p.VersionNumber) · @Dfh.FileSize(p.FileSize)@(p.Encoding != null ? " · " + p.Encoding : "")</span>
+                @if (p.Kind == DocumentPreviewKind.ExtractedText)
+                {
+                    <span class="dfh-preview-badge" title="The text of the file, without its layout. A page preview is planned.">Text only — page layout preview is coming</span>
+                }
+                <span class="dfh-spacer"></span>
+                @if (p.Kind == DocumentPreviewKind.Markdown)
+                {
+                    <nav class="dfh-segmented" aria-label="Markdown view">
+                        <a class="dfh-segmented-item@(!Model.ShowSource ? " is-active" : "")" href="@PreviewUrl(view: "")" aria-current="@(!Model.ShowSource ? "true" : null)">Rendered</a>
+                        <a class="dfh-segmented-item@(Model.ShowSource ? " is-active" : "")" href="@PreviewUrl(view: "source")" aria-current="@(Model.ShowSource ? "true" : null)">Source</a>
+                    </nav>
+                }
+                @if (p.Kind is DocumentPreviewKind.Text or DocumentPreviewKind.ExtractedText || (p.Kind == DocumentPreviewKind.Markdown && Model.ShowSource))
+                {
+                    <a class="btn btn-secondary btn-sm" href="@PreviewUrl(wrap: Model.WrapLines ? "0" : "")" aria-pressed="@(Model.WrapLines ? "true" : "false")">
+                        <i class="bi bi-text-wrap" aria-hidden="true"></i>Wrap lines
+                    </a>
+                }
+                @if (p.Kind == DocumentPreviewKind.Image)
+                {
+                    <button type="button" class="btn btn-secondary btn-sm" data-dfh-image-zoom aria-pressed="false" hidden>
+                        <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i><span>Actual size</span>
+                    </button>
+                }
+            </div>
+        }
+
+        @if (p != null && !p.IsLatest && p.VersionNumber > 0)
+        {
+            <div class="dfh-banner dfh-banner--info dfh-preview-version" role="status">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <span>Viewing v@(p.VersionNumber) of @(p.LatestVersionNumber).</span>
+                <a href="@PreviewUrl(keepVersion: false)">Back to current</a>
+            </div>
+        }
+
+        <div class="dfh-preview-body" tabindex="0" aria-label="Document content">
+            @if (p == null || p.Kind == DocumentPreviewKind.None)
+            {
+                <div class="dfh-preview">
+                    <div class="dfh-preview-page">
+                        <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                        <h2 class="dfh-preview-title">@d.Title</h2>
+                        <span class="dfh-preview-meta">@Dfh.FileSize(d.FileSize)@(current != null ? $" · v{current.Number}" : "") · modified @Dfh.Relative(d.ModifiedAt)</span>
+                        <p class="dfh-preview-note">@(p?.Note ?? "A preview isn't available for this file. Download it to open it on your computer.")</p>
+                        <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
+                            @if (p != null && !p.IsLatest && p.VersionId > 0)
+                            {
+                                <input type="hidden" name="versionId" value="@p.VersionId" />
+                            }
+                            <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download @label</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else if (p.Kind == DocumentPreviewKind.Image)
+            {
+                <div class="dfh-preview-image" data-dfh-image>
+                    <img src="@Url.Page("/Documents/Details", "File", new { id = d.Id, version = p.VersionNumber })" alt="@d.Title (v@(p.VersionNumber))" />
+                </div>
+            }
+            else if (p.Kind == DocumentPreviewKind.Markdown && !Model.ShowSource)
+            {
+                <article class="dfh-md">@Html.Raw(p.Html)</article>
+            }
+            else
+            {
+                <pre class="dfh-code@(Model.WrapLines ? "" : " is-nowrap")"><code>@foreach (var line in Lines(p.Text))
+{<span class="dfh-code-line">@line</span>}</code></pre>
+            }
+
+            @if (p != null && p.Truncated)
+            {
+                <div class="dfh-preview-more">
+                    <span>Showing the first 256 KB. Download the file for the rest.</span>
+                    <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
+                        <input type="hidden" name="versionId" value="@p.VersionId" />
+                        <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download</button>
+                    </form>
+                </div>
+            }
         </div>
-    </div>
+    </section>
 </div>
 
 <partial name="_DocumentDialogs" model='new DocumentDialogsView("/Documents", Model.Tree)' />

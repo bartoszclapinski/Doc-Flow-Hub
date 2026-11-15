@@ -99,4 +99,23 @@
             if (idle) idle.hidden = true;
         }, 0);
     });
+
+    // Image preview (Sprint 18): fit to the pane by default, 'Actual size' shows it 1:1 with scrolling.
+    // The button is only shown once the image is larger than the pane, so it never does nothing.
+    document.addEventListener('DOMContentLoaded', function () {
+        const frame = document.querySelector('[data-dfh-image]');
+        const toggle = document.querySelector('[data-dfh-image-zoom]');
+        const img = frame && frame.querySelector('img');
+        if (!frame || !toggle || !img) return;
+        function ready() {
+            const bigger = img.naturalWidth > img.clientWidth + 1 || img.naturalHeight > img.clientHeight + 1;
+            toggle.hidden = !bigger && !frame.classList.contains('is-actual');
+        }
+        if (img.complete) ready(); else img.addEventListener('load', ready);
+        toggle.addEventListener('click', function () {
+            const actual = frame.classList.toggle('is-actual');
+            toggle.setAttribute('aria-pressed', actual ? 'true' : 'false');
+            toggle.querySelector('span').textContent = actual ? 'Fit to window' : 'Actual size';
+        });
+    });
 })();

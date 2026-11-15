@@ -176,6 +176,29 @@ test('admin screens', async ({ page }) => {
   }
 });
 
+// Sprint 18: the document preview for each kind, at desktop and phone width.
+test('preview screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  for (const [name, kind, extra] of [
+    ['preview-md', 'md', ''], ['preview-md-source', 'md', '?view=source'], ['preview-txt', 'txt', ''],
+    ['preview-pdf', 'pdf', ''], ['preview-docx', 'docx', ''],
+  ] as const) {
+    await page.goto('/Documents');
+    const href = await page.locator(`tbody tr[data-ext="${kind.toUpperCase()}"] a[href*="/Documents/Details/"]`).first().getAttribute('href');
+    await page.goto(href + extra);
+    await page.screenshot({ path: `${dir}/${name}.png` });
+  }
+  await page.goto('/Documents');
+  const older = await page.locator('tbody tr[data-version]:not([data-version="0"]):not([data-version="1"]) a[href*="/Documents/Details/"]').first().getAttribute('href');
+  await page.goto(older + '?version=1&tab=versions');
+  await page.screenshot({ path: `${dir}/preview-older-version.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents');
+  const md = await page.locator('tbody tr[data-ext="MD"] a[href*="/Documents/Details/"]').first().getAttribute('href');
+  await page.goto(md!);
+  await page.screenshot({ path: `${dir}/preview-md-390.png`, fullPage: true });
+});
+
 test('landing page', async ({ page }) => {
   await page.goto('/');
   await page.locator('.dfh-lp-shot img').evaluate((img: HTMLImageElement) => img.decode());

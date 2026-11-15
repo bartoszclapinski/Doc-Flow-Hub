@@ -12,8 +12,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace DocFlowHub.Web.Pages.Documents;
 
 /// <summary>
-/// Document details (design 3b): editor tabs, toolbar, preview placeholder (D5) and an inspector with
-/// Info / AI / Versions / Sharing tabs. Delete and move use the shared dialogs (Documents handlers).
+/// Document details (design 3b): editor tabs, toolbar, the document preview (Sprint 18: text, Markdown,
+/// images, extracted text for PDF / DOCX) and an inspector with Info / AI / Versions / Sharing tabs.
+/// Delete and move use the shared dialogs (Documents handlers).
 /// </summary>
 [Authorize]
 public class DetailsModel : PageModel
@@ -27,6 +28,7 @@ public class DetailsModel : PageModel
     private readonly IAIUsageTrackingService _aiUsage;
     private readonly ITeamService _teamService;
     private readonly IDemoModeService _demoMode;
+    private readonly IDocumentPreviewService _preview;
     private readonly ILogger<DetailsModel> _logger;
 
     public DetailsModel(
@@ -37,6 +39,7 @@ public class DetailsModel : PageModel
         IAIUsageTrackingService aiUsage,
         ITeamService teamService,
         IDemoModeService demoMode,
+        IDocumentPreviewService preview,
         ILogger<DetailsModel> logger)
     {
         _browser = browser;
@@ -46,6 +49,7 @@ public class DetailsModel : PageModel
         _aiUsage = aiUsage;
         _teamService = teamService;
         _demoMode = demoMode;
+        _preview = preview;
         _logger = logger;
     }
 
@@ -55,6 +59,23 @@ public class DetailsModel : PageModel
     /// <summary>Inspector tab: info (default), ai, versions or sharing.</summary>
     [BindProperty(SupportsGet = true)]
     public string? Tab { get; set; }
+
+    /// <summary>Version number to preview (S18-6); the newest when empty.</summary>
+    [BindProperty(SupportsGet = true)]
+    public int? Version { get; set; }
+
+    /// <summary>"source" shows Markdown as text (S18-3).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? View { get; set; }
+
+    /// <summary>"0" turns line wrapping off in text previews (S18-4).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Wrap { get; set; }
+
+    public bool ShowSource => string.Equals(View, "source", StringComparison.OrdinalIgnoreCase);
+    public bool WrapLines => Wrap != "0";
+
+    public DocumentPreview? Preview { get; private set; }
 
     public DocumentDetails Doc { get; private set; } = new();
     public DocumentTree Tree { get; private set; } = new();
@@ -97,6 +118,14 @@ public class DetailsModel : PageModel
         }
         Doc = details.Data;
 
+        var preview = await _preview.GetPreviewAsync(Doc, Version);
+        if (!preview.Succeeded)
+        {
+            // Only a version number that does not exist gets here.
+            return NotFound();
+        }
+        Preview = preview.Data;
+
         if (Doc.IsOwner)
         {
             var tree = await _browser.GetTreeAsync(userId);
@@ -125,6 +154,39 @@ public class DetailsModel : PageModel
         ViewData["StatusPath"] = string.Join(" / ",
             new[] { Doc.Location, Doc.Title + Doc.FileType.ToLowerInvariant() }.Where(p => !string.IsNullOrEmpty(p)));
         return Page();
+    }
+
+    /// <summary>
+    /// Serves an image version inline for the preview (S18-5). Other types answer 404. The headers keep the
+    /// browser from sniffing or running anything: nosniff, a sandboxing CSP, private caching with an ETag.
+    /// </summary>
+    public async Task<IActionResult> OnGetFileAsync()
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var file = await _preview.GetInlineFileAsync(userId, Id, Version);
+        if (!file.Succeeded || file.Data == null)
+        {
+            return NotFound();
+        }
+
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
+        Response.Headers["Content-Disposition"] = "inline";
+        Response.Headers.CacheControl = "private, max-age=300";
+        if (file.Data.ETag != null)
+        {
+            Response.Headers.ETag = file.Data.ETag;
+            if (Request.Headers.IfNoneMatch.ToString() == file.Data.ETag)
+            {
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+        }
+        return File(file.Data.Content, file.Data.ContentType);
     }
 
     /// <summary>Downloads one version (the current one when versionId is not given).</summary>

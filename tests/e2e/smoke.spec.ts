@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { DEMO_ADMIN, DEMO_USER, expectShellPage, signIn } from './helpers';
 
 // Smoke: both demo accounts can sign in and every main destination renders in the shell.
@@ -494,4 +494,70 @@ test('privacy page describes what the app stores, signed in or not', async ({ pa
   await expect(page.locator('h1')).toHaveText('Privacy');
   await expect(page.locator('.dfh-doc-page')).toContainText('salted hash');
   await expect(page.locator('body')).not.toContainText('Use this page to detail');
+});
+
+// Sprint 18: document preview (read-only, works in the demo).
+async function openDocument(page: Page, row: string) {
+  await page.goto('/Documents');
+  const href = await page.locator(`${row} a[href*="/Documents/Details/"]`).first().getAttribute('href');
+  expect(href, `a document row matching ${row}`).toBeTruthy();
+  await page.goto(href!);
+}
+
+test('preview: Markdown is rendered; Source shows numbered lines', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await openDocument(page, 'tbody tr[data-ext="MD"]');
+  await expect(page.locator('.dfh-md h1')).toBeVisible();
+  await page.locator('.dfh-segmented a', { hasText: 'Source' }).click();
+  await expect(page).toHaveURL(/view=source/);
+  await expect(page.locator('.dfh-code-line').first()).toHaveText(/^# /);
+  await page.locator('.dfh-segmented a', { hasText: 'Rendered' }).click();
+  await expect(page.locator('.dfh-md h1')).toBeVisible();
+});
+
+test('preview: text files and the text of PDF / DOCX files', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await openDocument(page, 'tbody tr[data-ext="TXT"]');
+  await expect(page.locator('.dfh-preview-bar')).toContainText('UTF-8');
+  await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+  await page.locator('.dfh-preview-bar a', { hasText: 'Wrap lines' }).click();
+  await expect(page).toHaveURL(/wrap=0/);
+  await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
+
+  for (const kind of ['pdf', 'docx']) {
+    await openDocument(page, `tbody tr[data-ext="${kind.toUpperCase()}"]`);
+    await expect(page.locator('.dfh-preview-badge')).toContainText('Text only');
+    await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+  }
+});
+
+test('preview: an older version opens with a "viewing" banner', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  // The row shows the newest version number, not how many are left (a write test may delete old ones),
+  // so try the candidates until one still has an older version.
+  const hrefs = await page.locator('tbody tr[data-version]:not([data-version="0"]):not([data-version="1"]) a[href*="/Documents/Details/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute('href')!));
+  const eye = page.locator('#panel-versions .dfh-version-row:not(.is-current) a[aria-label^="Preview v"]').first();
+  let found = false;
+  for (const href of hrefs.slice(0, 8)) {
+    await page.goto(href + '?tab=versions');
+    if (await eye.count()) { found = true; break; }
+  }
+  expect(found, 'a document with an older version').toBe(true);
+  const number = (await eye.getAttribute('aria-label'))!.replace('Preview v', '');
+  await eye.click();
+  await expect(page.locator('.dfh-preview-version')).toContainText(`Viewing v${number} of`);
+  await expect(page.locator('.dfh-preview-bar')).toContainText(`v${number}`);
+  await page.locator('.dfh-preview-version a', { hasText: 'Back to current' }).click();
+  await expect(page.locator('.dfh-preview-version')).toHaveCount(0);
+});
+
+test('preview on a phone: content flows with the page, no sideways scroll', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openDocument(page, 'tbody tr[data-ext="MD"]');
+  await expect(page.locator('.dfh-md')).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });

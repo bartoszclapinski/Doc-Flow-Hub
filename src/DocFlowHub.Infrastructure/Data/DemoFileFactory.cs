@@ -27,7 +27,8 @@ public static class DemoFileFactory
         {
             "pdf" => CreatePdf(title, lines),
             "docx" => CreateDocx(title, lines),
-            "md" => Encoding.UTF8.GetBytes($"# {title}\n\n{string.Join("\n", lines)}\n"),
+            // Markdown joins lines separated by a single newline, so put a blank line between them.
+            "md" => Encoding.UTF8.GetBytes($"# {title}\n\n{string.Join("\n\n", lines)}\n"),
             "txt" => Encoding.UTF8.GetBytes($"{title}\n{new string('=', title.Length)}\n\n{string.Join("\n", lines)}\n"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileType), fileType, "Unsupported demo file type"),
         };
