@@ -9,8 +9,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace DocFlowHub.Web.Pages.Documents;
 
 /// <summary>
-/// Version compare (design 3i, decision S12-5): two versions side by side with the AI comparison in
-/// the inspector. GET only reads a saved comparison; generating one is a POST (disabled in the demo).
+/// Version compare (design 3i, decision S12-5): the line-by-line text diff of two versions (Sprint 21) with
+/// the AI comparison in the inspector. GET only reads a saved comparison; generating one is a POST
+/// (disabled in the demo).
 /// </summary>
 [Authorize]
 public class CompareModel : PageModel
@@ -18,6 +19,7 @@ public class CompareModel : PageModel
     private readonly IDocumentBrowserService _browser;
     private readonly IDocumentService _documentService;
     private readonly IVersionComparisonService _comparisons;
+    private readonly IVersionDiffService _diffs;
     private readonly IAISettingsService _aiSettings;
     private readonly IDemoModeService _demoMode;
     private readonly ILogger<CompareModel> _logger;
@@ -26,6 +28,7 @@ public class CompareModel : PageModel
         IDocumentBrowserService browser,
         IDocumentService documentService,
         IVersionComparisonService comparisons,
+        IVersionDiffService diffs,
         IAISettingsService aiSettings,
         IDemoModeService demoMode,
         ILogger<CompareModel> logger)
@@ -33,6 +36,7 @@ public class CompareModel : PageModel
         _browser = browser;
         _documentService = documentService;
         _comparisons = comparisons;
+        _diffs = diffs;
         _aiSettings = aiSettings;
         _demoMode = demoMode;
         _logger = logger;
@@ -41,7 +45,24 @@ public class CompareModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int Id { get; set; }
 
+    /// <summary>"unified" shows the diff in one column; anything else is side by side (S21-4).</summary>
+    [BindProperty(SupportsGet = true, Name = "view")]
+    public string? Layout { get; set; }
+
+    /// <summary>"ignore" leaves whitespace-only changes out (S21-6).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Ws { get; set; }
+
+    /// <summary>"all" shows every unchanged line instead of folding them (S21-5).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Context { get; set; }
+
+    public bool Unified => string.Equals(Layout, "unified", StringComparison.OrdinalIgnoreCase);
+    public bool IgnoreWhitespace => string.Equals(Ws, "ignore", StringComparison.OrdinalIgnoreCase);
+    public bool ShowAll => string.Equals(Context, "all", StringComparison.OrdinalIgnoreCase);
+
     public DocumentComparisonView View { get; private set; } = new();
+    public VersionDiff Diff { get; private set; } = new() { Status = VersionDiffStatus.Unreadable };
     public bool IsDemo => _demoMode.IsEnabled;
 
     public async Task<IActionResult> OnGetAsync(int? from, int? to)
@@ -67,6 +88,10 @@ public class CompareModel : PageModel
         }
 
         View = result.Data;
+        var diff = await _diffs.GetDiffAsync(View, new VersionDiffOptions { IgnoreWhitespace = IgnoreWhitespace, ShowAll = ShowAll });
+        Diff = diff.Succeeded && diff.Data != null
+            ? diff.Data
+            : new VersionDiff { Status = VersionDiffStatus.Unreadable, Note = "The versions could not be compared. Try downloading them." };
         ViewData["StatusPath"] = string.Join(" / ",
             new[] { View.Location, View.Title + View.FileType.ToLowerInvariant() }.Where(p => !string.IsNullOrEmpty(p)));
         return Page();

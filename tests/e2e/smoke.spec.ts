@@ -328,6 +328,78 @@ test('compare: the seeded AI comparison shows, the pickers change the pair', asy
   await expect(page.locator('.dfh-editor-tab.is-active')).toContainText('↔');
 });
 
+// Sprint 21: the line-by-line diff. Demo versions of one document differ in a few lines.
+test('compare: line diff side by side and unified, with change jumps', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await signIn(page, DEMO_USER);
+  const id = await documentWithVersions(page);
+  await page.goto(`/Documents/Compare/${id}`);
+
+  const diff = page.locator('[data-dfh-diff]');
+  await expect(diff).toHaveClass(/is-split/);
+  const added = await diff.locator('.dfh-diff-line.is-add').count();
+  const removed = await diff.locator('.dfh-diff-line.is-del').count();
+  const changes = await diff.locator('[data-dfh-change]').count();
+  expect(added).toBeGreaterThan(0);
+  expect(removed).toBeGreaterThan(0);
+  await expect(page.locator('.dfh-diff-count .is-add')).toHaveText(`+${added}`);
+  await expect(page.locator('.dfh-diff-count .is-del')).toHaveText(`−${removed}`);
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText(`change 1 of ${changes}`);
+  await expect(page.locator('.dfh-diff-empty')).toHaveCount(0);
+
+  // Side by side: a removed line and the added line of the same row sit next to each other.
+  const pair = diff.locator('[data-dfh-change]', { has: page.locator('.is-del') }).filter({ has: page.locator('.is-add') }).first();
+  const del = (await pair.locator('.is-del').first().boundingBox())!;
+  const add = (await pair.locator('.is-add').first().boundingBox())!;
+  expect(add.x).toBeGreaterThan(del.x + del.width - 2);
+  expect(Math.abs(add.y - del.y)).toBeLessThan(2);
+
+  await page.locator('[data-dfh-diff-next]').click();
+  const second = changes > 1 ? 2 : 1;
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText(`change ${second} of ${changes}`);
+  await expect(diff.locator(`#change-${second}`)).toHaveClass(/is-current/);
+  await page.keyboard.press('p');
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText(`change 1 of ${changes}`);
+
+  // Unified: one column, removed lines above the added ones.
+  await page.locator('.dfh-diff-layout a', { hasText: 'Unified' }).click();
+  await expect(page).toHaveURL(/view=unified/);
+  await expect(diff).toHaveClass(/is-unified/);
+  const uDel = (await pair.locator('.is-del').first().boundingBox())!;
+  const uAdd = (await pair.locator('.is-add').first().boundingBox())!;
+  expect(Math.abs(uAdd.x - uDel.x)).toBeLessThan(2);
+  expect(uAdd.y).toBeGreaterThan(uDel.y);
+
+  // The switches are links that keep each other and the version pair.
+  await page.locator('[data-dfh-diff-ws]').click();
+  await expect(page).toHaveURL(/ws=ignore/);
+  await expect(page).toHaveURL(/view=unified/);
+  await expect(page).toHaveURL(/from=\d+&to=\d+/);
+  await expect(page.locator('[data-dfh-diff-ws]')).toHaveAttribute('aria-pressed', 'true');
+  expect(errors).toEqual([]);
+});
+
+test('compare on a phone: the diff is unified and nothing scrolls sideways', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithVersions(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/Documents/Compare/${id}`);
+
+  const diff = page.locator('[data-dfh-diff]');
+  await expect(diff.locator('.dfh-diff-line.is-add').first()).toBeVisible();
+  await expect(page.locator('.dfh-diff-layout')).toBeHidden();
+  const pair = diff.locator('[data-dfh-change]', { has: page.locator('.is-del') }).filter({ has: page.locator('.is-add') }).first();
+  const del = (await pair.locator('.is-del').first().boundingBox())!;
+  const add = (await pair.locator('.is-add').first().boundingBox())!;
+  expect(Math.abs(add.x - del.x)).toBeLessThan(2);
+  expect(add.y).toBeGreaterThan(del.y);
+  expect(del.x).toBeGreaterThanOrEqual(0);
+  expect(del.x + del.width).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
 test('editor tabs: opened documents stay as tabs until closed', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents?sort=name');

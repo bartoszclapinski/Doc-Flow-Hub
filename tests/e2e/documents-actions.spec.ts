@@ -277,3 +277,68 @@ test('a damaged Word document offers the download instead of a preview', async (
 
   await deleteOpenDocument(page, 'e2e-damaged');
 });
+
+// Sprint 21: the line diff of two uploaded versions, with known edits.
+test('compare shows the exact added, removed and changed lines of two versions', async ({ page }) => {
+  const v1 = Array.from({ length: 40 }, (_, i) => `Line ${i + 1}`);
+  v1[2] = 'The budget is 100 EUR for this quarter';
+  v1[29] = 'spaced  out   line';
+  const v2 = v1.slice();
+  v2[2] = 'The budget is 250 EUR for this quarter';
+  v2[29] = 'spaced out line';
+  v2.splice(19, 1); // "Line 20" is removed
+  v2.push('A new closing line', '<b>not bold</b>');
+
+  await uploadFile(page, { name: 'e2e-diff.txt', mimeType: 'text/plain', buffer: Buffer.from(v1.join('\n') + '\n') });
+  const id = /\/Documents\/Details\/(\d+)/.exec(page.url())![1];
+  await page.locator('a', { hasText: 'New version' }).click();
+  await page.locator('#new-version [data-dfh-file]').setInputFiles({ name: 'e2e-diff.txt', mimeType: 'text/plain', buffer: Buffer.from(v2.join('\r\n')) });
+  await page.locator('#ChangeSummary').fill('Budget and closing line');
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded v2');
+
+  await page.goto(`/Documents/Compare/${id}?from=1&to=2`);
+  const diff = page.locator('[data-dfh-diff]');
+  await expect(page.locator('.dfh-diff-count .is-add')).toHaveText('+4');
+  await expect(page.locator('.dfh-diff-count .is-del')).toHaveText('−3');
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText('change 1 of 4');
+
+  // Change 1: one line with the changed words marked; both line numbers are 3.
+  const first = diff.locator('#change-1');
+  await expect(first.locator('.is-del .dfh-diff-t')).toHaveText('The budget is 100 EUR for this quarter');
+  await expect(first.locator('.is-del .dfh-diff-w')).toHaveText('100');
+  await expect(first.locator('.is-add .dfh-diff-w')).toHaveText('250');
+  await expect(first.locator('.is-del .dfh-diff-n.is-old')).toHaveText('3');
+  await expect(first.locator('.is-add .dfh-diff-n.is-new')).toHaveText('3');
+  // Change 2: a removed line only. Change 4: two added lines, markup shown as text.
+  await expect(diff.locator('#change-2 .dfh-diff-line')).toHaveCount(1);
+  await expect(diff.locator('#change-2 .is-del .dfh-diff-t')).toHaveText('Line 20');
+  await expect(diff.locator('#change-4 .is-add .dfh-diff-t')).toHaveText(['A new closing line', '<b>not bold</b>']);
+  await expect(diff.locator('b')).toHaveCount(0);
+  // After the removed line the numbers differ: old 21 is new 20.
+  const after = diff.locator('.dfh-diff-line.is-ctx', { has: page.locator('.dfh-diff-n.is-old', { hasText: /^21$/ }) });
+  await expect(after.locator('.dfh-diff-n.is-new')).toHaveText('20');
+
+  // Unchanged stretches are folded around three lines of context.
+  await expect(diff.locator('.dfh-diff-fold')).toHaveText(['⋯ 10 unchanged lines', '⋯ 3 unchanged lines', '⋯ 4 unchanged lines']);
+  await diff.locator('.dfh-diff-fold').first().click();
+  await expect(page).toHaveURL(/context=all/);
+  await expect(diff.locator('.dfh-diff-fold')).toHaveCount(0);
+  await expect(diff.locator('.dfh-diff-line.is-ctx')).toHaveCount(37);
+  await expect(page.locator('[data-dfh-diff-all]')).toHaveAttribute('aria-pressed', 'true');
+
+  // Ignoring whitespace drops the spacing-only change.
+  await page.locator('[data-dfh-diff-ws]').click();
+  await expect(page.locator('.dfh-diff-count .is-add')).toHaveText('+3');
+  await expect(page.locator('.dfh-diff-count .is-del')).toHaveText('−2');
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText('change 1 of 3');
+
+  // An address with a change number opens at that change.
+  await page.goto(`/Documents/Compare/${id}?from=1&to=2#change-3`);
+  await expect(page.locator('[data-dfh-diff-pos]')).toHaveText('change 3 of 4');
+  await expect(diff.locator('#change-3')).toHaveClass(/is-current/);
+  await expect(diff.locator('#change-3 .is-del .dfh-diff-t')).toHaveText('spaced  out   line');
+
+  await page.goto(`/Documents/Details/${id}`);
+  await deleteOpenDocument(page, 'e2e-diff');
+});

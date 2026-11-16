@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IDocumentBrowserService, DocumentBrowserService>();
         services.AddScoped<IDocumentPreviewService, DocumentPreviewService>();
+        services.AddScoped<IVersionDiffService, VersionDiffService>();
         services.AddScoped<IAdminBrowserService, DocFlowHub.Infrastructure.Services.Admin.AdminBrowserService>();
         services.AddScoped<IWorkspaceBrowserService, DocFlowHub.Infrastructure.Services.Workspace.WorkspaceBrowserService>();
         if (IsProvider(configuration["DocumentStorage:Provider"], "Local"))

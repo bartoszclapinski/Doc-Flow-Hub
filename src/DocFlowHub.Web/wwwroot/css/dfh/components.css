@@ -1403,6 +1403,85 @@ button.dfh-tree-toggle > i { transition: transform 0.12s ease-out; }
 .dfh-diff-side .dfh-mono { font-size: 11px; color: var(--dfh-text-muted); }
 .dfh-diff-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dfh-text-2); }
 .dfh-diff-empty { flex: 1 1 auto; min-height: 0; background: var(--dfh-bg); }
+
+/* Line diff (Sprint 21). One markup, two layouts: unified is the base (and the only one on phones);
+   side by side puts removed lines in the left column and added lines in the right one, on the
+   grid row the server gives each line. */
+.dfh-diff-bar {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--dfh-border);
+    background: var(--dfh-bg);
+}
+.dfh-diff-nav { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.dfh-diff-bar > [aria-pressed="true"] { background: var(--dfh-bg-control); color: var(--dfh-text); }
+.dfh-diff-count { display: inline-flex; gap: 6px; font-size: 12px; color: var(--dfh-text-muted); white-space: nowrap; }
+.dfh-diff-count .is-add { color: var(--dfh-success); }
+.dfh-diff-count .is-del { color: var(--dfh-danger); }
+.dfh-diff {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: var(--dfh-bg);
+    font-family: var(--dfh-font-mono);
+    font-size: 12px;
+    line-height: 22px;
+    color: var(--dfh-diff-text);
+}
+.dfh-diff:focus-visible { outline: 0; box-shadow: inset 0 0 0 1px var(--dfh-accent); }
+.dfh-diff-section { position: relative; scroll-margin-top: 44px; }
+.dfh-diff-section.is-current::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0 auto 0 0;
+    width: 2px;
+    background: var(--dfh-accent);
+}
+.dfh-diff-line { display: grid; grid-template-columns: 40px 40px 18px minmax(0, 1fr); }
+.dfh-diff-n { padding-right: 8px; text-align: right; color: var(--dfh-text-disabled); user-select: none; }
+.dfh-diff-s { text-align: center; user-select: none; }
+.dfh-diff-t { min-height: 22px; padding-right: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dfh-diff-line.is-ctx > .dfh-diff-s.is-old, .dfh-diff-line.is-ctx > .dfh-diff-t.is-old { display: none; }
+.dfh-diff-line.is-del { background: var(--dfh-diff-del); }
+.dfh-diff-line.is-add { background: var(--dfh-diff-add); }
+.dfh-diff-line.is-del > .dfh-diff-s { color: var(--dfh-danger); }
+.dfh-diff-line.is-add > .dfh-diff-s { color: var(--dfh-success); }
+.dfh-diff-w { padding: 0; border-radius: 2px; color: inherit; }
+.is-del .dfh-diff-w { background: oklch(0.70 0.13 25 / 0.38); }
+.is-add .dfh-diff-w { background: oklch(0.70 0.13 150 / 0.38); }
+.dfh-diff-fold {
+    display: block;
+    padding: 0 12px 0 98px;
+    border-block: 1px solid var(--dfh-border-subtle);
+    background: var(--dfh-bg-hover);
+    color: var(--dfh-text-muted);
+}
+.dfh-diff-fold:hover { color: var(--dfh-text); text-decoration: none; }
+
+@media (min-width: 600px) {
+    .dfh-diff.is-split { min-width: 0; }
+    .dfh-diff.is-split .dfh-diff-section { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .dfh-diff.is-split .dfh-diff-section.is-change { background: var(--dfh-bg-filler); }
+    .dfh-diff.is-split .dfh-diff-section::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 50%;
+        border-left: 1px solid var(--dfh-border);
+    }
+    .dfh-diff.is-split .dfh-diff-line { grid-template-columns: 40px 18px minmax(0, 1fr); }
+    .dfh-diff.is-split .dfh-diff-line.is-del { grid-column: 1; }
+    .dfh-diff.is-split .dfh-diff-line.is-add { grid-column: 2; }
+    .dfh-diff.is-split .is-del > .dfh-diff-n.is-new, .dfh-diff.is-split .is-add > .dfh-diff-n.is-old { display: none; }
+    .dfh-diff.is-split .dfh-diff-line.is-ctx { grid-column: 1 / -1; grid-template-columns: 40px 18px minmax(0, 1fr) 40px 18px minmax(0, 1fr); }
+    .dfh-diff.is-split .dfh-diff-line.is-ctx > .is-old { display: block; }
+    .dfh-diff.is-split .dfh-diff-fold { padding-left: 58px; }
+}
 .dfh-ai-compare-head {
     display: flex;
     align-items: center;

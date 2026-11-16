@@ -16,6 +16,8 @@ idle, so the first visit can take a minute.
 **Documents**
 - Upload files (PDF, Word, text, Markdown, images) with a title, description and categories.
 - Upload a new version of a document; older versions stay and can be downloaded or deleted.
+- Compare two versions line by line, side by side or unified, with the changed words marked, unchanged
+  stretches folded and an option to ignore whitespace. PDF and Word versions are compared by their text.
 - Preview in the browser: PDF pages (PDF.js, with page thumbnails, navigation, zoom and selectable
   text), Word documents (.docx) with their headings, lists, tables, links and pictures, text with line
   numbers, rendered Markdown (with a source view) and images; any older version can be previewed too.
@@ -68,7 +70,8 @@ Being clear about the gaps:
 - **The Word view is simplified**: it shows the structure of a `.docx`, not its fonts, colours,
   columns, headers, footers or footnotes, and a numbered list that continues after a break starts
   again; old `.doc` files can only be downloaded. Links and form fields inside PDFs are not interactive.
-  **No line-by-line diff**; version comparison is the AI's description of the changes.
+- **The version diff compares text only**: not formatting, layout or images, and at most 256 KB of
+  text and 5,000 lines a version. An older version cannot be restored yet.
 - No invitations, notifications, comments or real-time updates.
 
 ## Tech stack
@@ -79,7 +82,7 @@ Being clear about the gaps:
 - OpenAI and Anthropic SDKs for the AI features
 - Bootstrap 5 restyled with design tokens, plain JavaScript (no front-end framework), self-hosted
   IBM Plex Sans and JetBrains Mono; PDF.js (self-hosted) for PDF pages, Markdig for Markdown,
-  the Open XML SDK for Word documents
+  the Open XML SDK for Word documents, DiffPlex for the version diff
 - xUnit unit tests (in-memory and SQLite), Playwright end-to-end tests
 - Docker image and GitHub Actions CI (build, tests, container smoke test)
 
