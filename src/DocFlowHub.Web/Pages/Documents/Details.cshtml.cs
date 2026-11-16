@@ -65,7 +65,7 @@ public class DetailsModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? Version { get; set; }
 
-    /// <summary>"source" shows Markdown as text (S18-3); "text" shows a PDF's text instead of its pages (S19-4).</summary>
+    /// <summary>"source" shows Markdown as text (S18-3); "text" shows the plain text of a PDF or a Word document instead of its pages (S19-4, S20-9).</summary>
     [BindProperty(SupportsGet = true)]
     public string? View { get; set; }
 
@@ -74,7 +74,7 @@ public class DetailsModel : PageModel
     public string? Wrap { get; set; }
 
     public bool ShowSource => string.Equals(View, "source", StringComparison.OrdinalIgnoreCase);
-    public bool ShowPdfText => string.Equals(View, "text", StringComparison.OrdinalIgnoreCase);
+    public bool ShowText => string.Equals(View, "text", StringComparison.OrdinalIgnoreCase);
     public bool WrapLines => Wrap != "0";
 
     public DocumentPreview? Preview { get; private set; }
@@ -120,7 +120,7 @@ public class DetailsModel : PageModel
         }
         Doc = details.Data;
 
-        var preview = await _preview.GetPreviewAsync(Doc, Version, pdfText: ShowPdfText);
+        var preview = await _preview.GetPreviewAsync(Doc, Version, textView: ShowText);
         if (!preview.Succeeded)
         {
             // Only a version number that does not exist gets here.

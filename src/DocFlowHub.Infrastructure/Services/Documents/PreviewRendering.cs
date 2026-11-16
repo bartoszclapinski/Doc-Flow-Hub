@@ -156,10 +156,10 @@ public static class PreviewRendering
     }
 
     /// <summary>Browsers ignore whitespace and control characters inside a URL ("java\tscript:"), so drop them first.</summary>
-    private static string? Clean(string? url) =>
+    internal static string? Clean(string? url) =>
         url == null ? null : new string(url.Where(c => !char.IsWhiteSpace(c) && !char.IsControl(c)).ToArray());
 
-    private static bool IsWebUrl(string? url) =>
+    internal static bool IsWebUrl(string? url) =>
         url != null && (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                         || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
 

@@ -481,6 +481,45 @@ public static class DemoDataSeeder
     }
 
     /// <summary>
+    /// DOCX files get real structure (Sprint 20), so the demo shows the formatted view: labelled facts,
+    /// headings, a bullet list and a table with the version history up to this version.
+    /// </summary>
+    internal static IReadOnlyList<string> BuildDocxLines(Document doc, DocumentVersion version)
+    {
+        const string bold = DemoFileFactory.BoldMark;
+        static string Cell(string? text) => (text ?? string.Empty).Replace('|', '/');
+
+        var lines = new List<string>();
+        if (!string.IsNullOrWhiteSpace(doc.Description)) lines.Add(doc.Description);
+        lines.Add($"{bold}Version {version.VersionNumber}:{bold} {version.ChangeSummary}");
+        lines.Add($"{bold}Author:{bold} {version.UserName}");
+        lines.Add($"{bold}Date:{bold} {version.CreatedAt:yyyy-MM-dd}");
+
+        lines.Add(DemoFileFactory.HeadingPrefix + "Summary");
+        lines.Add(BodyTemplates[(version.VersionNumber + doc.Title.Length) % BodyTemplates.Length]);
+        if (version.VersionNumber > 1)
+        {
+            lines.Add($"Changes since version {version.VersionNumber - 1}: updated figures, clarified scope and refreshed the action list.");
+        }
+
+        lines.Add(DemoFileFactory.HeadingPrefix + "Action points");
+        lines.Add(DemoFileFactory.BulletPrefix + $"Review the figures with {version.UserName}");
+        lines.Add(DemoFileFactory.BulletPrefix + "Confirm the scope with the document owner");
+        lines.Add(DemoFileFactory.BulletPrefix + $"Share version {version.VersionNumber} with the team before the next review");
+
+        lines.Add(DemoFileFactory.HeadingPrefix + "Version history");
+        lines.Add(DemoFileFactory.RowPrefix + string.Join(DemoFileFactory.CellSeparator, "Version", "Date", "Author", "Summary"));
+        foreach (var v in doc.Versions.Where(v => v.VersionNumber <= version.VersionNumber).OrderBy(v => v.VersionNumber))
+        {
+            lines.Add(DemoFileFactory.RowPrefix + string.Join(DemoFileFactory.CellSeparator,
+                $"v{v.VersionNumber}", $"{v.CreatedAt:yyyy-MM-dd}", Cell(v.UserName), Cell(v.ChangeSummary)));
+        }
+        lines.Add(string.Empty);
+        lines.Add("*Sample content generated for the DocFlowHub demo.*");
+        return lines;
+    }
+
+    /// <summary>
     /// Generates and uploads one file per version (overwriting any existing blob), then
     /// stores the real size and hash. Saves after each document, so an interruption loses
     /// at most one document's metadata. Stops at the first failed upload (e.g. storage
@@ -504,7 +543,12 @@ public static class DemoDataSeeder
             var type = doc.FileType.TrimStart('.');
             foreach (var version in doc.Versions.OrderBy(v => v.VersionNumber))
             {
-                var lines = type.Equals("pdf", StringComparison.OrdinalIgnoreCase) ? BuildPdfLines(doc, version) : BuildContentLines(doc, version);
+                var lines = type.ToLowerInvariant() switch
+                {
+                    "pdf" => BuildPdfLines(doc, version),
+                    "docx" => BuildDocxLines(doc, version),
+                    _ => BuildContentLines(doc, version),
+                };
                 var content = DemoFileFactory.Create(type, doc.Title, lines);
                 var file = DemoFileFactory.ToFormFile(content, $"{doc.Title}.{type}", type);
                 var result = await storage.UploadDocumentAsync(file, doc.Id, version.VersionNumber);

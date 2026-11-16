@@ -515,7 +515,7 @@ test('preview: Markdown is rendered; Source shows numbered lines', async ({ page
   await expect(page.locator('.dfh-md h1')).toBeVisible();
 });
 
-test('preview: text files and the text of PDF / DOCX files', async ({ page }) => {
+test('preview: text files show numbered lines, the encoding and a wrap switch', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await openDocument(page, 'tbody tr[data-ext="TXT"]');
   await expect(page.locator('.dfh-preview-bar')).toContainText('UTF-8');
@@ -523,10 +523,37 @@ test('preview: text files and the text of PDF / DOCX files', async ({ page }) =>
   await page.locator('.dfh-preview-bar a', { hasText: 'Wrap lines' }).click();
   await expect(page).toHaveURL(/wrap=0/);
   await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
+});
 
+// Sprint 20: a Word document as formatted HTML. Demo DOCX files have headings, a list and a table.
+test('preview: a Word document is formatted; Text shows its plain text', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await signIn(page, DEMO_USER);
   await openDocument(page, 'tbody tr[data-ext="DOCX"]');
-  await expect(page.locator('.dfh-preview-badge')).toContainText('Text only');
-  await expect(page.locator('.dfh-code-line').first()).not.toBeEmpty();
+
+  const docx = page.locator('.dfh-docx');
+  await expect(page.locator('.dfh-preview-badge')).toHaveText('Simplified layout');
+  await expect(docx.locator('h1.dfh-docx-title')).toBeVisible();
+  await expect(docx.locator('h1', { hasText: 'Action points' })).toBeVisible();
+  await expect(docx.locator('ul > li')).toHaveCount(3);
+  await expect(docx.locator('strong', { hasText: 'Author:' })).toBeVisible();
+  await expect(docx.locator('.dfh-docx-table th')).toHaveText(['Version', 'Date', 'Author', 'Summary']);
+  await expect(docx.locator('.dfh-docx-table tr').nth(1).locator('td').first()).toHaveText('v1');
+  await expect(docx.locator('em')).toContainText('Sample content');
+
+  await page.locator('.dfh-segmented a', { hasText: 'Text' }).click();
+  await expect(page).toHaveURL(/view=text/);
+  await expect(page.locator('.dfh-docx')).toHaveCount(0);
+  await expect(page.locator('.dfh-preview-badge')).toHaveCount(0);
+  await expect(page.locator('pre.dfh-code')).toContainText('Version history');
+  await page.locator('.dfh-preview-bar a', { hasText: 'Wrap lines' }).click();
+  await expect(page).toHaveURL(/view=text/);
+  await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
+  await page.locator('.dfh-segmented a', { hasText: 'Document' }).click();
+  await expect(page.locator('.dfh-docx h1.dfh-docx-title')).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 // Sprint 19: PDF pages through the self-hosted PDF.js. Demo PDFs have three pages.
@@ -654,5 +681,15 @@ test('preview on a phone: content flows with the page, no sideways scroll', asyn
   const box = await page.locator('.dfh-pdf-page[data-page="1"]').boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+
+  // Word: the sheet and its table stay inside the screen.
+  await openDocument(page, 'tbody tr[data-ext="DOCX"]');
+  await expect(page.locator('.dfh-docx-table')).toBeVisible();
+  for (const part of ['.dfh-docx', '.dfh-docx-table']) {
+    const b = await page.locator(part).first().boundingBox();
+    expect(b!.x).toBeGreaterThanOrEqual(0);
+    expect(b!.x + b!.width).toBeLessThanOrEqual(390);
+  }
   expect(await overflow()).toBeLessThanOrEqual(0);
 });

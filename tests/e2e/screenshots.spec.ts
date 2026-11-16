@@ -193,6 +193,7 @@ test('preview screens', async ({ page }) => {
   for (const [name, kind, extra] of [
     ['preview-md', 'md', ''], ['preview-md-source', 'md', '?view=source'], ['preview-txt', 'txt', ''],
     ['preview-pdf', 'pdf', ''], ['preview-pdf-text', 'pdf', '?view=text'], ['preview-docx', 'docx', ''],
+    ['preview-docx-text', 'docx', '?view=text'],
   ] as const) {
     await page.goto('/Documents');
     const href = await page.locator(`tbody tr[data-ext="${kind.toUpperCase()}"] a[href*="/Documents/Details/"]`).first().getAttribute('href');
@@ -224,6 +225,14 @@ test('preview screens', async ({ page }) => {
   await page.goto(pdf!);
   await settlePdf(page);
   await page.screenshot({ path: `${dir}/preview-pdf-390.png` });
+  await page.goto('/Documents');
+  const docx = await page.locator('tbody tr[data-ext="DOCX"] a[href*="/Documents/Details/"]').first().getAttribute('href');
+  await page.goto(docx!);
+  await page.screenshot({ path: `${dir}/preview-docx-390.png`, fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(docx!);
+  await page.locator('.dfh-docx-table').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${dir}/preview-docx-table.png` });
 });
 
 test('landing page', async ({ page }) => {
