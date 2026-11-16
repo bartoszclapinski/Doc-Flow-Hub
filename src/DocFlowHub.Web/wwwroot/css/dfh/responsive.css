@@ -226,6 +226,12 @@
     .dfh-code.is-nowrap { overflow-x: auto; }
     .dfh-md { width: auto; margin: 12px; padding: 18px 16px; font-size: 14px; }
     .dfh-md hr.dfh-docx-break { margin: 1.5em -16px; }
+    /* Line diff: unified only, and it flows with the page */
+    .dfh-diff-layout { display: none; }
+    .dfh-diff { overflow: visible; }
+    .dfh-diff-line { grid-template-columns: 30px 30px 14px minmax(0, 1fr); }
+    .dfh-diff-n { padding-right: 4px; font-size: 11px; }
+    .dfh-diff-fold { padding-left: 74px; }
     .dfh-preview-image { padding: 12px; }
     .dfh-preview-image img { max-height: 70vh; }
     .dfh-preview { flex: none; padding: 12px; }

@@ -177,6 +177,20 @@ test('admin screens', async ({ page }) => {
 });
 
 // Sprint 18: the document preview for each kind, at desktop and phone width.
+// Sprint 21: the line diff on the Compare page.
+test('compare diff screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?sort=name');
+  const multi = await page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[2-9]$/ }) }).first().getAttribute('data-id');
+  await page.goto(`/Documents/Compare/${multi}`);
+  await page.screenshot({ path: `${dir}/compare-diff.png` });
+  await page.goto(`/Documents/Compare/${multi}?view=unified&context=all`);
+  await page.screenshot({ path: `${dir}/compare-diff-unified.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/Documents/Compare/${multi}`);
+  await page.screenshot({ path: `${dir}/compare-diff-390.png`, fullPage: true });
+});
+
 // PDF pages draw after load (Sprint 19): wait for the first page and the thumbnails in view.
 async function settlePdf(page: Page) {
   if (!(await page.locator('[data-dfh-pdf]').count())) return;

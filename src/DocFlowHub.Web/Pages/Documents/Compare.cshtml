@@ -8,6 +8,24 @@
     var c = v.Comparison;
     var pair = $"v{v.From.Number} ↔ v{v.To.Number}";
     var newest = v.Versions[0].Number;
+    var diff = Model.Diff;
+
+    // Links of the diff toolbar: they keep the version pair and the other switches. "" clears a switch.
+    string DiffUrl(string? view = null, string? ws = null, string? context = null)
+    {
+        static string? Pick(string? next, string? current) => next == null ? current : next.Length == 0 ? null : next;
+        return Url.Page("/Documents/Compare", new
+        {
+            id = v.DocumentId,
+            from = v.From.Number,
+            to = v.To.Number,
+            view = Pick(view, Model.Unified ? "unified" : null),
+            ws = Pick(ws, Model.IgnoreWhitespace ? "ignore" : null),
+            context = Pick(context, Model.ShowAll ? "all" : null),
+        })!;
+    }
+
+    string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count:N0} {noun}s";
 }
 
 @section Inspector {
@@ -107,28 +125,98 @@
                 <span class="dfh-diff-who" title="@Dfh.Timestamp(version.CreatedAt)">@version.Author · @Dfh.Relative(version.CreatedAt)@(version.Number == newest ? " · current" : "")</span>
             </div>
         }
+        @if (Model.Unified) { <input type="hidden" name="view" value="unified" /> }
+        @if (Model.IgnoreWhitespace) { <input type="hidden" name="ws" value="ignore" /> }
+        @if (Model.ShowAll) { <input type="hidden" name="context" value="all" /> }
         <noscript><button type="submit" class="btn btn-secondary btn-sm">Compare</button></noscript>
     </form>
 
-    <div class="dfh-diff-empty dfh-fill">
-        <div class="dfh-empty dfh-empty--left">
-            <i class="bi bi-file-diff" aria-hidden="true"></i>
-            <span class="dfh-empty-title">Line-by-line diff isn't available yet</span>
-            <p>
-                For now DocFlowHub compares versions with AI: the summary and the list of changes are on the right.
-                To see the exact text, download both versions.
-            </p>
-            <div class="dfh-empty-actions">
-                @foreach (var version in new[] { v.From, v.To })
+    @if (diff.Status == VersionDiffStatus.Changed || Model.IgnoreWhitespace)
+    {
+        @* Diff toolbar (S21-6). Every control is a plain link; compare.js adds the change counter and jumps. *@
+        <div class="dfh-diff-bar">
+            @if (diff.Status == VersionDiffStatus.Changed)
+            {
+                <nav class="dfh-segmented dfh-diff-layout" aria-label="Diff layout">
+                    <a class="dfh-segmented-item@(!Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "")" aria-current="@(!Model.Unified ? "true" : null)">Side by side</a>
+                    <a class="dfh-segmented-item@(Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "unified")" aria-current="@(Model.Unified ? "true" : null)">Unified</a>
+                </nav>
+            }
+            <a class="btn btn-secondary btn-sm" href="@DiffUrl(ws: Model.IgnoreWhitespace ? "" : "ignore")" aria-pressed="@(Model.IgnoreWhitespace ? "true" : "false")" data-dfh-diff-ws>
+                <i class="bi bi-distribute-horizontal" aria-hidden="true"></i>Ignore whitespace
+            </a>
+            @if (diff.Status == VersionDiffStatus.Changed && (diff.FoldedLines > 0 || Model.ShowAll))
+            {
+                <a class="btn btn-secondary btn-sm" href="@DiffUrl(context: Model.ShowAll ? "" : "all")" aria-pressed="@(Model.ShowAll ? "true" : "false")" data-dfh-diff-all>
+                    <i class="bi bi-arrows-expand" aria-hidden="true"></i>Show all lines
+                </a>
+            }
+            <span class="dfh-spacer"></span>
+            @if (diff.Status == VersionDiffStatus.Changed)
+            {
+                <span class="dfh-diff-nav">
+                <span class="dfh-mono dfh-diff-count" data-dfh-diff-count data-changes="@diff.Changes">
+                    <span class="is-add" title="@Plural(diff.AddedLines, "line") added">+@diff.AddedLines</span>
+                    <span class="is-del" title="@Plural(diff.RemovedLines, "line") removed">−@diff.RemovedLines</span>
+                    <span aria-hidden="true">·</span>
+                    <span data-dfh-diff-pos>@Plural(diff.Changes, "change")</span>
+                </span>
+                <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-prev aria-label="Previous change" title="Previous change (P)" hidden><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-next aria-label="Next change" title="Next change (N)" hidden><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+                </span>
+            }
+        </div>
+    }
+
+    @if (diff.Status == VersionDiffStatus.Changed)
+    {
+        <div class="dfh-diff @(Model.Unified ? "is-unified" : "is-split")" tabindex="0" aria-label="Differences between v@(v.From.Number) and v@(v.To.Number)" data-dfh-diff>
+            @foreach (var section in diff.Sections)
+            {
+                if (section.Kind == DiffSectionKind.Fold)
                 {
-                    <form method="post" asp-page="/Documents/Details" asp-page-handler="Download" asp-route-id="@v.DocumentId">
-                        <input type="hidden" name="versionId" value="@version.Id" />
-                        <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download v@(version.Number)</button>
-                    </form>
+                    <a class="dfh-diff-fold" href="@DiffUrl(context: "all")" title="Show all lines">⋯ @Plural(section.FoldedLines, "unchanged line")</a>
+                    continue;
                 }
+                var change = section.Kind == DiffSectionKind.Change;
+                @* Razor keeps an empty data-* attribute, so the change attributes are written only for a change (numbers only). *@
+                <div class="dfh-diff-section@(change ? " is-change" : "")"@Html.Raw(change ? $" id=\"change-{section.ChangeNumber}\" data-dfh-change=\"{section.ChangeNumber}\"" : "")>
+                    @foreach (var line in section.Lines)
+                    {
+                        if (line.Kind == DiffLineKind.Context)
+                        {
+                            <div class="dfh-diff-line is-ctx" style="grid-row: @line.Row"><span class="dfh-diff-n is-old">@line.OldNumber</span><span class="dfh-diff-s is-old"></span><span class="dfh-diff-t is-old">@line.OldText</span><span class="dfh-diff-n is-new">@line.NewNumber</span><span class="dfh-diff-s"></span><span class="dfh-diff-t">@line.NewText</span></div>
+                        }
+                        else
+                        {
+                            var removed = line.Kind == DiffLineKind.Removed;
+                            <div class="dfh-diff-line @(removed ? "is-del" : "is-add")" style="grid-row: @line.Row"><span class="dfh-diff-n is-old">@line.OldNumber</span><span class="dfh-diff-n is-new">@line.NewNumber</span><span class="dfh-diff-s">@(removed ? "−" : "+")</span><span class="dfh-diff-t">@if (line.Pieces == null) {@(removed ? line.OldText : line.NewText)} else { foreach (var piece in line.Pieces) { if (piece.Changed) {<mark class="dfh-diff-w">@piece.Text</mark>} else {@piece.Text} } }</span></div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        var same = diff.Status == VersionDiffStatus.Identical;
+        <div class="dfh-diff-empty dfh-fill" data-dfh-diff-status="@diff.Status">
+            <div class="dfh-empty dfh-empty--left">
+                <i class="bi @(same ? "bi-check2-circle" : "bi-file-diff")" aria-hidden="true"></i>
+                <span class="dfh-empty-title">@(same ? "No text differences" : diff.Status == VersionDiffStatus.TooLarge ? "Too large to compare here" : "No line-by-line diff for these versions")</span>
+                <p>@diff.Note</p>
+                <div class="dfh-empty-actions">
+                    @foreach (var version in new[] { v.From, v.To })
+                    {
+                        <form method="post" asp-page="/Documents/Details" asp-page-handler="Download" asp-route-id="@v.DocumentId">
+                            <input type="hidden" name="versionId" value="@version.Id" />
+                            <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download v@(version.Number)</button>
+                        </form>
+                    }
+                </div>
             </div>
         </div>
-    </div>
+    }
 </div>
 
 @section Scripts {
