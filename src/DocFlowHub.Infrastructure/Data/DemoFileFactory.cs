@@ -20,8 +20,21 @@ public static class DemoFileFactory
     /// <summary>A line that starts a new page in a PDF. Other formats leave it out.</summary>
     public const string PageBreak = "\f";
 
-    /// <summary>Prefix of a line drawn as a bold heading in a PDF; other formats keep the text without it.</summary>
+    /// <summary>Prefix of a heading line: bold in a PDF, a "Heading 1" paragraph in a DOCX; TXT and MD keep the text without it.</summary>
     public const string HeadingPrefix = "# ";
+
+    /// <summary>DOCX only (Sprint 20): a bullet list item.</summary>
+    public const string BulletPrefix = "- ";
+
+    /// <summary>
+    /// DOCX only: a table row, its cells separated by <see cref="CellSeparator"/>. Rows that follow each
+    /// other make one table; the first is its header row.
+    /// </summary>
+    public const string RowPrefix = "| ";
+    public const string CellSeparator = " | ";
+
+    /// <summary>DOCX only: text between two of these is bold; a whole line between single <c>*</c> is italic.</summary>
+    public const string BoldMark = "**";
 
     /// <summary>True for a type the factory can build; accepts "pdf" or ".pdf".</summary>
     public static bool IsSupported(string? fileType) =>
@@ -32,7 +45,7 @@ public static class DemoFileFactory
         Normalize(fileType) switch
         {
             "pdf" => CreatePdf(title, lines),
-            "docx" => CreateDocx(title, Plain(lines)),
+            "docx" => CreateDocx(title, lines),
             // Markdown joins lines separated by a single newline, so put a blank line between them.
             "md" => Encoding.UTF8.GetBytes($"# {title}\n\n{string.Join("\n\n", Plain(lines))}\n"),
             "txt" => Encoding.UTF8.GetBytes($"{title}\n{new string('=', title.Length)}\n\n{string.Join("\n", Plain(lines))}\n"),
@@ -66,22 +79,140 @@ public static class DemoFileFactory
 
     private static string Normalize(string fileType) => fileType.TrimStart('.').ToLowerInvariant();
 
+    /// <summary>
+    /// Writes a DOCX with real structure (Sprint 20), so the formatted preview has something to show: the
+    /// title in the "Title" style, <see cref="HeadingPrefix"/> lines as "Heading 1", <see cref="BulletPrefix"/>
+    /// lines as a bullet list, <see cref="RowPrefix"/> lines as a table, <see cref="BoldMark"/> for bold.
+    /// </summary>
     private static byte[] CreateDocx(string title, IReadOnlyList<string> lines)
     {
         using var ms = new MemoryStream();
         using (var doc = WordprocessingDocument.Create(ms, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
         {
             var main = doc.AddMainDocumentPart();
+
+            main.AddNewPart<StyleDefinitionsPart>().Styles = new W.Styles(
+                new W.Style(
+                    new W.StyleName { Val = "Title" },
+                    new W.StyleParagraphProperties(new W.SpacingBetweenLines { After = "240" }),
+                    new W.StyleRunProperties(new W.Bold(), new W.FontSize { Val = "40" }))
+                { Type = W.StyleValues.Paragraph, StyleId = "Title" },
+                new W.Style(
+                    new W.StyleName { Val = "heading 1" },
+                    new W.StyleParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { Before = "360", After = "120" }, new W.OutlineLevel { Val = 0 }),
+                    new W.StyleRunProperties(new W.Bold(), new W.FontSize { Val = "30" }))
+                { Type = W.StyleValues.Paragraph, StyleId = "Heading1" });
+
+            main.AddNewPart<NumberingDefinitionsPart>().Numbering = new W.Numbering(
+                new W.AbstractNum(
+                    new W.Level(
+                        new W.StartNumberingValue { Val = 1 },
+                        new W.NumberingFormat { Val = W.NumberFormatValues.Bullet },
+                        new W.LevelText { Val = "\u2022" },
+                        new W.PreviousParagraphProperties(new W.Indentation { Left = "720", Hanging = "360" }))
+                    { LevelIndex = 0 })
+                { AbstractNumberId = 0 },
+                new W.NumberingInstance(new W.AbstractNumId { Val = 0 }) { NumberID = 1 });
+
             var body = new W.Body();
-            body.Append(new W.Paragraph(new W.Run(new W.RunProperties(new W.Bold(), new W.FontSize { Val = "32" }), new W.Text(title))));
+            body.Append(new W.Paragraph(
+                new W.ParagraphProperties(new W.ParagraphStyleId { Val = "Title" }),
+                new W.Run(new W.Text(title))));
+
+            W.Table? table = null;
             foreach (var line in lines)
             {
-                body.Append(new W.Paragraph(new W.Run(new W.Text(line) { Space = DocumentFormat.OpenXml.SpaceProcessingModeValues.Preserve })));
+                if (line == PageBreak) continue;
+
+                if (line.StartsWith(RowPrefix, StringComparison.Ordinal))
+                {
+                    var header = table == null;
+                    if (table == null)
+                    {
+                        table = new W.Table(new W.TableProperties(
+                            new W.TableWidth { Width = "5000", Type = W.TableWidthUnitValues.Pct },
+                            new W.TableBorders(
+                                new W.TopBorder { Val = W.BorderValues.Single, Size = 4 },
+                                new W.LeftBorder { Val = W.BorderValues.Single, Size = 4 },
+                                new W.BottomBorder { Val = W.BorderValues.Single, Size = 4 },
+                                new W.RightBorder { Val = W.BorderValues.Single, Size = 4 },
+                                new W.InsideHorizontalBorder { Val = W.BorderValues.Single, Size = 4 },
+                                new W.InsideVerticalBorder { Val = W.BorderValues.Single, Size = 4 })));
+                        body.Append(table);
+                    }
+                    var row = new W.TableRow();
+                    if (header) row.Append(new W.TableRowProperties(new W.TableHeader()));
+                    foreach (var cell in line[RowPrefix.Length..].Split(CellSeparator))
+                    {
+                        var run = new W.Run();
+                        if (header) run.Append(new W.RunProperties(new W.Bold()));
+                        run.Append(DocxText(cell.Trim()));
+                        row.Append(new W.TableCell(new W.Paragraph(run)));
+                    }
+                    table.Append(row);
+                    continue;
+                }
+
+                if (table != null)
+                {
+                    // Word needs a paragraph between a table and whatever follows it.
+                    table = null;
+                    if (line.Length == 0)
+                    {
+                        body.Append(new W.Paragraph());
+                        continue;
+                    }
+                }
+
+                if (line.StartsWith(HeadingPrefix, StringComparison.Ordinal))
+                {
+                    body.Append(new W.Paragraph(
+                        new W.ParagraphProperties(new W.ParagraphStyleId { Val = "Heading1" }),
+                        new W.Run(DocxText(line[HeadingPrefix.Length..]))));
+                }
+                else if (line.StartsWith(BulletPrefix, StringComparison.Ordinal))
+                {
+                    var item = new W.Paragraph(new W.ParagraphProperties(
+                        new W.NumberingProperties(new W.NumberingLevelReference { Val = 0 }, new W.NumberingId { Val = 1 })));
+                    AppendRuns(item, line[BulletPrefix.Length..]);
+                    body.Append(item);
+                }
+                else
+                {
+                    var paragraph = new W.Paragraph();
+                    AppendRuns(paragraph, line);
+                    body.Append(paragraph);
+                }
             }
+            if (table != null) body.Append(new W.Paragraph());
+
             main.Document = new W.Document(body);
             main.Document.Save();
         }
         return ms.ToArray();
+    }
+
+    private static W.Text DocxText(string text) =>
+        new(text) { Space = DocumentFormat.OpenXml.SpaceProcessingModeValues.Preserve };
+
+    /// <summary>Runs for one line: <c>*whole line*</c> is italic, text between <see cref="BoldMark"/> is bold.</summary>
+    private static void AppendRuns(W.Paragraph paragraph, string line)
+    {
+        if (line.Length > 2 && line[0] == '*' && line[^1] == '*' && !line.StartsWith(BoldMark, StringComparison.Ordinal))
+        {
+            paragraph.Append(new W.Run(new W.RunProperties(new W.Italic()), DocxText(line[1..^1])));
+            return;
+        }
+
+        var parts = line.Split(BoldMark);
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (parts[i].Length == 0) continue;
+            var run = new W.Run();
+            if (i % 2 == 1) run.Append(new W.RunProperties(new W.Bold()));
+            run.Append(DocxText(parts[i]));
+            paragraph.Append(run);
+        }
     }
 
     /// <summary>

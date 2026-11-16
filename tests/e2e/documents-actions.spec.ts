@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import path from 'path';
+import { expect, test, type Page } from '@playwright/test';
 import { DEMO_USER, signIn } from './helpers';
 
 // Documents list writes (delete, bulk delete, move). They change data, so they run only on a
@@ -219,4 +220,60 @@ test('a damaged PDF explains itself and links to the text view', async ({ page }
   await page.locator('[data-dfh-action="delete"]').click();
   await page.locator('#dfh-delete-modal button[type="submit"]').click();
   await expect(page.locator('.dfh-toast')).toContainText('Deleted "e2e-damaged"');
+});
+
+// Sprint 20: Word documents. Both tests delete their document, like the PDF one above.
+async function uploadFile(page: Page, file: string | { name: string; mimeType: string; buffer: Buffer }) {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-file]').setInputFiles(file);
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  const ai = page.locator('input[name="GenerateSummary"][type="checkbox"]');
+  if (await ai.count()) await ai.uncheck();
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+}
+
+async function deleteOpenDocument(page: Page, title: string) {
+  await page.locator('button[aria-label="More actions"]').first().click();
+  await page.locator('[data-dfh-action="delete"]').click();
+  await page.locator('#dfh-delete-modal button[type="submit"]').click();
+  await expect(page.locator('.dfh-toast')).toContainText(`Deleted "${title}"`);
+}
+
+test('a Word document with markup in its text and a script link is shown safely', async ({ page }) => {
+  await uploadFile(page, path.join(__dirname, 'fixtures', 'tricky.docx'));
+
+  const docx = page.locator('.dfh-docx');
+  // The heading style has a Polish id ("Nagwek1"); it is found by its name.
+  await expect(docx.locator('h1')).toHaveText('E2E tricky heading');
+  await expect(docx).toContainText('<script>window.__docx_xss=1</script>');
+  await expect(docx).toContainText('stays text');
+  await expect(docx.locator('script, img')).toHaveCount(0);
+  await expect(docx.locator('a')).toHaveCount(1);
+  await expect(docx.locator('a')).toHaveAttribute('href', 'https://example.com/handbook');
+  await expect(docx.locator('a')).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+  await expect(docx).toContainText('script link and web link');
+  await expect(docx.locator('.dfh-docx-table td')).toHaveText(['cell one', 'cell two']);
+  await expect(docx.locator('.dfh-docx-table td strong')).toHaveText('cell two');
+  expect(await page.evaluate(() => (window as unknown as { __docx_xss?: number }).__docx_xss)).toBeUndefined();
+
+  await page.locator('.dfh-segmented a', { hasText: 'Text' }).click();
+  await expect(page.locator('pre.dfh-code')).toContainText('E2E tricky heading');
+  expect(await page.evaluate(() => (window as unknown as { __docx_xss?: number }).__docx_xss)).toBeUndefined();
+
+  await deleteOpenDocument(page, 'tricky');
+});
+
+test('a damaged Word document offers the download instead of a preview', async ({ page }) => {
+  await uploadFile(page, {
+    name: 'e2e-damaged.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('this is not a real Word file')]),
+  });
+
+  await expect(page.locator('.dfh-docx')).toHaveCount(0);
+  await expect(page.locator('.dfh-preview-note')).toContainText('damaged or password-protected');
+  await expect(page.locator('.dfh-preview-page button', { hasText: 'Download DOCX' })).toBeVisible();
+
+  await deleteOpenDocument(page, 'e2e-damaged');
 });

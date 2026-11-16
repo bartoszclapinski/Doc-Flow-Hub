@@ -112,7 +112,7 @@ Recommended defaults; the ones marked **D** need your OK.
 | D2 | Anonymous `/` | Redirect to Sign in; delete the marketing landing page with its invented stats (handoff says so). **Superseded in Sprint 16**: the updated handoff adds a new landing page, now shown at `/` to signed-out visitors. |
 | D3 | Status bar content | Storage provider from config ("Local storage" on the demo, "Azure Blob" otherwise), current path (mono), signed-in user's AI requests today vs daily limit (existing data), `demo · read-only` in demo, app version from the assembly. No "connected" claim. |
 | D4 | Version compare in the demo | Compare is a POST and the demo blocks POSTs, so the demo can't show it. Option: allow the `CompareVersions` handler in demo **only when a cached comparison exists** (the seed can create a few). Otherwise the compare screen shows an explanatory empty state in the demo. |
-| D5 | Document preview (Details) | Visual pass: placeholder panel with file type, size, page info we have, and Download. Real PDF.js preview later (needs an inline GET endpoint). **Sprint 18** replaced the placeholder: text, Markdown, images, and extracted text for PDF / DOCX. **Sprint 19**: PDF pages with PDF.js (thumbnail strip, page navigation, zoom); a DOCX view follows. |
+| D5 | Document preview (Details) | Visual pass: placeholder panel with file type, size, page info we have, and Download. Real PDF.js preview later (needs an inline GET endpoint). **Sprint 18** replaced the placeholder: text, Markdown, images, and extracted text for PDF / DOCX. **Sprint 19**: PDF pages with PDF.js (thumbnail strip, page navigation, zoom). **Sprint 20**: Word documents as formatted HTML (headings, lists, tables, links, pictures) with a Text view. |
 | D6 | Mutating buttons in demo | Keep them visible but disabled with a tooltip "Read-only demo" (today they fail on click). |
 | 7 | Near-identical greys `#9a9da4` / `#9da0a8` | Merge into `--dfh-text-muted` `#9a9da4`. |
 | 8 | Secondary button border | `--dfh-border-button: #4e5157` for 28px+ secondary buttons, `#43454a` for 24px compact controls and inputs. |
@@ -287,7 +287,7 @@ All recommendations accepted:
 - **D2, D3, 7–21** as in §4.
 - **D4** the demo allows `CompareVersions` only for comparisons already cached by the seed; otherwise
   the compare screen shows an empty state.
-- **D5** Details showed a preview placeholder; Sprint 18 added real previews, Sprint 19 PDF pages (DOCX next).
+- **D5** Details showed a preview placeholder; Sprint 18 added real previews, Sprint 19 PDF pages, Sprint 20 the Word view.
 - **D6** mutating buttons in the demo are disabled with a "Read-only demo" tooltip.
 - **D7** a small Playwright smoke suite is added in Sprint 9 (sign in as both demo accounts, open each
   main page, assert no error page).

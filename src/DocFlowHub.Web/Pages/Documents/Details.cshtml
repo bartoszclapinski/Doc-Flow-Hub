@@ -372,7 +372,8 @@
 
     @* Sprint 18: the document preview. Text and Markdown are rendered here (no extra request); images
        come from ?handler=File. Sprint 19: PDF pages are drawn by PDF.js (pdf-preview.js) from the same
-       handler, with a "Text" view; DOCX shows its extracted text until a page preview exists. *@
+       handler, with a "Text" view. Sprint 20: a DOCX is formatted HTML built on the server, with the
+       same "Text" view. *@
     <section class="dfh-preview-pane" aria-label="Preview">
         @if (p != null && p.Kind != DocumentPreviewKind.None)
         {
@@ -380,9 +381,9 @@
             <div class="dfh-preview-bar">
                 <span class="dfh-filetype dfh-filetype--@pKind">@pLabel</span>
                 <span class="dfh-mono dfh-muted">v@(p.VersionNumber) · @Dfh.FileSize(p.FileSize)@(p.Encoding != null ? " · " + p.Encoding : "")</span>
-                @if (p.Kind == DocumentPreviewKind.ExtractedText)
+                @if (p.Kind == DocumentPreviewKind.Docx && p.Html != null)
                 {
-                    <span class="dfh-preview-badge" title="The text of the file, without its layout. A page preview is planned.">Text only — page layout preview is coming</span>
+                    <span class="dfh-preview-badge" title="Headings, lists, tables and pictures are shown. Fonts, colours, columns, headers and footers are not.">Simplified layout</span>
                 }
                 <span class="dfh-spacer"></span>
                 @if (p.Kind == DocumentPreviewKind.Markdown)
@@ -392,7 +393,7 @@
                         <a class="dfh-segmented-item@(Model.ShowSource ? " is-active" : "")" href="@PreviewUrl(view: "source")" aria-current="@(Model.ShowSource ? "true" : null)">Source</a>
                     </nav>
                 }
-                @if (p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText)
+                @if (p.Kind == DocumentPreviewKind.Pdf && !Model.ShowText)
                 {
                     @* Page navigation and zoom (S19-6); pdf-preview.js shows them once the PDF is open. *@
                     <div class="dfh-pdf-controls" data-dfh-pdf-controls hidden>
@@ -409,12 +410,20 @@
                 @if (p.Kind == DocumentPreviewKind.Pdf)
                 {
                     <nav class="dfh-segmented" aria-label="PDF view">
-                        <a class="dfh-segmented-item@(!Model.ShowPdfText ? " is-active" : "")" href="@PreviewUrl(view: "")" aria-current="@(!Model.ShowPdfText ? "true" : null)">Pages</a>
-                        <a class="dfh-segmented-item@(Model.ShowPdfText ? " is-active" : "")" href="@PreviewUrl(view: "text")" aria-current="@(Model.ShowPdfText ? "true" : null)">Text</a>
+                        <a class="dfh-segmented-item@(!Model.ShowText ? " is-active" : "")" href="@PreviewUrl(view: "")" aria-current="@(!Model.ShowText ? "true" : null)">Pages</a>
+                        <a class="dfh-segmented-item@(Model.ShowText ? " is-active" : "")" href="@PreviewUrl(view: "text")" aria-current="@(Model.ShowText ? "true" : null)">Text</a>
                     </nav>
                 }
-                @if (p.Kind is DocumentPreviewKind.Text or DocumentPreviewKind.ExtractedText || (p.Kind == DocumentPreviewKind.Markdown && Model.ShowSource)
-                     || (p.Kind == DocumentPreviewKind.Pdf && Model.ShowPdfText && p.Text != null))
+                @if (p.Kind == DocumentPreviewKind.Docx)
+                {
+                    <nav class="dfh-segmented" aria-label="Word document view">
+                        <a class="dfh-segmented-item@(!Model.ShowText ? " is-active" : "")" href="@PreviewUrl(view: "")" aria-current="@(!Model.ShowText ? "true" : null)">Document</a>
+                        <a class="dfh-segmented-item@(Model.ShowText ? " is-active" : "")" href="@PreviewUrl(view: "text")" aria-current="@(Model.ShowText ? "true" : null)">Text</a>
+                    </nav>
+                }
+                @if (p.Kind == DocumentPreviewKind.Text || (p.Kind == DocumentPreviewKind.Markdown && Model.ShowSource)
+                     || (p.Kind == DocumentPreviewKind.Pdf && Model.ShowText && p.Text != null)
+                     || (p.Kind == DocumentPreviewKind.Docx && p.Html == null && p.Text != null))
                 {
                     <a class="btn btn-secondary btn-sm" href="@PreviewUrl(wrap: Model.WrapLines ? "0" : "")" aria-pressed="@(Model.WrapLines ? "true" : "false")">
                         <i class="bi bi-text-wrap" aria-hidden="true"></i>Wrap lines
@@ -438,7 +447,7 @@
             </div>
         }
 
-        @{ var pdfPages = p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText; }
+        @{ var pdfPages = p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowText; }
         <div class="dfh-preview-body@(pdfPages ? " is-pdf" : "")" tabindex="@(pdfPages ? null : "0")" aria-label="Document content">
             @if (p == null || p.Kind == DocumentPreviewKind.None)
             {
@@ -487,12 +496,34 @@
                     </div>
                 </div>
             }
+            else if (p.Kind == DocumentPreviewKind.Docx && p.Html == null && p.Text == null)
+            {
+                <div class="dfh-preview">
+                    <div class="dfh-preview-page">
+                        <span class="dfh-filetype dfh-filetype--@kind">@label</span>
+                        <p class="dfh-preview-note">@p.Note</p>
+                        <a class="btn btn-secondary btn-sm" href="@PreviewUrl(view: "")"><i class="bi bi-file-earmark-word" aria-hidden="true"></i>Show the document</a>
+                    </div>
+                </div>
+            }
             else if (p.Kind == DocumentPreviewKind.Markdown && !Model.ShowSource)
             {
                 <article class="dfh-md">@Html.Raw(p.Html)</article>
             }
+            else if (p.Kind == DocumentPreviewKind.Docx && p.Html != null)
+            {
+                @* DocxRendering only writes its own tags and encodes all text (S20-1). *@
+                <article class="dfh-md dfh-docx">@Html.Raw(p.Html)</article>
+            }
             else
             {
+                @if (p.Kind == DocumentPreviewKind.Docx && p.Note != null)
+                {
+                    <div class="dfh-banner dfh-banner--info dfh-preview-fallback" role="status">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                        <span>@p.Note</span>
+                    </div>
+                }
                 <pre class="dfh-code@(Model.WrapLines ? "" : " is-nowrap")"><code>@foreach (var line in Lines(p.Text))
 {<span class="dfh-code-line">@line</span>}</code></pre>
             }
@@ -500,7 +531,7 @@
             @if (p != null && p.Truncated)
             {
                 <div class="dfh-preview-more">
-                    <span>Showing the first 256 KB. Download the file for the rest.</span>
+                    <span>@(p.Kind == DocumentPreviewKind.Docx && p.Html != null ? "Showing the first part of the document." : "Showing the first 256 KB.") Download the file for the rest.</span>
                     <form method="post" asp-page-handler="Download" asp-route-id="@d.Id">
                         <input type="hidden" name="versionId" value="@p.VersionId" />
                         <button type="submit" class="btn btn-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i>Download</button>
@@ -537,7 +568,7 @@
     <script src="~/js/dfh/document-dialogs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>
     <script src="~/js/dfh/details.js" asp-append-version="true"></script>
-    @if (p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowPdfText)
+    @if (p != null && p.Kind == DocumentPreviewKind.Pdf && !Model.ShowText)
     {
         <script type="module" src="~/js/dfh/pdf-preview.js" asp-append-version="true"></script>
     }

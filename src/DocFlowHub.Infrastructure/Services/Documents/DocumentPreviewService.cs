@@ -6,7 +6,8 @@ using Microsoft.Extensions.Logging;
 namespace DocFlowHub.Infrastructure.Services.Documents;
 
 /// <summary>
-/// Previews for the Details page (Sprint 18, decisions S18-1…S18-5; PDF pages: Sprint 19). Access goes through
+/// Previews for the Details page (Sprint 18, decisions S18-1…S18-5; PDF pages: Sprint 19; Word documents:
+/// Sprint 20). Access goes through
 /// <see cref="IDocumentBrowserService.GetDetailsAsync"/>, the same check the Details page uses.
 /// Read-only, AI-free, so it works in the demo.
 /// </summary>
@@ -49,17 +50,17 @@ public class DocumentPreviewService : IDocumentPreviewService
         _logger = logger;
     }
 
-    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(string userId, int documentId, int? versionNumber = null, bool pdfText = false)
+    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(string userId, int documentId, int? versionNumber = null, bool textView = false)
     {
         var details = await _browser.GetDetailsAsync(userId, documentId);
         if (!details.Succeeded || details.Data == null)
         {
             return ServiceResult<DocumentPreview>.Failure("Document not found");
         }
-        return await GetPreviewAsync(details.Data, versionNumber, pdfText);
+        return await GetPreviewAsync(details.Data, versionNumber, textView);
     }
 
-    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(DocumentDetails document, int? versionNumber = null, bool pdfText = false)
+    public async Task<ServiceResult<DocumentPreview>> GetPreviewAsync(DocumentDetails document, int? versionNumber = null, bool textView = false)
     {
         if (document.Versions.Count == 0)
         {
@@ -94,7 +95,7 @@ public class DocumentPreviewService : IDocumentPreviewService
         }
 
         // PDF pages are drawn by PDF.js in the browser; the file is only read here for the text view (S19-3).
-        if (type == ".pdf" && !pdfText)
+        if (type == ".pdf" && !textView)
         {
             preview.Kind = DocumentPreviewKind.Pdf;
             return ServiceResult<DocumentPreview>.Success(preview);
@@ -135,7 +136,32 @@ public class DocumentPreviewService : IDocumentPreviewService
             return ServiceResult<DocumentPreview>.Success(preview);
         }
 
-        // PDF text view / DOCX: the text the AI features use (S18-1, S19-4).
+        // A Word document as formatted HTML (S20-1). A file the writer cannot open falls through to its text.
+        string? fallbackNote = null;
+        if (type == ".docx" && !textView)
+        {
+            try
+            {
+                var rendered = DocxRendering.Render(file.Data);
+                preview.Kind = DocumentPreviewKind.Docx;
+                if (string.IsNullOrWhiteSpace(rendered.Html))
+                {
+                    preview.Kind = DocumentPreviewKind.None;
+                    preview.Note = "This Word file has nothing to show. Download it to open it.";
+                    return ServiceResult<DocumentPreview>.Success(preview);
+                }
+                preview.Html = rendered.Html;
+                preview.Truncated = rendered.Truncated;
+                return ServiceResult<DocumentPreview>.Success(preview);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Preview: the formatted view failed for document {DocumentId} v{Version}", document.Id, version.Number);
+                fallbackNote = "The formatted view could not be built for this file, so its plain text is shown.";
+            }
+        }
+
+        // PDF / DOCX text view: the text the AI features use (S18-1, S19-4, S20-9).
         string? extracted = null;
         try
         {
@@ -150,15 +176,28 @@ public class DocumentPreviewService : IDocumentPreviewService
         if (string.IsNullOrWhiteSpace(extracted))
         {
             // A PDF keeps its kind, so the page still offers the "Pages" view; the note explains the empty text.
-            preview.Kind = type == ".pdf" ? DocumentPreviewKind.Pdf : DocumentPreviewKind.None;
-            preview.Note = type == ".pdf"
-                ? "No text could be found in this PDF (it may be scanned pages). The Pages view shows it as it looks."
-                : $"No text could be found in this {Label(type)} file (it may be scanned images). Download it to open it.";
+            // So does a DOCX whose text view is empty; one that also failed to render has nothing to offer.
+            if (type == ".pdf")
+            {
+                preview.Kind = DocumentPreviewKind.Pdf;
+                preview.Note = "No text could be found in this PDF (it may be scanned pages). The Pages view shows it as it looks.";
+            }
+            else if (fallbackNote == null)
+            {
+                preview.Kind = DocumentPreviewKind.Docx;
+                preview.Note = "No text could be found in this Word file (it may hold only pictures). The Document view shows what it contains.";
+            }
+            else
+            {
+                preview.Kind = DocumentPreviewKind.None;
+                preview.Note = "This Word file could not be read for a preview (it may be damaged or password-protected). Download it to open it.";
+            }
             return ServiceResult<DocumentPreview>.Success(preview);
         }
 
         var (capped, cut) = PreviewRendering.CapText(extracted, DocumentPreview.TextLimitBytes);
-        preview.Kind = type == ".pdf" ? DocumentPreviewKind.Pdf : DocumentPreviewKind.ExtractedText;
+        preview.Kind = type == ".pdf" ? DocumentPreviewKind.Pdf : DocumentPreviewKind.Docx;
+        preview.Note = fallbackNote;
         preview.Text = capped;
         preview.Truncated = cut;
         return ServiceResult<DocumentPreview>.Success(preview);

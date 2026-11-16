@@ -1113,6 +1113,22 @@ button.dfh-tree-toggle > i { transition: transform 0.12s ease-out; }
 .dfh-md th, .dfh-md td { padding: 6px 10px; border: 1px solid var(--dfh-border); text-align: left; }
 .dfh-md th { background: var(--dfh-bg-panel); font-weight: 600; }
 
+/* Word documents (Sprint 20): the Markdown sheet at Letter width, plus what DocxRendering writes */
+.dfh-docx { width: min(816px, 100% - 32px); padding: 44px 56px; }
+.dfh-md .dfh-docx-title { font-size: 28px; border-bottom: 0; padding-bottom: 0; }
+.dfh-docx .is-center { text-align: center; }
+.dfh-docx .is-right { text-align: right; }
+.dfh-docx ul ul, .dfh-docx ul ol, .dfh-docx ol ul, .dfh-docx ol ol { margin: 0.25em 0 0; }
+.dfh-docx-table { max-width: 100%; margin: 0 0 1em; overflow-x: auto; }
+.dfh-docx-table > table { display: table; width: 100%; margin: 0; overflow: visible; }
+.dfh-docx td, .dfh-docx th { vertical-align: top; }
+.dfh-docx td > :last-child, .dfh-docx th > :last-child { margin-bottom: 0; }
+.dfh-docx td .dfh-docx-table { margin-top: 0.5em; }
+.dfh-docx-img { max-width: 100%; height: auto; vertical-align: middle; }
+.dfh-docx-picture { color: var(--dfh-text-muted); font-style: italic; }
+.dfh-md hr.dfh-docx-break { margin: 2em -56px; border-top: 1px dashed var(--dfh-border-button); }
+.dfh-preview-fallback { margin: 12px 16px 0; }
+
 /* Images: fit the pane by default; "Actual size" (JS) shows them 1:1 with scrolling */
 .dfh-preview-image { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 20px; }
 .dfh-preview-image img {

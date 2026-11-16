@@ -194,7 +194,7 @@ public class DocumentPreviewServiceTests
     public async Task Pdf_TextView_HasTheExtractedText()
     {
         File(1, DemoFileFactory.Create("pdf", "Quarterly report", new[] { "Revenue grew in the third quarter." }));
-        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), pdfText: true)).Data!;
+        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), textView: true)).Data!;
         preview.Kind.Should().Be(DocumentPreviewKind.Pdf);
         preview.Text.Should().Contain("Revenue grew");
     }
@@ -203,19 +203,10 @@ public class DocumentPreviewServiceTests
     public async Task Pdf_TextView_WithoutText_KeepsThePagesViewAndExplains()
     {
         File(1, Encoding.ASCII.GetBytes("%PDF-1.4 not really a pdf"));
-        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), pdfText: true)).Data!;
+        var preview = (await _service.GetPreviewAsync(Doc(".pdf", 1), textView: true)).Data!;
         preview.Kind.Should().Be(DocumentPreviewKind.Pdf);
         preview.Text.Should().BeNull();
         preview.Note.Should().Contain("Pages view");
-    }
-
-    [Fact]
-    public async Task Docx_ShowsExtractedText()
-    {
-        File(1, DemoFileFactory.Create("docx", "Handbook", new[] { "Welcome to the team." }));
-        var preview = (await _service.GetPreviewAsync(Doc(".docx", 1))).Data!;
-        preview.Kind.Should().Be(DocumentPreviewKind.ExtractedText);
-        preview.Text.Should().Contain("Welcome to the team.");
     }
 
     [Fact]

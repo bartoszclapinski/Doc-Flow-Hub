@@ -17,8 +17,8 @@ idle, so the first visit can take a minute.
 - Upload files (PDF, Word, text, Markdown, images) with a title, description and categories.
 - Upload a new version of a document; older versions stay and can be downloaded or deleted.
 - Preview in the browser: PDF pages (PDF.js, with page thumbnails, navigation, zoom and selectable
-  text), text with line numbers, rendered Markdown (with a source view), images, and the text of Word
-  files; any older version can be previewed too.
+  text), Word documents (.docx) with their headings, lists, tables, links and pictures, text with line
+  numbers, rendered Markdown (with a source view) and images; any older version can be previewed too.
 - Projects with nested folders; drag a folder onto another to move it.
 - Documents list with a project tree, filters (type, owner, category), sorting, paging, bulk move and
   bulk delete with a per-document result.
@@ -65,8 +65,9 @@ Being clear about the gaps:
   say so. The AI limits are fixed in code.
 - **No e-mail and no inbox**: e-mails are only written to the log, and messages an administrator sends
   are saved but users have nowhere to read them.
-- **No page-layout preview for Word files yet**: they show their text only (a Word view is planned);
-  old `.doc` files can only be downloaded. Links and form fields inside PDFs are not interactive.
+- **The Word view is simplified**: it shows the structure of a `.docx`, not its fonts, colours,
+  columns, headers, footers or footnotes, and a numbered list that continues after a break starts
+  again; old `.doc` files can only be downloaded. Links and form fields inside PDFs are not interactive.
   **No line-by-line diff**; version comparison is the AI's description of the changes.
 - No invitations, notifications, comments or real-time updates.
 
@@ -77,7 +78,8 @@ Being clear about the gaps:
 - File storage in Azure Blob Storage or a local folder
 - OpenAI and Anthropic SDKs for the AI features
 - Bootstrap 5 restyled with design tokens, plain JavaScript (no front-end framework), self-hosted
-  IBM Plex Sans and JetBrains Mono; PDF.js (self-hosted) for PDF pages, Markdig for Markdown
+  IBM Plex Sans and JetBrains Mono; PDF.js (self-hosted) for PDF pages, Markdig for Markdown,
+  the Open XML SDK for Word documents
 - xUnit unit tests (in-memory and SQLite), Playwright end-to-end tests
 - Docker image and GitHub Actions CI (build, tests, container smoke test)
 

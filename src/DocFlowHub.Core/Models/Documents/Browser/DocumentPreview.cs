@@ -12,8 +12,12 @@ public enum DocumentPreviewKind
     /// <summary>Markdown (.md): sanitised HTML in <see cref="DocumentPreview.Html"/>, source in <see cref="DocumentPreview.Text"/>.</summary>
     Markdown,
 
-    /// <summary>Text extracted from a DOCX until a page-layout preview exists.</summary>
-    ExtractedText,
+    /// <summary>
+    /// A Word document (.docx) as formatted HTML in <see cref="DocumentPreview.Html"/> (Sprint 20).
+    /// <see cref="DocumentPreview.Text"/> holds the plain text when the text view asked for it, or when
+    /// the formatted view could not be built.
+    /// </summary>
+    Docx,
 
     /// <summary>JPG / PNG / GIF, loaded from the inline file handler.</summary>
     Image,
@@ -40,10 +44,10 @@ public class DocumentPreview
     public string FileType { get; set; } = string.Empty;
     public long FileSize { get; set; }
 
-    /// <summary>Decoded text (Text, Markdown source, ExtractedText); capped at <see cref="TextLimitBytes"/>.</summary>
+    /// <summary>Decoded text (Text, Markdown source, the PDF / DOCX text view); capped at <see cref="TextLimitBytes"/>.</summary>
     public string? Text { get; set; }
 
-    /// <summary>Rendered, sanitised Markdown (Markdown only).</summary>
+    /// <summary>Rendered, safe HTML (Markdown and Docx).</summary>
     public string? Html { get; set; }
 
     /// <summary>True when the file had more text than the preview shows.</summary>
