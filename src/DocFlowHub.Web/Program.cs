@@ -114,7 +114,14 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 // Liveness check for the host (Render's health check); doesn't touch the database.
-app.MapGet("/healthz", () => Results.Text("ok"));
+// The portfolio site polls /healthz from the browser to know when the free Render instance is awake.
+// While the instance sleeps, Render answers browsers with its own 503 "loading" page; reading the real
+// status needs a CORS response, so this public, data-free endpoint allows any origin.
+app.MapGet("/healthz", (HttpContext context) =>
+{
+    context.Response.Headers.AccessControlAllowOrigin = "*";
+    return Results.Text("ok");
+});
 
 // Keep crawlers out of the public demo: every visit wakes the sleeping free instance.
 if (app.Services.GetRequiredService<IDemoModeService>().IsEnabled)
