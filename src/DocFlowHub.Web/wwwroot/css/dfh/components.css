@@ -1668,6 +1668,7 @@ button.dfh-tree-toggle > i { transition: transform 0.12s ease-out; }
 .dfh-upload-ai-facts dt { font-weight: 400; color: var(--dfh-text-muted); }
 .dfh-upload-ai-facts dd { margin: 0; color: var(--dfh-text); }
 .dfh-upload-ai-settings { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.dfh-upload-demo-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dfh-text-muted); }
 
 /* "What will happen" and the upload progress */
 .dfh-upload-checks, .dfh-upload-progress { padding: 10px 12px; border: 1px solid var(--dfh-border); border-radius: var(--dfh-radius); background: var(--dfh-bg); font-size: 12.5px; }

@@ -35,7 +35,7 @@
     @if (Model.IsDemo)
     {
         <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-secondary btn-sm" disabled><i class="bi bi-folder-plus" aria-hidden="true"></i>New folder</button></span>
-        <span class="dfh-btn-disabled-wrap" tabindex="0" title="@demoTip"><button type="button" class="btn btn-primary btn-sm" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload here</button></span>
+        <a class="btn btn-primary btn-sm" asp-page="/Documents/Upload" asp-route-projectId="@p.Id" asp-route-folderId="@folderId" title="Read-only demo: try the upload screen and its AI options; files are not sent"><i class="bi bi-upload" aria-hidden="true"></i>Upload here</a>
     }
     else
     {

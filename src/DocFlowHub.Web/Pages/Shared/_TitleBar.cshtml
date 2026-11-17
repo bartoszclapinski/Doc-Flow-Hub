@@ -71,16 +71,9 @@
             <i class="bi bi-layout-sidebar-inset-reverse" aria-hidden="true"></i>
         </button>
 
-        @if (DemoMode.IsEnabled)
-        {
-            <span class="d-inline-block dfh-titlebar-upload" tabindex="0" title="Read-only demo — uploads are disabled">
-                <button type="button" class="btn btn-primary dfh-btn-26" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
-            </span>
-        }
-        else
-        {
-            <a class="btn btn-primary dfh-btn-26 dfh-titlebar-upload" asp-area="" asp-page="/Documents/Upload"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
-        }
+        @* The upload screen opens in the read-only demo too: everything on it can be tried, only sending is off. *@
+        <a class="btn btn-primary dfh-btn-26 dfh-titlebar-upload" asp-area="" asp-page="/Documents/Upload"
+           title="@(DemoMode.IsEnabled ? "Read-only demo: try the upload screen and its AI options; files are not sent" : null)"><i class="bi bi-upload" aria-hidden="true"></i>Upload</a>
 
         <div class="dropdown">
             <button type="button" class="dfh-avatar dfh-avatar--me dfh-avatar--24" data-bs-toggle="dropdown"
