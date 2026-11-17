@@ -273,7 +273,7 @@ test('preview screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/preview-docx-390.png`, fullPage: true });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(docx!);
-  await page.locator('.dfh-docx-table').scrollIntoViewIfNeeded();
+  await page.locator('.dfh-docx-table').first().scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${dir}/preview-docx-table.png` });
 });
 
@@ -344,7 +344,7 @@ test('interaction screens', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents');
   await page.keyboard.press('Control+k');
-  await page.locator('#dfh-palette-q').fill('annual rep');
+  await page.locator('#dfh-palette-q').fill('revenue fore');
   await page.locator('.dfh-palette-row b').first().waitFor();
   await page.screenshot({ path: `${dir}/palette.png` });
   await page.keyboard.press('Escape');
@@ -428,7 +428,7 @@ test('readme screenshots', async ({ page }) => {
   await page.screenshot({ path: `${out}/document-ai.png` });
   await page.goto('/Documents');
   await page.keyboard.press('Control+k');
-  await page.locator('#dfh-palette-q').fill('annual rep');
+  await page.locator('#dfh-palette-q').fill('revenue fore');
   await page.locator('.dfh-palette-row b').first().waitFor();
   await page.screenshot({ path: `${out}/palette.png` });
   await page.keyboard.press('Escape');

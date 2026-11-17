@@ -23,22 +23,29 @@ public static class DemoFileFactory
     /// <summary>Prefix of a heading line: bold in a PDF, a "Heading 1" paragraph in a DOCX; TXT and MD keep the text without it.</summary>
     public const string HeadingPrefix = "# ";
 
-    /// <summary>DOCX only (Sprint 20): a bullet list item.</summary>
+    /// <summary>A bullet list item (Sprint 20 for DOCX; Sprint 24: every format).</summary>
     public const string BulletPrefix = "- ";
 
     /// <summary>
-    /// DOCX only: a table row, its cells separated by <see cref="CellSeparator"/>. Rows that follow each
-    /// other make one table; the first is its header row.
+    /// A table row, its cells separated by <see cref="CellSeparator"/>. Rows that follow each other make
+    /// one table; the first is its header row. DOCX and Markdown draw a real table, TXT lines the columns
+    /// up, a PDF writes the cells side by side.
     /// </summary>
     public const string RowPrefix = "| ";
     public const string CellSeparator = " | ";
 
-    /// <summary>DOCX only: text between two of these is bold; a whole line between single <c>*</c> is italic.</summary>
+    /// <summary>Text between two of these is bold; a whole line between single <c>*</c> is italic (DOCX, Markdown).</summary>
     public const string BoldMark = "**";
 
-    /// <summary>True for a type the factory can build; accepts "pdf" or ".pdf".</summary>
+    /// <summary>A line that opens or closes a code block (Sprint 24): Markdown keeps it, the others indent the code.</summary>
+    public const string CodeFence = "```";
+
+    /// <summary>Picture types of the demo (Sprint 24); they are drawn by <c>DemoImageFactory</c>, not built from lines.</summary>
+    public static readonly string[] PictureTypes = { "png" };
+
+    /// <summary>True for a type the demo can build a file for; accepts "pdf" or ".pdf".</summary>
     public static bool IsSupported(string? fileType) =>
-        !string.IsNullOrEmpty(fileType) && SupportedTypes.Contains(Normalize(fileType));
+        !string.IsNullOrEmpty(fileType) && (SupportedTypes.Contains(Normalize(fileType)) || PictureTypes.Contains(Normalize(fileType)));
 
     /// <summary>Builds the file; <paramref name="fileType"/> may be "pdf" or ".pdf".</summary>
     public static byte[] Create(string fileType, string title, IReadOnlyList<string> lines) =>
@@ -46,17 +53,156 @@ public static class DemoFileFactory
         {
             "pdf" => CreatePdf(title, lines),
             "docx" => CreateDocx(title, lines),
-            // Markdown joins lines separated by a single newline, so put a blank line between them.
-            "md" => Encoding.UTF8.GetBytes($"# {title}\n\n{string.Join("\n\n", Plain(lines))}\n"),
-            "txt" => Encoding.UTF8.GetBytes($"{title}\n{new string('=', title.Length)}\n\n{string.Join("\n", Plain(lines))}\n"),
+            "md" => Encoding.UTF8.GetBytes(CreateMarkdown(title, lines)),
+            "txt" => Encoding.UTF8.GetBytes(CreateText(title, lines)),
             _ => throw new ArgumentOutOfRangeException(nameof(fileType), fileType, "Unsupported demo file type"),
         };
 
-    /// <summary>The lines without PDF page breaks and heading markers.</summary>
-    private static IReadOnlyList<string> Plain(IReadOnlyList<string> lines) =>
-        lines.Where(l => l != PageBreak)
-             .Select(l => l.StartsWith(HeadingPrefix, StringComparison.Ordinal) ? l[HeadingPrefix.Length..] : l)
-             .ToList();
+    /// <summary>A line without the bold and italic marks.</summary>
+    private static string Unmark(string line)
+    {
+        var text = line.Replace(BoldMark, string.Empty);
+        return text.Length > 2 && text[0] == '*' && text[^1] == '*' ? text[1..^1] : text;
+    }
+
+    private static string[] Cells(string row) => row[RowPrefix.Length..].Split(CellSeparator).Select(c => c.Trim()).ToArray();
+
+    /// <summary>
+    /// Markdown with real structure (Sprint 24): "## " headings, lists, pipe tables with a header row,
+    /// fenced code. Blocks are separated by one blank line; list items and table rows stay together.
+    /// </summary>
+    private static string CreateMarkdown(string title, IReadOnlyList<string> lines)
+    {
+        var sb = new StringBuilder($"# {title}\n");
+        var block = "start";
+        var code = false;
+        void Open(string kind)
+        {
+            if (block != kind || kind is "para" or "heading") sb.Append('\n');
+            block = kind;
+        }
+
+        foreach (var line in lines)
+        {
+            if (line == PageBreak) continue;
+            if (line == CodeFence)
+            {
+                if (!code) Open("code");
+                sb.Append(CodeFence).Append('\n');
+                code = !code;
+                if (!code) block = "code-end";
+                continue;
+            }
+            if (code)
+            {
+                sb.Append(line).Append('\n');
+                continue;
+            }
+            if (line.Length == 0)
+            {
+                block = "gap";
+                continue;
+            }
+            if (line.StartsWith(HeadingPrefix, StringComparison.Ordinal))
+            {
+                Open("heading");
+                sb.Append("## ").Append(line[HeadingPrefix.Length..]).Append('\n');
+            }
+            else if (line.StartsWith(BulletPrefix, StringComparison.Ordinal))
+            {
+                Open("list");
+                sb.Append(line).Append('\n');
+            }
+            else if (line.StartsWith(RowPrefix, StringComparison.Ordinal))
+            {
+                var cells = Cells(line);
+                var first = block != "table";
+                Open("table");
+                sb.Append("| ").Append(string.Join(" | ", cells)).Append(" |\n");
+                if (first) sb.Append('|').Append(string.Concat(cells.Select(_ => " --- |"))).Append('\n');
+            }
+            else
+            {
+                Open("para");
+                sb.Append(line).Append('\n');
+            }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Plain text (Sprint 24): underlined headings, "- " lists, tables with lined-up columns and indented
+    /// code; the bold and italic marks are left out.
+    /// </summary>
+    private static string CreateText(string title, IReadOnlyList<string> lines)
+    {
+        var sb = new StringBuilder($"{title}\n{new string('=', title.Length)}\n\n");
+        var code = false;
+        var rows = new List<string[]>();
+        void FlushTable()
+        {
+            if (rows.Count == 0) return;
+            var widths = Enumerable.Range(0, rows.Max(r => r.Length))
+                .Select(i => rows.Max(r => i < r.Length ? r[i].Length : 0)).ToArray();
+            for (var r = 0; r < rows.Count; r++)
+            {
+                sb.Append(string.Join("  ", rows[r].Select((c, i) => c.PadRight(widths[i]))).TrimEnd()).Append('\n');
+                if (r == 0) sb.Append(string.Join("  ", widths.Select(w => new string('-', w)))).Append('\n');
+            }
+            rows.Clear();
+        }
+
+        foreach (var line in lines)
+        {
+            if (line == PageBreak) continue;
+            if (line == CodeFence)
+            {
+                FlushTable();
+                code = !code;
+                continue;
+            }
+            if (code)
+            {
+                sb.Append("    ").Append(line).Append('\n');
+                continue;
+            }
+            if (line.StartsWith(RowPrefix, StringComparison.Ordinal))
+            {
+                rows.Add(Cells(line));
+                continue;
+            }
+            FlushTable();
+            if (line.StartsWith(HeadingPrefix, StringComparison.Ordinal))
+            {
+                var heading = Unmark(line[HeadingPrefix.Length..]);
+                sb.Append('\n').Append(heading).Append('\n').Append(new string('-', heading.Length)).Append('\n');
+            }
+            else
+            {
+                sb.Append(Unmark(line)).Append('\n');
+            }
+        }
+        FlushTable();
+        return sb.ToString();
+    }
+
+    /// <summary>The lines as a PDF lays them out: no marks, table cells side by side, code indented.</summary>
+    private static IEnumerable<string> PdfLines(IReadOnlyList<string> lines)
+    {
+        var code = false;
+        foreach (var line in lines)
+        {
+            if (line == CodeFence)
+            {
+                code = !code;
+                continue;
+            }
+            if (code) yield return "    " + line;
+            else if (line.StartsWith(RowPrefix, StringComparison.Ordinal)) yield return string.Join("     ", Cells(line));
+            else if (line == PageBreak || line.StartsWith(HeadingPrefix, StringComparison.Ordinal)) yield return line.Replace(BoldMark, string.Empty);
+            else yield return Unmark(line);
+        }
+    }
 
     public static string GetContentType(string fileType) =>
         Normalize(fileType) switch
@@ -64,6 +210,7 @@ public static class DemoFileFactory
             "pdf" => "application/pdf",
             "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "md" => "text/markdown",
+            "png" => "image/png",
             _ => "text/plain",
         };
 
@@ -120,9 +267,22 @@ public static class DemoFileFactory
                 new W.Run(new W.Text(title))));
 
             W.Table? table = null;
+            var code = false;
             foreach (var line in lines)
             {
                 if (line == PageBreak) continue;
+                if (line == CodeFence)
+                {
+                    code = !code;
+                    continue;
+                }
+                if (code)
+                {
+                    body.Append(new W.Paragraph(new W.Run(
+                        new W.RunProperties(new W.RunFonts { Ascii = "Consolas", HighAnsi = "Consolas" }, new W.FontSize { Val = "19" }),
+                        DocxText(line))));
+                    continue;
+                }
 
                 if (line.StartsWith(RowPrefix, StringComparison.Ordinal))
                 {
@@ -226,7 +386,7 @@ public static class DemoFileFactory
         // Lay the lines out on pages: the title takes the room of two lines on the first page.
         var pages = new List<List<(string Text, bool Heading)>> { new() };
         var used = 2;
-        foreach (var raw in lines)
+        foreach (var raw in PdfLines(lines))
         {
             if (raw == PageBreak)
             {

@@ -302,8 +302,7 @@ async function documentWithVersions(page: import('@playwright/test').Page): Prom
 
 test('details: inspector tabs switch and survive a reload', async ({ page }) => {
   await signIn(page, DEMO_USER);
-  const id = await documentWithVersions(page);
-  await page.goto(`/Documents/Details/${id}`);
+  await openTitled(page, 'Mobile app 2.0 — product requirements');
   await expect(page.locator('#panel-info')).toBeVisible();
   await page.locator('[data-dfh-tabs] [data-tab="versions"]').click();
   await expect(page.locator('#panel-versions')).toBeVisible();
@@ -464,6 +463,40 @@ test('compare on a phone: the pair chips wrap and nothing scrolls sideways', asy
   await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
   await expect(page.locator('.dfh-pair-chips')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
+// Sprint 24: the demo is a small company's workspace, not two accounts with random files.
+test('demo data: projects with their own folders, colleagues, pictures and long histories', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Projects');
+  expect(await page.locator('tbody tr').count()).toBeGreaterThanOrEqual(7);
+  await page.goto('/Projects?status=archived');
+  await expect(page.locator('tbody')).toContainText('Office Move 2025');
+
+  await page.goto('/Documents');
+  // Each project has its own folders (the tree may keep subfolders collapsed, so check the names exist).
+  await expect(page.locator('a, button, span', { hasText: /^Wireframes$/ }).first()).toBeAttached();
+  await expect(page.locator('a, button, span', { hasText: /^Postmortems$/ }).first()).toBeAttached();
+  // Documents from colleagues reach the demo user through their teams.
+  await expect(page.locator('tbody')).toContainText('Tom Becker');
+
+  await openTitled(page, 'Homepage wireframe');
+  await expect(page.locator('[data-dfh-image] img')).toBeVisible();
+  await openTitled(page, 'Mobile app 2.0 — product requirements');
+  await page.locator('[data-dfh-tabs] [data-tab="versions"]').click();
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(7);
+  await expect(page.locator('#panel-versions')).toContainText('Added the batch endpoint to the API table');
+});
+
+test('demo data: the admin sees the whole company', async ({ page }) => {
+  await signIn(page, DEMO_ADMIN);
+  await page.goto('/Admin/Users');
+  expect(await page.locator('tbody tr').count()).toBeGreaterThanOrEqual(12);
+  await expect(page.locator('tbody')).toContainText('Maya Chen');
+  await openTitled(page, 'Service agreement — Northwind Hosting');
+  await page.locator('[data-dfh-tabs] [data-tab="versions"]').click();
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(7);
+  await expect(page.locator('.dfh-docx')).toContainText('7. Data retention');
 });
 
 test('editor tabs: opened documents stay as tabs until closed', async ({ page }) => {
@@ -668,9 +701,9 @@ test('palette: Ctrl K finds documents and folders, Enter opens the active row', 
   await page.keyboard.press('Control+k');
   const palette = page.locator('#dfh-palette');
   await expect(palette).toBeVisible();
-  await page.locator('#dfh-palette-q').fill('annual rep');
-  await expect(palette.locator('.dfh-palette-row').first()).toContainText('Annual Report');
-  await expect(palette.locator('.dfh-palette-row b').first()).toHaveText(/annual/i);
+  await page.locator('#dfh-palette-q').fill('revenue fore');
+  await expect(palette.locator('.dfh-palette-row').first()).toContainText('Revenue forecast FY2026');
+  await expect(palette.locator('.dfh-palette-row b').first()).toHaveText(/revenue/i);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
 });
@@ -717,6 +750,14 @@ test('privacy page describes what the app stores, signed in or not', async ({ pa
   await expect(page.locator('body')).not.toContainText('Use this page to detail');
 });
 
+// Sprint 24: open a demo document by its title (the demo seed is a fixed catalogue).
+async function openTitled(page: Page, title: string) {
+  await page.goto('/Documents?q=' + encodeURIComponent(title));
+  const href = await page.locator('tbody tr a[href*="/Documents/Details/"]', { hasText: title }).first().getAttribute('href');
+  expect(href, `a document titled ${title}`).toBeTruthy();
+  await page.goto(href!);
+}
+
 // Sprint 18: document preview (read-only, works in the demo).
 async function openDocument(page: Page, row: string) {
   await page.goto('/Documents');
@@ -746,29 +787,29 @@ test('preview: text files show numbered lines, the encoding and a wrap switch', 
   await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
 });
 
-// Sprint 20: a Word document as formatted HTML. Demo DOCX files have headings, a list and a table.
+// Sprint 20: a Word document as formatted HTML. Sprint 24: the requirements document of the demo, at v7.
 test('preview: a Word document is formatted; Text shows its plain text', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await signIn(page, DEMO_USER);
-  await openDocument(page, 'tbody tr[data-ext="DOCX"]');
+  await openTitled(page, 'Mobile app 2.0 — product requirements');
 
   const docx = page.locator('.dfh-docx');
   await expect(page.locator('.dfh-preview-badge')).toHaveText('Simplified layout');
-  await expect(docx.locator('h1.dfh-docx-title')).toBeVisible();
-  await expect(docx.locator('h1', { hasText: 'Action points' })).toBeVisible();
-  await expect(docx.locator('ul > li')).toHaveCount(3);
-  await expect(docx.locator('strong', { hasText: 'Author:' })).toBeVisible();
-  await expect(docx.locator('.dfh-docx-table th')).toHaveText(['Version', 'Date', 'Author', 'Summary']);
-  await expect(docx.locator('.dfh-docx-table tr').nth(1).locator('td').first()).toHaveText('v1');
-  await expect(docx.locator('em')).toContainText('Sample content');
+  await expect(docx.locator('h1.dfh-docx-title')).toHaveText('Mobile app 2.0 — product requirements');
+  await expect(docx.locator('h1', { hasText: 'Problem' })).toBeVisible();
+  await expect(docx.locator('h1', { hasText: 'Success metrics' })).toBeVisible();
+  expect(await docx.locator('ul > li').count()).toBeGreaterThanOrEqual(6);
+  await expect(docx.locator('strong', { hasText: 'Owner:' })).toBeVisible();
+  await expect(docx.locator('.dfh-docx-table').first().locator('th')).toHaveText(['Method', 'Path', 'Purpose']);
+  await expect(docx.locator('.dfh-docx-table').first()).toContainText('/api/v2/items/batch');
 
   await page.locator('.dfh-segmented a', { hasText: 'Text' }).click();
   await expect(page).toHaveURL(/view=text/);
   await expect(page.locator('.dfh-docx')).toHaveCount(0);
   await expect(page.locator('.dfh-preview-badge')).toHaveCount(0);
-  await expect(page.locator('pre.dfh-code')).toContainText('Version history');
+  await expect(page.locator('pre.dfh-code')).toContainText('Non-goals');
   await page.locator('.dfh-preview-bar a', { hasText: 'Wrap lines' }).click();
   await expect(page).toHaveURL(/view=text/);
   await expect(page.locator('pre.dfh-code')).toHaveClass(/is-nowrap/);
@@ -777,7 +818,7 @@ test('preview: a Word document is formatted; Text shows its plain text', async (
   expect(errors).toEqual([]);
 });
 
-// Sprint 19: PDF pages through the self-hosted PDF.js. Demo PDFs have three pages.
+// Sprint 19: PDF pages through the self-hosted PDF.js. Sprint 24: the revenue forecast has three pages.
 const PDFJS_LOAD = 60_000;
 test('preview: PDF pages render with thumbnails, page navigation and zoom', async ({ page }) => {
   test.slow(); // loads PDF.js
@@ -785,7 +826,7 @@ test('preview: PDF pages render with thumbnails, page navigation and zoom', asyn
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await signIn(page, DEMO_USER);
-  await openDocument(page, 'tbody tr[data-ext="PDF"]');
+  await openTitled(page, 'Revenue forecast FY2026');
 
   const pdf = page.locator('[data-dfh-pdf]');
   // The first PDF downloads PDF.js (about 1.7 MB); on a slow link to the live demo that takes a while.
@@ -900,7 +941,7 @@ test('preview on a phone: content flows with the page, no sideways scroll', asyn
   expect(await overflow()).toBeLessThanOrEqual(0);
 
   // PDF: no thumbnail strip, the page fits the width.
-  await openDocument(page, 'tbody tr[data-ext="PDF"]');
+  await openTitled(page, 'Revenue forecast FY2026');
   await expect(page.locator('.dfh-pdf-page[data-page="1"]')).toHaveAttribute('data-rendered', 'true', { timeout: PDFJS_LOAD });
   await expect(page.locator('.dfh-pdf-thumbs')).toBeHidden();
   const box = await page.locator('.dfh-pdf-page[data-page="1"]').boundingBox();
@@ -909,8 +950,8 @@ test('preview on a phone: content flows with the page, no sideways scroll', asyn
   expect(await overflow()).toBeLessThanOrEqual(0);
 
   // Word: the sheet and its table stay inside the screen.
-  await openDocument(page, 'tbody tr[data-ext="DOCX"]');
-  await expect(page.locator('.dfh-docx-table')).toBeVisible();
+  await openTitled(page, 'Mobile app 2.0 — product requirements');
+  await expect(page.locator('.dfh-docx-table').first()).toBeVisible();
   for (const part of ['.dfh-docx', '.dfh-docx-table']) {
     const b = await page.locator(part).first().boundingBox();
     expect(b!.x).toBeGreaterThanOrEqual(0);

@@ -7,7 +7,10 @@
 
 **Live demo:** [docflowhub-demo.onrender.com](https://docflowhub-demo.onrender.com) — read-only. Sign in as
 `demo@docflowhub.com` or `demo-admin@docflowhub.com`, password `Demo123!`. The free server sleeps when
-idle, so the first visit can take a minute.
+idle, so the first visit can take a minute. The demo is the workspace of a small software company: ten
+colleagues in six teams, ten projects with their own folders, and about 130 documents (specifications,
+contracts, budgets, postmortems, release notes, charts and wireframes), many with several versions whose
+changes you can compare line by line.
 
 ![Documents: project tree, table and inspector](docs/screenshots/documents.png)
 
