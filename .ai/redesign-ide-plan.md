@@ -167,7 +167,7 @@ Recommended defaults; the ones marked **D** need your OK.
 | Monthly AI limit, AI queue, queue position | Daily usage vs existing daily limit; "Pending" = no summary yet |
 | Activity feed beyond versions/AI events | Versions + AI events only |
 | Team Viewer role, permission matrix, invitations, team↔project link | Hidden; roles Owner/Admin/Member as today |
-| Line diff, change anchors, restore version | Compare screen shows the AI comparison in the new layout; diff column replaced by an empty state "Line diff coming later". **Sprint 21** added the line diff (side by side / unified, word marks, folding, ignore whitespace, change jumps); change anchors from the AI list and restore are still open. |
+| Line diff, change anchors, restore version | Compare screen shows the AI comparison in the new layout; diff column replaced by an empty state "Line diff coming later". **Sprint 21** added the line diff (side by side / unified, word marks, folding, ignore whitespace, change jumps); **Sprint 22** added restore (the older side, as a new version), the pair chips and two-version picking in the Versions tab; change anchors from the AI list are still open. |
 | Multi-file upload, existing-name detection, "scanning" | Single file; sections hidden |
 | Sessions, security events, audit log, CSV export, delete account, language, time zone | Hidden |
 | Notifications bell | Hidden |

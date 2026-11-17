@@ -64,9 +64,16 @@ public class CompareModel : PageModel
     public DocumentComparisonView View { get; private set; } = new();
     public VersionDiff Diff { get; private set; } = new() { Status = VersionDiffStatus.Unreadable };
     public bool IsDemo => _demoMode.IsEnabled;
+    public bool CanRestore => View.IsOwner && !IsDemo;
+    public string RestoreTip => IsDemo ? "Read-only demo — changes are disabled" : "Only the owner can restore a version";
 
-    public async Task<IActionResult> OnGetAsync(int? from, int? to)
+    /// <summary>"Compare selected" in the Versions tab sends the two ticked numbers as pick=1&amp;pick=3 (S22-7).</summary>
+    public async Task<IActionResult> OnGetAsync(int? from, int? to, [FromQuery(Name = "pick")] int[]? pick)
     {
+        if (from == null && to == null && pick is { Length: >= 2 })
+        {
+            return RedirectToPage(new { id = Id, from = pick.Min(), to = pick.Max() });
+        }
         var userId = User.GetUserId();
         if (string.IsNullOrEmpty(userId))
         {

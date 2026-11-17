@@ -191,6 +191,19 @@ test('compare diff screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/compare-diff-390.png`, fullPage: true });
 });
 
+// Sprint 22: the version pairs and the Versions tab picker.
+test('version screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?sort=name');
+  const id = await page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[3-6]$/ }) }).first().getAttribute('data-id');
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await page.screenshot({ path: `${dir}/compare-pairs.png` });
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await page.locator('.dfh-version-pick[value="3"]').check();
+  await page.screenshot({ path: `${dir}/versions-pick.png` });
+});
+
 // PDF pages draw after load (Sprint 19): wait for the first page and the thumbnails in view.
 async function settlePdf(page: Page) {
   if (!(await page.locator('[data-dfh-pdf]').count())) return;

@@ -240,6 +240,12 @@ public class DocumentComparisonView
     public DocumentDetailsVersion From { get; set; } = new();
     public DocumentDetailsVersion To { get; set; } = new();
     public DocumentComparisonResult? Comparison { get; set; }
+
+    /// <summary>The signed-in user owns the document (restore is the owner's, S22-2).</summary>
+    public bool IsOwner { get; set; }
+
+    /// <summary>Version pairs (older, newer) with a saved AI comparison, for the pair chips (S22-6).</summary>
+    public List<(int From, int To)> SavedPairs { get; set; } = new();
 }
 
 public class DocumentComparisonResult

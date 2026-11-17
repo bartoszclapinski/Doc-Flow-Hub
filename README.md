@@ -15,8 +15,9 @@ idle, so the first visit can take a minute.
 
 **Documents**
 - Upload files (PDF, Word, text, Markdown, images) with a title, description and categories.
-- Upload a new version of a document; older versions stay and can be downloaded or deleted.
-- Compare two versions line by line, side by side or unified, with the changed words marked, unchanged
+- Upload a new version of a document; older versions stay and can be downloaded, deleted or restored
+  (a restore adds the old file as a new version, so nothing is overwritten).
+- Compare any two versions line by line (every pair is one click away), side by side or unified, with the changed words marked, unchanged
   stretches folded and an option to ignore whitespace. PDF and Word versions are compared by their text.
 - Preview in the browser: PDF pages (PDF.js, with page thumbnails, navigation, zoom and selectable
   text), Word documents (.docx) with their headings, lists, tables, links and pictures, text with line
@@ -71,7 +72,7 @@ Being clear about the gaps:
   columns, headers, footers or footnotes, and a numbered list that continues after a break starts
   again; old `.doc` files can only be downloaded. Links and form fields inside PDFs are not interactive.
 - **The version diff compares text only**: not formatting, layout or images, and at most 256 KB of
-  text and 5,000 lines a version. An older version cannot be restored yet.
+  text and 5,000 lines a version.
 - No invitations, notifications, comments or real-time updates.
 
 ## Tech stack

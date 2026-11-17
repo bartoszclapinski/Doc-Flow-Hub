@@ -400,6 +400,72 @@ test('compare on a phone: the diff is unified and nothing scrolls sideways', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
 
+// Sprint 22: any pair of versions, and restore (disabled in the demo).
+async function documentWithThreeVersions(page: Page): Promise<string> {
+  await page.goto('/Documents?sort=name');
+  const row = page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[3-6]$/ }) }).first();
+  return (await row.getAttribute('data-id'))!;
+}
+
+test('compare: every pair is one click away and has an AI comparison in the demo', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.goto(`/Documents/Compare/${id}`);
+
+  const chips = page.locator('.dfh-pair-chips .dfh-pair-chip');
+  expect(await chips.count()).toBeGreaterThanOrEqual(3);
+  await expect(page.locator('.dfh-pair-chip.is-active')).toHaveAttribute('aria-current', 'true');
+  // The demo saves an AI comparison for every pair, so every chip has the AI mark.
+  await expect(page.locator('.dfh-pair-chip:not(:has(.bi-stars))')).toHaveCount(0);
+
+  await page.locator('.dfh-pair-chip', { hasText: 'v1 ↔ v3' }).click();
+  await expect(page).toHaveURL(/from=1&to=3/);
+  await expect(page.locator('#pick-from')).toHaveValue('1');
+  await expect(page.locator('#pick-to')).toHaveValue('3');
+  await expect(page.locator('.dfh-compare-summary p')).not.toBeEmpty();
+  await expect(page.locator('[data-dfh-diff]')).toBeVisible();
+  await expect(page.locator('.dfh-diff-pick-label')).toHaveText(['Older', 'Newer']);
+
+  // Restore is the owner's and disabled in the read-only demo.
+  await expect(page.locator('[data-dfh-compare-restore]')).toBeDisabled();
+  await expect(page.locator('[data-dfh-compare-restore]')).toHaveText(/Restore v1/);
+});
+
+test('versions tab: tick two versions to compare them; restore is disabled in the demo', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+
+  const go = page.locator('[data-dfh-pick-go]');
+  await expect(go).toBeDisabled();
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await expect(page.locator('[data-dfh-pick-hint]')).toHaveText('Tick one more version.');
+  await page.locator('.dfh-version-pick[value="3"]').check();
+  await expect(go).toBeEnabled();
+  await expect(go).toHaveText('Compare v1 ↔ v3');
+  // A third tick drops the oldest one.
+  await page.locator('.dfh-version-pick[value="2"]').check();
+  await expect(page.locator('.dfh-version-pick[value="1"]')).not.toBeChecked();
+  await expect(go).toHaveText('Compare v2 ↔ v3');
+  await page.locator('.dfh-version-pick[value="3"]').uncheck();
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await expect(go).toHaveText('Compare v1 ↔ v2');
+  await go.click();
+  await expect(page).toHaveURL(/\/Documents\/Compare\/\d+\?from=1&to=2/);
+
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await expect(page.locator('[data-dfh-version-restore="1"]')).toBeDisabled();
+});
+
+test('compare on a phone: the pair chips wrap and nothing scrolls sideways', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await expect(page.locator('.dfh-pair-chips')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
 test('editor tabs: opened documents stay as tabs until closed', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents?sort=name');

@@ -28,6 +28,12 @@ public interface IDocumentService
     Task<ServiceResult<DocumentDto>> ShareDocumentWithTeamAsync(int documentId, int teamId);
     Task<ServiceResult> UnshareDocumentFromTeamAsync(int documentId);
     Task<ServiceResult<DocumentDto>> UploadNewVersionAsync(UploadVersionRequest request);
+
+    /// <summary>
+    /// Restores an older version (Sprint 22): its file becomes a new version on top, so nothing is
+    /// overwritten. Only the owner may do it. Returns the new version number. No AI request is made.
+    /// </summary>
+    Task<ServiceResult<int>> RestoreVersionAsync(int documentId, int versionNumber, string userId, string? message = null);
     Task<ServiceResult<DocumentDto>> MoveDocumentAsync(MoveDocumentRequest request);
     Task<ServiceResult<PagedResult<DocumentDto>>> GetAllDocumentsForAdminAsync(DocumentFilter filter);
 } 

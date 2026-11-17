@@ -242,6 +242,23 @@ public class DetailsModel : PageModel
             : Back("versions", error: result.Error ?? "The version could not be deleted.");
     }
 
+    /// <summary>Restores an older version as a new one (Sprint 22). The owner only; no AI request.</summary>
+    public async Task<IActionResult> OnPostRestoreVersionAsync(int versionNumber, string? message)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var trimmed = message?.Trim();
+        if (trimmed is { Length: > 500 }) trimmed = trimmed[..500];
+        var result = await _documentService.RestoreVersionAsync(Id, versionNumber, userId, trimmed);
+        return result.Succeeded
+            ? Back("versions", success: $"Restored v{versionNumber} as v{result.Data}")
+            : Back("versions", error: result.Error ?? "The version could not be restored.");
+    }
+
     public async Task<IActionResult> OnPostShareAsync(int? teamId)
     {
         var userId = User.GetUserId();

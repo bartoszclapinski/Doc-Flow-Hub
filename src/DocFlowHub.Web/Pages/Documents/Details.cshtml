@@ -209,6 +209,10 @@
                 {
                     <p class="dfh-insp-note">@(d.Versions.Count > 1 ? "No saved comparisons yet." : "Upload a second version to compare versions.")</p>
                 }
+                @if (d.Versions.Count > 2)
+                {
+                    <a class="dfh-insp-more" href="?tab=versions" data-dfh-tab-open="versions"><i class="bi bi-ui-checks" aria-hidden="true"></i>Compare any two versions…</a>
+                }
                 else
                 {
                     <ul class="dfh-link-list dfh-mono">
@@ -223,12 +227,25 @@
 
         @* ---------- Versions: all of them ---------- *@
         <div class="dfh-tabpanel" role="tabpanel" id="panel-versions" aria-labelledby="tab-versions" hidden="@(tab != "versions")">
-            <ol class="dfh-version-rows">
+            @* Sprint 22: tick two versions to compare them (a GET form, so it works without JS too). *@
+            <form method="get" asp-page="/Documents/Compare" asp-route-id="@d.Id" id="dfh-version-pick" data-dfh-version-pick></form>
+            @if (d.Versions.Count > 2)
+            {
+                <div class="dfh-version-pickbar">
+                    <span class="dfh-muted" data-dfh-pick-hint>Tick two versions to compare them.</span>
+                    <button type="submit" form="dfh-version-pick" class="btn btn-secondary btn-sm" data-dfh-pick-go><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Compare selected</span></button>
+                </div>
+            }
+            <ol class="dfh-version-rows@(d.Versions.Count > 2 ? " has-pick" : "")">
                 @foreach (var v in d.Versions)
                 {
                     var isCurrent = v == current;
                     var message = v.Message ?? (v.Number == 1 ? "Initial upload" : "No description");
                     <li class="dfh-version-row@(isCurrent ? " is-current" : "")">
+                        @if (d.Versions.Count > 2)
+                        {
+                            <input type="checkbox" class="form-check-input dfh-version-pick" form="dfh-version-pick" name="pick" value="@v.Number" aria-label="Select v@(v.Number) to compare" />
+                        }
                         <span class="dfh-dot @(isCurrent ? "dfh-dot--accent" : "dfh-dot--past")" aria-hidden="true"></span>
                         <span class="dfh-mono">v@(v.Number)</span>
                         <span class="dfh-version-main">
@@ -246,6 +263,10 @@
                             {
                                 <a class="dfh-icon-action" asp-page="/Documents/Compare" asp-route-id="@d.Id" asp-route-from="@v.Number" asp-route-to="@current.Number"
                                    title="Compare with v@(current.Number)" aria-label="Compare v@(v.Number) with v@(current.Number)"><i class="bi bi-arrow-left-right" aria-hidden="true"></i></a>
+                                <span class="dfh-btn-disabled-wrap" title="@(Model.CanManage ? $"Restore v{v.Number} as a new version" : Model.OwnerTip)">
+                                    <button type="button" class="dfh-icon-action" aria-label="Restore v@(v.Number)" disabled="@(!Model.CanManage)"
+                                            data-dfh-version-restore="@v.Number"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></button>
+                                </span>
                                 <span class="dfh-btn-disabled-wrap" title="@(Model.CanManage ? $"Delete v{v.Number}" : Model.OwnerTip)">
                                     <button type="button" class="dfh-icon-action is-danger" aria-label="Delete v@(v.Number)" disabled="@(!Model.CanManage)"
                                             data-dfh-version-delete="@v.Id" data-number="@v.Number"><i class="bi bi-trash" aria-hidden="true"></i></button>
@@ -350,6 +371,17 @@
                 @if (d.Versions.Count > 1)
                 {
                     <li><a class="dropdown-item" asp-page="/Documents/Compare" asp-route-id="@d.Id"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Compare versions…</a></li>
+                }
+                @if (p != null && !p.IsLatest && p.VersionNumber > 0)
+                {
+                    if (Model.CanManage)
+                    {
+                        <li><button type="button" class="dropdown-item" data-dfh-version-restore="@p.VersionNumber"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore v@(p.VersionNumber)…</button></li>
+                    }
+                    else
+                    {
+                        <li><span class="dropdown-item disabled" title="@Model.OwnerTip"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore v@(p.VersionNumber)…</span></li>
+                    }
                 }
                 <li><button type="button" class="dropdown-item" data-dfh-copy-link><i class="bi bi-link-45deg" aria-hidden="true"></i>Copy link</button></li>
                 <li><hr class="dropdown-divider" /></li>
@@ -559,6 +591,31 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-danger"><i class="bi bi-trash" aria-hidden="true"></i>Delete version</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Restore an older version as a new one (Sprint 22) *@
+@{ var nextNumber = (d.Versions.Count > 0 ? d.Versions.Max(x => x.Number) : 0) + 1; }
+<div class="modal" id="dfh-version-restore-modal" tabindex="-1" aria-labelledby="dfh-version-restore-title" aria-hidden="true" data-next="@nextNumber">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" asp-page-handler="RestoreVersion" asp-route-id="@d.Id" data-dfh-busy="Restoring…">
+            <div class="modal-header">
+                <h2 class="modal-title" id="dfh-version-restore-title">Restore version?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body dfh-modal-stack">
+                <p class="m-0" data-dfh-restore-text>The file of this version becomes the new current version. Nothing is overwritten: every version stays.</p>
+                <label class="dfh-field">
+                    <span class="dfh-field-label">Description <span class="dfh-muted">(optional)</span></span>
+                    <input type="text" name="message" class="form-control" maxlength="500" placeholder="Restored from an older version" data-dfh-restore-message />
+                </label>
+                <input type="hidden" name="versionNumber" value="" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span data-dfh-restore-label>Restore</span></button>
             </div>
         </form>
     </div>

@@ -1349,6 +1349,11 @@ button.dfh-tree-toggle > i { transition: transform 0.12s ease-out; }
 .dfh-version-main > span:first-child { color: var(--dfh-text); overflow-wrap: anywhere; }
 .dfh-version-meta { font-family: var(--dfh-font-mono); font-size: 11px; color: var(--dfh-text-muted); }
 .dfh-version-actions { display: flex; align-items: center; gap: 2px; }
+/* Pick two versions to compare (Sprint 22) */
+.dfh-version-pickbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--dfh-border-subtle); font-size: 12px; }
+.dfh-version-pick { flex: none; margin: 3px 0 0; }
+.dfh-version-rows.has-pick .dfh-version-row { grid-template-columns: 16px 12px 30px minmax(0, 1fr) auto; }
+.dfh-insp-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
 .dfh-version-actions form { margin: 0; }
 .dfh-icon-action {
     display: inline-flex;
@@ -1398,11 +1403,41 @@ button.dfh-tree-toggle > i { transition: transform 0.12s ease-out; }
     font-weight: 600;
     min-height: 0;
 }
+.dfh-diff-pick-label { flex: none; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dfh-text-muted); }
 .dfh-diff-side.is-old select { color: var(--dfh-danger); }
 .dfh-diff-side.is-new select { color: var(--dfh-success); }
 .dfh-diff-side .dfh-mono { font-size: 11px; color: var(--dfh-text-muted); }
 .dfh-diff-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dfh-text-2); }
 .dfh-diff-empty { flex: 1 1 auto; min-height: 0; background: var(--dfh-bg); }
+
+/* Every version pair as a chip (Sprint 22) */
+.dfh-pair-chips {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--dfh-border);
+    background: var(--dfh-bg);
+    font-size: 12px;
+}
+.dfh-pair-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--dfh-border-strong);
+    border-radius: 11px;
+    font-family: var(--dfh-font-mono);
+    font-size: 11.5px;
+    color: var(--dfh-text-2);
+    white-space: nowrap;
+}
+.dfh-pair-chip:hover { border-color: var(--dfh-border-button); color: var(--dfh-text); text-decoration: none; }
+.dfh-pair-chip.is-active { border-color: var(--dfh-accent); background: var(--dfh-bg-control); color: var(--dfh-text); }
+.dfh-pair-chip .bi { font-size: 10px; color: var(--dfh-ai); }
 
 /* Line diff (Sprint 21). One markup, two layouts: unified is the base (and the only one on phones);
    side by side puts removed lines in the left column and added lines in the right one, on the

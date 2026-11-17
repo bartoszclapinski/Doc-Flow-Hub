@@ -342,3 +342,44 @@ test('compare shows the exact added, removed and changed lines of two versions',
   await page.goto(`/Documents/Details/${id}`);
   await deleteOpenDocument(page, 'e2e-diff');
 });
+
+// Sprint 22: restoring an older version adds it on top.
+test('restoring v1 adds it as v3 with the v1 file', async ({ page }) => {
+  await uploadFile(page, { name: 'e2e-restore.txt', mimeType: 'text/plain', buffer: Buffer.from('First version text\n') });
+  const id = /\/Documents\/Details\/(\d+)/.exec(page.url())![1];
+  await page.locator('a', { hasText: 'New version' }).click();
+  await page.locator('#new-version [data-dfh-file]').setInputFiles({ name: 'e2e-restore.txt', mimeType: 'text/plain', buffer: Buffer.from('Second version text\n') });
+  await page.locator('#ChangeSummary').fill('Second draft');
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded v2');
+
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await page.locator('[data-dfh-version-restore="1"]').click();
+  const modal = page.locator('#dfh-version-restore-modal');
+  await expect(modal.locator('.modal-title')).toHaveText('Restore v1 as v3?');
+  await expect(modal.locator('[data-dfh-restore-message]')).toHaveAttribute('placeholder', 'Restored from v1');
+  await modal.locator('button[type="submit"]').click();
+
+  await expect(page.locator('.dfh-toast')).toContainText('Restored v1 as v3');
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(3);
+  await expect(page.locator('#panel-versions .dfh-version-row.is-current')).toContainText('Restored from v1');
+  await expect(page.locator('.dfh-code-line').first()).toHaveText('First version text');
+
+  // The diff of v1 and v3 is empty; v2 and v3 differ.
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await expect(page.locator('.dfh-empty-title')).toHaveText('No text differences');
+  await page.goto(`/Documents/Compare/${id}?from=2&to=3`);
+  await expect(page.locator('.dfh-diff-count .is-add')).toHaveText('+1');
+
+  // The Compare page offers to restore the older side too, here as v4 with the user's own description.
+  await page.locator('[data-dfh-compare-restore]').click();
+  const compareModal = page.locator('#dfh-compare-restore-modal');
+  await expect(compareModal.locator('.modal-title')).toHaveText('Restore v2 as v4?');
+  await compareModal.locator('input[name="message"]').fill('Back to the second draft');
+  await compareModal.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(new RegExp(`/Documents/Details/${id}`));
+  await expect(page.locator('.dfh-toast')).toContainText('Restored v2 as v4');
+  await expect(page.locator('#panel-versions .dfh-version-row.is-current')).toContainText('Back to the second draft');
+
+  await deleteOpenDocument(page, 'e2e-restore');
+});
