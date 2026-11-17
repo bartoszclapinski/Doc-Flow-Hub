@@ -43,7 +43,7 @@
                                 <option value="@m" selected="@(m == i.PreferredModel)">@m.ToApiString()</option>
                             }
                         </select>
-                        <span class="dfh-form-row-help">Used when you generate a summary or compare versions from a document. Summaries made right after an upload still use the system default.</span>
+                        <span class="dfh-form-row-help">Used when you generate a summary or compare versions from a document. The upload screen starts with it, and you can pick another model there.</span>
                     </div>
                 </div>
             </section>
@@ -89,6 +89,10 @@
                         <div class="dfh-form-row-control dfh-slider-row">
                             <input id="@name" type="range" class="form-range dfh-w-260" name="Input.@name" min="@min.ToString(inv)" max="@maxValue.ToString(inv)" step="@step.ToString(inv)" value="@value.ToString(inv)" disabled="@demo" data-dfh-range-output />
                             <output class="dfh-mono" for="@name">@value.ToString(fmt, inv)</output>
+                            @if (name == "QualityPreference")
+                            {
+                                <span class="dfh-form-row-help">Sets the default summary detail on the upload screen: below 0.45 Short, below 0.8 Standard, from 0.8 Detailed.</span>
+                            }
                         </div>
                     </div>
                 }

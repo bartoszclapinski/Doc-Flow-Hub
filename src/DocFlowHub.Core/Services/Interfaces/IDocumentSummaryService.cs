@@ -32,6 +32,11 @@ public interface IDocumentSummaryService
     /// Regenerate summary for a document with specific model
     /// </summary>
     Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model);
+
+    /// <summary>
+    /// Regenerate the summary with a model and a level of detail (Sprint 23: the upload screen's choices).
+    /// </summary>
+    Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model, SummaryDetail detail);
     
     /// <summary>
     /// Delete existing summary for a document

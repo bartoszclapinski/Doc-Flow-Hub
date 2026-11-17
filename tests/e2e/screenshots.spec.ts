@@ -204,6 +204,21 @@ test('version screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/versions-pick.png` });
 });
 
+// Sprint 23: the upload screen with its AI panel, the checks for a file, and an image (no summary).
+test('upload screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents/Upload');
+  await page.screenshot({ path: `${dir}/upload-empty.png` });
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'q3-financial-report.txt', mimeType: 'text/plain', buffer: Buffer.from('Quarterly report. '.repeat(400)) });
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await page.screenshot({ path: `${dir}/upload-file.png` });
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'team-photo.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+  await page.screenshot({ path: `${dir}/upload-image.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents/Upload');
+  await page.screenshot({ path: `${dir}/upload-390.png`, fullPage: true });
+});
+
 // PDF pages draw after load (Sprint 19): wait for the first page and the thumbnails in view.
 async function settlePdf(page: Page) {
   if (!(await page.locator('[data-dfh-pdf]').count())) return;

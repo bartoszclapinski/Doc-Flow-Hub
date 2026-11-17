@@ -14,7 +14,9 @@ idle, so the first visit can take a minute.
 ## What it does
 
 **Documents**
-- Upload files (PDF, Word, text, Markdown, images) with a title, description and categories.
+- Upload files (PDF, Word, text, Markdown, images) with a title, description and categories. The upload
+  screen shows what will happen to the file, uploads with a progress bar, and lets you pick the AI
+  model and how detailed the summary is, with a cost and time estimate.
 - Upload a new version of a document; older versions stay and can be downloaded, deleted or restored
   (a restore adds the old file as a new version, so nothing is overwritten).
 - Compare any two versions line by line (every pair is one click away), side by side or unified, with the changed words marked, unchanged

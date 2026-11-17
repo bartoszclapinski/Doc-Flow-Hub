@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DocFlowHub.Core.Models;
+using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Documents.Dto;
@@ -369,7 +370,9 @@ public class DocumentService : IDocumentService
                     using var scope = _serviceScopeFactory.CreateScope();
                     var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
                     
-                    var summaryResult = await summaryService.RegenerateSummaryAsync(document.Id);
+                    // The model and detail the uploader chose (Sprint 23), or the defaults.
+                    var summaryResult = await summaryService.RegenerateSummaryAsync(
+                        document.Id, request.SummaryModel ?? AIModelHelper.GetDefaultModel(), request.SummaryDetail);
                     if (summaryResult.Succeeded)
                     {
                         _logger.LogInformation("AI summary generated successfully for document {DocumentId}", document.Id);

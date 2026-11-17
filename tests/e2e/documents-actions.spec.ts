@@ -383,3 +383,48 @@ test('restoring v1 adds it as v3 with the v1 file', async ({ page }) => {
 
   await deleteOpenDocument(page, 'e2e-restore');
 });
+
+// Sprint 23: the upload screen's AI choices and its progress upload.
+test('upload: the AI choices can be remembered as the defaults', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-ai-on]').uncheck();
+  await page.locator('[data-dfh-ai-model]').selectOption('ClaudeSonnet5');
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await page.locator('[data-dfh-ai-remember]').check();
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-remember.txt', mimeType: 'text/plain', buffer: Buffer.from('Remember me\n') });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded "e2e-remember"');
+  const id = /\/Documents\/Details\/(\d+)/.exec(page.url())![1];
+
+  await page.goto('/Documents/Upload');
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeSonnet5');
+  await expect(page.locator('input[name="SummaryDetail"][value="Detailed"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-on]')).not.toBeChecked();
+
+  // Back to the defaults, so the other tests start as before.
+  await page.goto('/Settings/AI');
+  await page.locator('button', { hasText: 'Reset to defaults' }).click();
+  await expect(page.locator('.dfh-toast')).toContainText('reset to the defaults');
+  await page.goto('/Documents/Upload');
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeHaiku45');
+  await expect(page.locator('input[name="SummaryDetail"][value="Standard"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-on]')).toBeChecked();
+
+  await page.goto(`/Documents/Details/${id}`);
+  await deleteOpenDocument(page, 'e2e-remember');
+});
+
+test('upload: a rejected file shows the error on the form without leaving it', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  // A .png whose bytes are not a PNG: the server's content check refuses it.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-fake.png', mimeType: 'image/png', buffer: Buffer.from('not really an image') });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-upload-error')).toContainText('does not match');
+  await expect(page).toHaveURL(/\/Documents\/Upload/);
+  await expect(page.locator('[data-dfh-progress]')).toBeHidden();
+  await expect(page.locator('[data-dfh-upload-submit]')).toBeEnabled();
+  await expect(page.locator('#Title')).toHaveValue('e2e-fake');
+});

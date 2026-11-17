@@ -4,7 +4,7 @@ The upload screen from before the redesign (Sprint 12) offered more than the cur
 current IDE layout the screen looks empty, and its strongest part, the AI summary, is a single checkbox
 below the form.
 
-Status: **plan, waiting for the user's go** · Branch: `feat/versions-upload` (after Sprint 22) → PR into `master`.
+Status: **done** (2026-11-17, see [`sprint23-log.md`](sprint23-log.md)) · Branch: `feat/versions-upload` (after Sprint 22) → PR into `master`.
 
 ## What the old screen had (commit `eef3618`)
 

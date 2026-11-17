@@ -490,6 +490,69 @@ test('upload: the form checks the file type before uploading', async ({ page }) 
   await expect(page.locator('#Title')).toHaveValue('notes');
 });
 
+// Sprint 23: the AI panel on the upload screen.
+test('upload: the AI panel shows the model, the detail and an estimate that follows the file', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents/Upload');
+
+  const panel = page.locator('[data-dfh-ai-panel]');
+  const on = page.locator('[data-dfh-ai-on]');
+  await expect(panel.locator('h2')).toHaveText('AI on upload');
+  await expect(on).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeHaiku45');
+  await expect(page.locator('input[name="SummaryDetail"][value="Standard"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-est-note]')).toContainText('typical one-page document');
+  await expect(page.locator('[data-dfh-est-cost]')).toHaveText('< $0.01');
+  await expect(panel).toContainText('System API');
+
+  await page.locator('[data-dfh-ai-model]').selectOption('ClaudeOpus48');
+  await expect(page.locator('[data-dfh-ai-strengths]')).toContainText('most capable Claude');
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await expect(page.locator('[data-dfh-ai-detail]')).toHaveText('A full paragraph and 6–8 key points');
+
+  // A long text file: the estimate is for this file now.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'long-report.txt', mimeType: 'text/plain', buffer: Buffer.from('word '.repeat(40000)) });
+  await expect(page.locator('[data-dfh-est-note]')).toContainText('For this file (195 KB)');
+  await expect(page.locator('[data-dfh-est-cost]')).toHaveText(/^≈ \$0\.\d\d$/);
+  const checks = page.locator('[data-dfh-upload-checks]');
+  await expect(checks.locator('[data-check="file"]')).toHaveClass('is-ok');
+  await expect(checks.locator('[data-check="text"]')).toHaveClass('is-ok');
+  await expect(checks.locator('[data-check="ai"]')).toContainText('Claude Opus 4.8');
+  await expect(checks.locator('[data-check="ai"]')).toContainText('detailed');
+
+  // An image and an old .doc have no text: the switch turns itself off and says why.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+  await expect(on).toBeDisabled();
+  await expect(on).not.toBeChecked();
+  await expect(page.locator('[data-dfh-ai-reason]')).toHaveText('Images have no text to summarise.');
+  await expect(checks.locator('[data-check="ai"]')).toHaveText('No AI summary for this file.');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'old.doc', mimeType: 'application/msword', buffer: Buffer.from('d0cf11e0a1b11ae1', 'hex') });
+  await expect(page.locator('[data-dfh-ai-reason]')).toContainText('Re-save the file as .docx');
+  // A text file again: the user's choice comes back.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n') });
+  await expect(on).toBeEnabled();
+  await expect(on).toBeChecked();
+  await on.uncheck();
+  await expect(checks.locator('[data-check="ai"]')).toHaveText('No AI summary: the switch is off.');
+
+  // The demo is read-only: everything can be tried, only the upload is disabled.
+  await expect(page.locator('.dfh-form-footer button.btn-primary')).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test('upload on a phone: the AI panel comes before the details, no sideways scroll', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents/Upload');
+  const ai = (await page.locator('[data-dfh-ai-panel]').boundingBox())!;
+  const details = (await page.locator('.dfh-upload-details').boundingBox())!;
+  expect(ai.y).toBeLessThan(details.y);
+  expect(ai.x + ai.width).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
 // Sprint 13: projects, folders, teams.
 test('projects: table with inspector, archived tab, filter', async ({ page }) => {
   await signIn(page, DEMO_USER);
