@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DocFlowHub.Core.Models;
+using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Models.Common;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Documents.Dto;
@@ -369,7 +370,9 @@ public class DocumentService : IDocumentService
                     using var scope = _serviceScopeFactory.CreateScope();
                     var summaryService = scope.ServiceProvider.GetRequiredService<IDocumentSummaryService>();
                     
-                    var summaryResult = await summaryService.RegenerateSummaryAsync(document.Id);
+                    // The model and detail the uploader chose (Sprint 23), or the defaults.
+                    var summaryResult = await summaryService.RegenerateSummaryAsync(
+                        document.Id, request.SummaryModel ?? AIModelHelper.GetDefaultModel(), request.SummaryDetail);
                     if (summaryResult.Succeeded)
                     {
                         _logger.LogInformation("AI summary generated successfully for document {DocumentId}", document.Id);
@@ -452,6 +455,8 @@ public class DocumentService : IDocumentService
             document.UpdatedAt = DateTime.UtcNow;
             document.FileType = version.FileType;
             document.FileSize = version.FileSize;
+            // The newest version is the current one (deleting versions relies on it).
+            document.CurrentVersionId = version.Id;
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -795,6 +800,8 @@ public class DocumentService : IDocumentService
             document.UpdatedAt = DateTime.UtcNow;
             document.FileType = version.FileType;
             document.FileSize = version.FileSize;
+            // The newest version is the current one (deleting versions relies on it).
+            document.CurrentVersionId = version.Id;
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -826,6 +833,92 @@ public class DocumentService : IDocumentService
             _logger.LogError(ex, "Error uploading new version");
             await transaction.RollbackAsync();
             return ServiceResult<DocumentDto>.Failure($"Error uploading new version: {ex.Message}");
+        }
+    }
+
+    private static readonly Dictionary<string, string> RestoreContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".pdf"] = "application/pdf",
+        [".doc"] = "application/msword",
+        [".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        [".txt"] = "text/plain",
+        [".md"] = "text/markdown",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
+        [".gif"] = "image/gif",
+    };
+
+    public async Task<ServiceResult<int>> RestoreVersionAsync(int documentId, int versionNumber, string userId, string? message = null)
+    {
+        var document = await _context.Documents
+            .Include(d => d.Versions)
+            .FirstOrDefaultAsync(d => d.Id == documentId && !d.IsDeleted);
+        if (document == null)
+            return ServiceResult<int>.Failure("Document not found");
+        if (document.OwnerId != userId)
+            return ServiceResult<int>.Failure("Only the owner can restore a version");
+
+        var source = document.Versions.FirstOrDefault(v => v.VersionNumber == versionNumber);
+        if (source == null)
+            return ServiceResult<int>.Failure("Version not found");
+        var newest = document.Versions.Max(v => v.VersionNumber);
+        if (source.VersionNumber == newest)
+            return ServiceResult<int>.Failure($"v{versionNumber} is already the current version");
+
+        var file = await _storageService.DownloadDocumentAsync(documentId, versionNumber);
+        if (!file.Succeeded || file.Data == null || file.Data.Length == 0)
+        {
+            _logger.LogWarning("Restore: could not read document {DocumentId} v{Version}: {Error}", documentId, versionNumber, file.Error);
+            return ServiceResult<int>.Failure($"The file of v{versionNumber} could not be read, so it was not restored");
+        }
+
+        // The file goes to storage first: if that fails, no version row is written (S22-5).
+        var number = newest + 1;
+        var type = string.IsNullOrEmpty(source.FileType) ? document.FileType : source.FileType;
+        var upload = new FormFile(new MemoryStream(file.Data), 0, file.Data.Length, "file", $"restored{type}")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = RestoreContentTypes.TryGetValue(type, out var contentType) ? contentType : "application/octet-stream",
+        };
+        var stored = await _storageService.UploadDocumentAsync(upload, documentId, number);
+        if (!stored.Succeeded || stored.Data == null)
+        {
+            return ServiceResult<int>.Failure(stored.Error ?? "The file could not be stored");
+        }
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var version = new DocumentVersion
+            {
+                DocumentId = documentId,
+                VersionNumber = number,
+                CreatedAt = now,
+                UserId = userId,
+                CreatedBy = userId,
+                ChangeSummary = string.IsNullOrWhiteSpace(message) ? $"Restored from v{versionNumber}" : message.Trim(),
+                FileType = type,
+                FileSize = file.Data.Length,
+                FilePath = stored.Data,
+                StoragePath = stored.Data,
+                FileHash = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(file.Data)),
+            };
+            _context.DocumentVersions.Add(version);
+            await _context.SaveChangesAsync();
+
+            document.UpdatedAt = now;
+            document.FileType = type;
+            document.FileSize = version.FileSize;
+            document.CurrentVersionId = version.Id;
+            await _context.SaveChangesAsync();
+            return ServiceResult<int>.Success(number);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Restore: saving v{Number} of document {DocumentId} failed", number, documentId);
+            await _storageService.DeleteDocumentAsync(documentId, number);
+            return ServiceResult<int>.Failure("The version could not be restored. Try again later.");
         }
     }
 

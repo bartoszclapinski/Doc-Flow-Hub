@@ -320,14 +320,16 @@ public static class DemoDataSeeder
         };
         foreach (var doc in documents)
         {
+            // Every pair, not only neighbours, so v1 <-> v3 has an AI comparison in the demo too (S22-9).
             var ordered = doc.Versions.OrderBy(v => v.VersionNumber).ToList();
             for (var i = 1; i < ordered.Count; i++)
+            for (var j = 0; j < i; j++)
             {
                 var (summary, changes, type, significance) = comparisonTemplates[rng.Next(comparisonTemplates.Length)];
                 context.VersionComparisons.Add(new VersionComparison
                 {
                     DocumentId = doc.Id,
-                    FromVersionId = ordered[i - 1].Id,
+                    FromVersionId = ordered[j].Id,
                     ToVersionId = ordered[i].Id,
                     ChangeSummary = summary,
                     DetailedChanges = changes,

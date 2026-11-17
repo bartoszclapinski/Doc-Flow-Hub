@@ -381,6 +381,7 @@ public class DocumentBrowserService : IDocumentBrowserService
                     d.Id,
                     d.Title,
                     d.FileType,
+                    d.OwnerId,
                     ProjectName = d.Project != null ? d.Project.Name : null,
                     FolderPath = d.Folder != null ? d.Folder.Path : null,
                 })
@@ -417,8 +418,20 @@ public class DocumentBrowserService : IDocumentBrowserService
                 })
                 .FirstOrDefaultAsync();
 
+            var byId = versions.ToDictionary(v => v.Id, v => v.Number);
+            var saved = await _context.VersionComparisons
+                .Where(c => c.DocumentId == documentId)
+                .Select(c => new { c.FromVersionId, c.ToVersionId })
+                .ToListAsync();
+
             return ServiceResult<DocumentComparisonView>.Success(new DocumentComparisonView
             {
+                IsOwner = doc.OwnerId == userId,
+                SavedPairs = saved
+                    .Where(p => byId.ContainsKey(p.FromVersionId) && byId.ContainsKey(p.ToVersionId))
+                    .Select(p => (Math.Min(byId[p.FromVersionId], byId[p.ToVersionId]), Math.Max(byId[p.FromVersionId], byId[p.ToVersionId])))
+                    .Distinct()
+                    .ToList(),
                 DocumentId = doc.Id,
                 Title = doc.Title,
                 FileType = doc.FileType,

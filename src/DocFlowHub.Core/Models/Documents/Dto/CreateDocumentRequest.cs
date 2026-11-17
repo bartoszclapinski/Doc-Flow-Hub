@@ -16,4 +16,10 @@ public class CreateDocumentRequest
 
     /// <summary>Generate an AI summary in the background after the upload (the uploader's choice).</summary>
     public bool GenerateSummary { get; set; } = true;
+
+    /// <summary>The model for the upload summary (Sprint 23); null = the system default.</summary>
+    public DocFlowHub.Core.Models.AI.AIModel? SummaryModel { get; set; }
+
+    /// <summary>How much the upload summary says (Sprint 23).</summary>
+    public DocFlowHub.Core.Models.AI.SummaryDetail SummaryDetail { get; set; } = DocFlowHub.Core.Models.AI.SummaryDetail.Standard;
 } 

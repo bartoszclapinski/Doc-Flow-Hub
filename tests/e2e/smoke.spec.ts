@@ -400,6 +400,72 @@ test('compare on a phone: the diff is unified and nothing scrolls sideways', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
 
+// Sprint 22: any pair of versions, and restore (disabled in the demo).
+async function documentWithThreeVersions(page: Page): Promise<string> {
+  await page.goto('/Documents?sort=name');
+  const row = page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[3-6]$/ }) }).first();
+  return (await row.getAttribute('data-id'))!;
+}
+
+test('compare: every pair is one click away and has an AI comparison in the demo', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.goto(`/Documents/Compare/${id}`);
+
+  const chips = page.locator('.dfh-pair-chips .dfh-pair-chip');
+  expect(await chips.count()).toBeGreaterThanOrEqual(3);
+  await expect(page.locator('.dfh-pair-chip.is-active')).toHaveAttribute('aria-current', 'true');
+  // The demo saves an AI comparison for every pair, so every chip has the AI mark.
+  await expect(page.locator('.dfh-pair-chip:not(:has(.bi-stars))')).toHaveCount(0);
+
+  await page.locator('.dfh-pair-chip', { hasText: 'v1 ↔ v3' }).click();
+  await expect(page).toHaveURL(/from=1&to=3/);
+  await expect(page.locator('#pick-from')).toHaveValue('1');
+  await expect(page.locator('#pick-to')).toHaveValue('3');
+  await expect(page.locator('.dfh-compare-summary p')).not.toBeEmpty();
+  await expect(page.locator('[data-dfh-diff]')).toBeVisible();
+  await expect(page.locator('.dfh-diff-pick-label')).toHaveText(['Older', 'Newer']);
+
+  // Restore is the owner's and disabled in the read-only demo.
+  await expect(page.locator('[data-dfh-compare-restore]')).toBeDisabled();
+  await expect(page.locator('[data-dfh-compare-restore]')).toHaveText(/Restore v1/);
+});
+
+test('versions tab: tick two versions to compare them; restore is disabled in the demo', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+
+  const go = page.locator('[data-dfh-pick-go]');
+  await expect(go).toBeDisabled();
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await expect(page.locator('[data-dfh-pick-hint]')).toHaveText('Tick one more version.');
+  await page.locator('.dfh-version-pick[value="3"]').check();
+  await expect(go).toBeEnabled();
+  await expect(go).toHaveText('Compare v1 ↔ v3');
+  // A third tick drops the oldest one.
+  await page.locator('.dfh-version-pick[value="2"]').check();
+  await expect(page.locator('.dfh-version-pick[value="1"]')).not.toBeChecked();
+  await expect(go).toHaveText('Compare v2 ↔ v3');
+  await page.locator('.dfh-version-pick[value="3"]').uncheck();
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await expect(go).toHaveText('Compare v1 ↔ v2');
+  await go.click();
+  await expect(page).toHaveURL(/\/Documents\/Compare\/\d+\?from=1&to=2/);
+
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await expect(page.locator('[data-dfh-version-restore="1"]')).toBeDisabled();
+});
+
+test('compare on a phone: the pair chips wrap and nothing scrolls sideways', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  const id = await documentWithThreeVersions(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await expect(page.locator('.dfh-pair-chips')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
 test('editor tabs: opened documents stay as tabs until closed', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.goto('/Documents?sort=name');
@@ -422,6 +488,69 @@ test('upload: the form checks the file type before uploading', async ({ page }) 
   await page.locator('[data-dfh-file]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello\n') });
   await expect(page.locator('[data-dfh-file-status]')).toHaveText('ready');
   await expect(page.locator('#Title')).toHaveValue('notes');
+});
+
+// Sprint 23: the AI panel on the upload screen.
+test('upload: the AI panel shows the model, the detail and an estimate that follows the file', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents/Upload');
+
+  const panel = page.locator('[data-dfh-ai-panel]');
+  const on = page.locator('[data-dfh-ai-on]');
+  await expect(panel.locator('h2')).toHaveText('AI on upload');
+  await expect(on).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeHaiku45');
+  await expect(page.locator('input[name="SummaryDetail"][value="Standard"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-est-note]')).toContainText('typical one-page document');
+  await expect(page.locator('[data-dfh-est-cost]')).toHaveText('< $0.01');
+  await expect(panel).toContainText('System API');
+
+  await page.locator('[data-dfh-ai-model]').selectOption('ClaudeOpus48');
+  await expect(page.locator('[data-dfh-ai-strengths]')).toContainText('most capable Claude');
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await expect(page.locator('[data-dfh-ai-detail]')).toHaveText('A full paragraph and 6–8 key points');
+
+  // A long text file: the estimate is for this file now.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'long-report.txt', mimeType: 'text/plain', buffer: Buffer.from('word '.repeat(40000)) });
+  await expect(page.locator('[data-dfh-est-note]')).toContainText('For this file (195 KB)');
+  await expect(page.locator('[data-dfh-est-cost]')).toHaveText(/^≈ \$0\.\d\d$/);
+  const checks = page.locator('[data-dfh-upload-checks]');
+  await expect(checks.locator('[data-check="file"]')).toHaveClass('is-ok');
+  await expect(checks.locator('[data-check="text"]')).toHaveClass('is-ok');
+  await expect(checks.locator('[data-check="ai"]')).toContainText('Claude Opus 4.8');
+  await expect(checks.locator('[data-check="ai"]')).toContainText('detailed');
+
+  // An image and an old .doc have no text: the switch turns itself off and says why.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+  await expect(on).toBeDisabled();
+  await expect(on).not.toBeChecked();
+  await expect(page.locator('[data-dfh-ai-reason]')).toHaveText('Images have no text to summarise.');
+  await expect(checks.locator('[data-check="ai"]')).toHaveText('No AI summary for this file.');
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'old.doc', mimeType: 'application/msword', buffer: Buffer.from('d0cf11e0a1b11ae1', 'hex') });
+  await expect(page.locator('[data-dfh-ai-reason]')).toContainText('Re-save the file as .docx');
+  // A text file again: the user's choice comes back.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n') });
+  await expect(on).toBeEnabled();
+  await expect(on).toBeChecked();
+  await on.uncheck();
+  await expect(checks.locator('[data-check="ai"]')).toHaveText('No AI summary: the switch is off.');
+
+  // The demo is read-only: everything can be tried, only the upload is disabled.
+  await expect(page.locator('.dfh-form-footer button.btn-primary')).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test('upload on a phone: the AI panel comes before the details, no sideways scroll', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents/Upload');
+  const ai = (await page.locator('[data-dfh-ai-panel]').boundingBox())!;
+  const details = (await page.locator('.dfh-upload-details').boundingBox())!;
+  expect(ai.y).toBeLessThan(details.y);
+  expect(ai.x + ai.width).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
 
 // Sprint 13: projects, folders, teams.

@@ -89,7 +89,35 @@ public class DocumentSummaryService : IDocumentSummaryService
     /// <summary>
     /// Generate a summary for document content using AI with specific model
     /// </summary>
-    public async Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId, AIModel model)
+    public Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId, AIModel model) =>
+        GenerateSummaryAsync(documentId, model, SummaryDetail.Standard);
+
+    /// <summary>
+    /// The prompt for a summary at a level of detail (Sprint 23). The answer keeps the shape the parser
+    /// expects: the summary text, then "Key points" with one bullet per line.
+    /// </summary>
+    internal static string BuildPrompt(string title, string content, SummaryDetail detail)
+    {
+        var (summary, points) = detail switch
+        {
+            SummaryDetail.Short => ("A one-sentence summary", "Key points (bullet format, 3 short points of a few words each)"),
+            SummaryDetail.Detailed => ("A detailed summary (one paragraph of 5-7 sentences)", "Key points (bullet format, 6-8 points, one or two sentences each)"),
+            _ => ("A concise summary (2-3 sentences)", "Key points (bullet format, 3-5 main points)"),
+        };
+        return $@"Please provide a summary of the following document.
+
+Document Title: {title}
+Content:
+{content}
+
+Please provide:
+1. {summary}
+2. {points}
+
+Summary:";
+    }
+
+    private async Task<ServiceResult<DocumentSummary>> GenerateSummaryAsync(int documentId, AIModel model, SummaryDetail detail)
     {
         try
         {
@@ -115,17 +143,7 @@ public class DocumentSummaryService : IDocumentSummaryService
             _logger.LogDebug("Extracted content length: {ContentLength} characters", content.Length);
 
             // Generate AI summary
-            var prompt = $@"Please provide a comprehensive summary of the following document.
-
-Document Title: {document.Title}
-Content:
-{content}
-
-Please provide:
-1. A concise summary (2-3 sentences)
-2. Key points (bullet format, 3-5 main points)
-
-Summary:";
+            var prompt = BuildPrompt((string)document.Title, content, detail);
 
             var aiResponse = await _aiService.GenerateCompletionAsync(prompt, model.ToApiString());
             if (!aiResponse.IsSuccess || string.IsNullOrWhiteSpace(aiResponse.Content))
@@ -180,7 +198,10 @@ Summary:";
     /// <summary>
     /// Regenerate summary for a document with specific model
     /// </summary>
-    public async Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model)
+    public Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model) =>
+        RegenerateSummaryAsync(documentId, model, SummaryDetail.Standard);
+
+    public async Task<ServiceResult> RegenerateSummaryAsync(int documentId, AIModel model, SummaryDetail detail)
     {
         try
         {
@@ -202,7 +223,7 @@ Summary:";
             InvalidateDocumentContentCache(documentId);
 
             // Generate new summary with specified model
-            var result = await GenerateSummaryAsync(documentId, model);
+            var result = await GenerateSummaryAsync(documentId, model, detail);
             if (!result.Succeeded)
             {
                 return ServiceResult.Failure(result.Error!);

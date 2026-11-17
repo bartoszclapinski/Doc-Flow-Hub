@@ -1,6 +1,7 @@
 @page
 @model DocFlowHub.Web.Pages.Documents.UploadModel
 @using DocFlowHub.Core.Models.Documents.Browser
+@using DocFlowHub.Core.Models.AI
 @inject DocFlowHub.Core.Services.Interfaces.IDemoModeService DemoMode
 @{
     ViewData["Title"] = "Upload";
@@ -8,6 +9,22 @@
     var tree = Model.Tree;
     var types = string.Join(" ", Model.AllowedTypes.Select(t => t.TrimStart('.')));
     var maxMb = Model.MaxFileBytes / 1024 / 1024;
+    var ai = Model.SummariesEnabled;
+
+    // The no-JS estimate: a typical one-page document (about 2,500 characters). upload.js redoes it for the file.
+    (string Cost, string Time, string Tokens) Estimate(AIModel m, SummaryDetail d)
+    {
+        const int inputTokens = 2500 / 4 + 200;
+        var outputTokens = SummaryDetailHelper.TypicalOutputTokens(d);
+        var (pin, pout) = AIModelFacts.PricePerMillionTokens(m);
+        var cost = (inputTokens * pin + outputTokens * pout) / 1_000_000m;
+        var factor = d switch { SummaryDetail.Short => 0.7, SummaryDetail.Detailed => 1.6, _ => 1.0 };
+        var seconds = Math.Max(2, (int)Math.Round(AIModelFacts.TypicalSeconds(m) * factor));
+        return (cost < 0.01m ? "< $0.01" : "≈ $" + cost.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                "≈ " + seconds + " s",
+                "≈ " + (inputTokens + outputTokens).ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
+    }
+    var estimate = Estimate(Model.SummaryModel, Model.SummaryDetail);
 }
 
 @section Inspector {
@@ -59,23 +76,26 @@
 }
 
 <form class="dfh-column" method="post" enctype="multipart/form-data" data-dfh-upload-form data-dfh-busy="Uploading…"
-      data-max-bytes="@Model.MaxFileBytes" data-types="@string.Join(",", Model.AllowedTypes)">
+      data-max-bytes="@Model.MaxFileBytes" data-types="@string.Join(",", Model.AllowedTypes)"
+      data-summarisable="@string.Join(",", UploadModel.SummarisableTypes)" data-dfh-upload-progress="@(DemoMode.IsEnabled ? null : "on")"
+      data-models="@Model.ModelsJson" data-details="@UploadModel.DetailsJson">
     <partial name="_EditorTabs" model='new EditorTabsView("Upload document", Icon: "bi-upload")' />
 
-    <div class="dfh-form-scroll">
-        <div class="dfh-form-body">
+    <div class="dfh-form-scroll dfh-upload-scroll">
+        <div class="dfh-form-body dfh-upload-body@(Model.ErrorMessage != null ? " has-error" : "")">
             @if (Model.ErrorMessage != null)
             {
-                <div class="dfh-form-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
+                <div class="dfh-form-error dfh-upload-error" role="alert"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i><span>@Model.ErrorMessage</span></div>
             }
 
-            <fieldset class="dfh-form-section">
+            <fieldset class="dfh-form-section dfh-upload-file">
                 <legend class="dfh-form-heading">File</legend>
                 <label class="dfh-dropzone" data-dfh-dropzone>
                     <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
                     <span class="dfh-dropzone-text">
                         <span>Drop a file here or <span class="dfh-dropzone-link">browse</span></span>
                         <span class="dfh-mono">@types · max @maxMb MB</span>
+                        <span class="dfh-dropzone-tip"><i class="bi bi-lightbulb" aria-hidden="true"></i>Old <span class="dfh-mono">.doc</span> files can't be read for AI summaries: re-save them as <span class="dfh-mono">.docx</span>.</span>
                     </span>
                     <input type="file" name="File" class="dfh-file-input" accept="@string.Join(",", Model.AllowedTypes)" required data-dfh-file />
                 </label>
@@ -88,9 +108,109 @@
                         <button type="button" class="dfh-icon-action" data-dfh-file-remove aria-label="Remove the file"><i class="bi bi-x" aria-hidden="true"></i></button>
                     </li>
                 </ul>
+
+                @* "What will happen" (S23-4): filled by upload.js when a file is picked. *@
+                <div class="dfh-upload-checks" data-dfh-upload-checks hidden>
+                    <span class="dfh-upload-checks-title">What will happen</span>
+                    <ul>
+                        <li data-check="file"><i class="bi" aria-hidden="true"></i><span></span></li>
+                        <li data-check="text"><i class="bi" aria-hidden="true"></i><span></span></li>
+                        <li data-check="ai"><i class="bi" aria-hidden="true"></i><span></span></li>
+                    </ul>
+                </div>
+
+                @* Progress (S23-5): shown by upload.js while the file is sent. *@
+                <div class="dfh-upload-progress" data-dfh-progress hidden aria-live="polite">
+                    <div class="dfh-upload-bar"><span data-dfh-progress-bar></span></div>
+                    <ol class="dfh-upload-steps">
+                        <li data-step="upload"><span class="dfh-upload-step-dot" aria-hidden="true"></span><span>Upload</span><span class="dfh-mono" data-dfh-progress-pct>0%</span></li>
+                        <li data-step="save"><span class="dfh-upload-step-dot" aria-hidden="true"></span><span>Check and store the file</span></li>
+                        <li data-step="ai"><span class="dfh-upload-step-dot" aria-hidden="true"></span><span>AI summary</span><span class="dfh-muted" data-dfh-progress-ai>continues in the background</span></li>
+                    </ol>
+                </div>
             </fieldset>
 
-            <fieldset class="dfh-form-section">
+            @* The AI options of the old upload screen, made real (S23-1 … S23-3). *@
+            <section class="dfh-upload-ai@(ai ? "" : " is-off")" aria-labelledby="dfh-upload-ai-title" data-dfh-ai-panel>
+                <header class="dfh-upload-ai-head">
+                    <i class="bi bi-stars" aria-hidden="true"></i>
+                    <h2 id="dfh-upload-ai-title">AI on upload</h2>
+                    <span class="dfh-mono">1 request</span>
+                </header>
+                @if (!ai)
+                {
+                    <p class="dfh-upload-ai-off">AI summaries are turned off for your account. <a asp-page="/Settings/AI">Turn them on in Settings · AI</a>.</p>
+                    <input type="hidden" name="GenerateSummary" value="false" />
+                }
+                else
+                {
+                    <label class="dfh-upload-ai-switch form-switch">
+                        <input type="checkbox" class="form-check-input" role="switch" name="GenerateSummary" value="true" checked="@Model.GenerateSummary" data-dfh-ai-on />
+                        <span>
+                            <strong>Generate an AI summary</strong>
+                            <small data-dfh-ai-reason>The AI reads the file and writes a summary with key points. It appears on the document a few seconds after the upload.</small>
+                        </span>
+                    </label>
+                    <input type="hidden" name="GenerateSummary" value="false" />
+
+                    <div class="dfh-upload-ai-options" data-dfh-ai-options>
+                        <label class="dfh-field">
+                            <span class="dfh-field-label">Model</span>
+                            <select name="SummaryModel" class="form-select" data-dfh-ai-model>
+                                @foreach (var group in AIModelHelper.GetAllModels().GroupBy(m => m.GetProvider()).OrderBy(g => g.Key == AIProvider.Anthropic ? 0 : 1))
+                                {
+                                    <optgroup label="@(group.Key == AIProvider.Anthropic ? "Anthropic" : "OpenAI")">
+                                        @foreach (var m in group)
+                                        {
+                                            <option value="@m" selected="@(m == Model.SummaryModel)">@m.ToDisplayName()@(m == AIModelHelper.GetDefaultModel() ? " ★" : "")</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                            <small class="dfh-upload-ai-note" data-dfh-ai-strengths>@AIModelFacts.Strengths(Model.SummaryModel)</small>
+                        </label>
+
+                        <div class="dfh-field">
+                            <span class="dfh-field-label" id="dfh-detail-label">Summary detail</span>
+                            <div class="dfh-choice-group" role="radiogroup" aria-labelledby="dfh-detail-label">
+                                @foreach (var d in Enum.GetValues<SummaryDetail>())
+                                {
+                                    <label class="dfh-choice" title="@SummaryDetailHelper.Describe(d)">
+                                        <input type="radio" name="SummaryDetail" value="@d" checked="@(d == Model.SummaryDetail)" data-describe="@SummaryDetailHelper.Describe(d)" />
+                                        <span>@d</span>
+                                    </label>
+                                }
+                            </div>
+                            <small class="dfh-upload-ai-note" data-dfh-ai-detail>@SummaryDetailHelper.Describe(Model.SummaryDetail)</small>
+                        </div>
+
+                        <div class="dfh-upload-estimate" data-dfh-ai-estimate aria-live="polite">
+                            <span class="dfh-upload-estimate-title">Estimate</span>
+                            <dl>
+                                <div><dt>Cost</dt><dd data-dfh-est-cost>@estimate.Cost</dd></div>
+                                <div><dt>Time</dt><dd data-dfh-est-time>@estimate.Time</dd></div>
+                                <div><dt>Tokens</dt><dd data-dfh-est-tokens>@estimate.Tokens</dd></div>
+                            </dl>
+                            <small data-dfh-est-note>For a typical one-page document. Pick a file for a closer estimate.</small>
+                        </div>
+
+                        <label class="dfh-check-row">
+                            <input type="checkbox" class="form-check-input" name="RememberDefaults" value="true" data-dfh-ai-remember />
+                            <span>Remember as my defaults<small>Saves the switch, the model and the detail to Settings · AI.</small></span>
+                        </label>
+                    </div>
+                }
+                <dl class="dfh-upload-ai-facts">
+                    @if (Model.AiDailyLimit is int dailyLimit)
+                    {
+                        <div><dt>AI requests today</dt><dd class="dfh-mono">@Model.AiRequestsToday / @Dfh.Number(dailyLimit)</dd></div>
+                    }
+                    <div><dt>API key</dt><dd>@(Model.UsesOwnKey ? "Your own key" : "System API")</dd></div>
+                </dl>
+                <a class="dfh-upload-ai-settings" asp-page="/Settings/AI"><i class="bi bi-gear" aria-hidden="true"></i>Defaults in Settings · AI</a>
+            </section>
+
+            <fieldset class="dfh-form-section dfh-upload-details">
                 <legend class="dfh-form-heading">Details</legend>
                 <div class="dfh-form-grid">
                     <label class="dfh-field is-wide">
@@ -149,17 +269,6 @@
                 </div>
             </fieldset>
 
-            <fieldset class="dfh-form-section">
-                <legend class="dfh-form-heading"><i class="bi bi-stars" aria-hidden="true"></i>AI</legend>
-                <label class="dfh-check-row">
-                    <input type="checkbox" class="form-check-input" name="GenerateSummary" value="true" checked="@Model.GenerateSummary" disabled="@(!Model.AIFeaturesEnabled)" />
-                    <span>
-                        Generate a summary after upload <span class="dfh-mono">1 request</span>
-                        <small>@(Model.AIFeaturesEnabled ? "Uses your preferred model from Settings · AI. The summary appears on the document a few seconds later." : "AI features are turned off for your account in Settings · AI.")</small>
-                    </span>
-                </label>
-                <input type="hidden" name="GenerateSummary" value="false" />
-            </fieldset>
         </div>
     </div>
 

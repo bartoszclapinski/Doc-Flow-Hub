@@ -60,6 +60,55 @@
             });
         }
 
+        // Restore an older version as a new one (Sprint 22).
+        const restoreModal = document.getElementById('dfh-version-restore-modal');
+        if (restoreModal && window.bootstrap) {
+            const modal = bootstrap.Modal.getOrCreateInstance(restoreModal);
+            const next = restoreModal.getAttribute('data-next');
+            document.addEventListener('click', function (e) {
+                const button = e.target.closest('[data-dfh-version-restore]');
+                if (!button || button.disabled) return;
+                const number = button.getAttribute('data-dfh-version-restore');
+                restoreModal.querySelector('#dfh-version-restore-title').textContent = 'Restore v' + number + ' as v' + next + '?';
+                restoreModal.querySelector('[data-dfh-restore-text]').textContent =
+                    'The file of v' + number + ' becomes v' + next + ', the new current version. Nothing is overwritten: every version stays.';
+                restoreModal.querySelector('[data-dfh-restore-label]').textContent = 'Restore as v' + next;
+                restoreModal.querySelector('[data-dfh-restore-message]').placeholder = 'Restored from v' + number;
+                restoreModal.querySelector('input[name="versionNumber"]').value = number;
+                modal.show();
+            });
+            restoreModal.addEventListener('shown.bs.modal', function () {
+                restoreModal.querySelector('[data-dfh-restore-message]').focus();
+            });
+        }
+
+        // Pick two versions to compare: the button says which pair, a third tick drops the oldest one.
+        const pick = document.querySelector('[data-dfh-version-pick]');
+        const go = document.querySelector('[data-dfh-pick-go]');
+        if (pick && go) {
+            const hint = document.querySelector('[data-dfh-pick-hint]');
+            const order = [];
+            const update = function () {
+                const numbers = order.map(function (box) { return Number(box.value); }).sort(function (a, b) { return a - b; });
+                go.disabled = numbers.length !== 2;
+                go.querySelector('span').textContent = numbers.length === 2 ? 'Compare v' + numbers[0] + ' \u2194 v' + numbers[1] : 'Compare selected';
+                if (hint) hint.textContent = numbers.length === 2 ? '' : numbers.length === 1 ? 'Tick one more version.' : 'Tick two versions to compare them.';
+            };
+            document.querySelectorAll('.dfh-version-pick').forEach(function (box) {
+                if (box.checked) order.push(box);
+                box.addEventListener('change', function () {
+                    const at = order.indexOf(box);
+                    if (at >= 0) order.splice(at, 1);
+                    if (box.checked) {
+                        order.push(box);
+                        if (order.length > 2) order.shift().checked = false;
+                    }
+                    update();
+                });
+            });
+            update();
+        }
+
         // Copy link.
         document.addEventListener('click', function (e) {
             if (!e.target.closest('[data-dfh-copy-link]')) return;

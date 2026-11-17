@@ -11,14 +11,14 @@
     var diff = Model.Diff;
 
     // Links of the diff toolbar: they keep the version pair and the other switches. "" clears a switch.
-    string DiffUrl(string? view = null, string? ws = null, string? context = null)
+    string DiffUrl(string? view = null, string? ws = null, string? context = null, int? from = null, int? to = null)
     {
         static string? Pick(string? next, string? current) => next == null ? current : next.Length == 0 ? null : next;
         return Url.Page("/Documents/Compare", new
         {
             id = v.DocumentId,
-            from = v.From.Number,
-            to = v.To.Number,
+            from = from ?? v.From.Number,
+            to = to ?? v.To.Number,
             view = Pick(view, Model.Unified ? "unified" : null),
             ws = Pick(ws, Model.IgnoreWhitespace ? "ignore" : null),
             context = Pick(context, Model.ShowAll ? "all" : null),
@@ -106,16 +106,16 @@
         <a class="btn btn-secondary btn-sm" asp-page="/Documents/Details" asp-route-id="@v.DocumentId"><i class="bi bi-file-earmark" aria-hidden="true"></i>Open document</a>
     </div>
 
-    @* Version header: two pickers (GET form; the script submits on change) *@
+    @* Version header (Sprint 22): "Compare [v1] with [v3]" with real dropdowns; a GET form the script submits on change. *@
     <form class="dfh-diff-header" method="get" asp-page="/Documents/Compare" asp-route-id="@v.DocumentId" data-dfh-compare-pickers>
         @foreach (var (side, version, name, css) in new[] { ("Older", v.From, "from", "is-old"), ("Newer", v.To, "to", "is-new") })
         {
             <div class="dfh-diff-side @css">
-                <label class="visually-hidden" for="pick-@name">@side version</label>
+                <label class="dfh-diff-pick-label" for="pick-@name">@side</label>
                 <select id="pick-@name" name="@name" class="form-select">
                     @foreach (var option in v.Versions)
                     {
-                        <option value="@option.Number" selected="@(option.Number == version.Number)">v@(option.Number)</option>
+                        <option value="@option.Number" selected="@(option.Number == version.Number)">v@(option.Number)@(option.Number == newest ? " (current)" : "")</option>
                     }
                 </select>
                 @if (version.Hash != null)
@@ -131,42 +131,74 @@
         <noscript><button type="submit" class="btn btn-secondary btn-sm">Compare</button></noscript>
     </form>
 
-    @if (diff.Status == VersionDiffStatus.Changed || Model.IgnoreWhitespace)
+    @* Every pair at a glance (S22-6), for documents with up to 6 versions; ✦ = a saved AI comparison. *@
+    @if (v.Versions.Count > 2 && v.Versions.Count <= 6)
     {
-        @* Diff toolbar (S21-6). Every control is a plain link; compare.js adds the change counter and jumps. *@
-        <div class="dfh-diff-bar">
-            @if (diff.Status == VersionDiffStatus.Changed)
+        var numbers = v.Versions.Select(x => x.Number).OrderBy(n => n).ToList();
+        <nav class="dfh-pair-chips" aria-label="Version pairs">
+            <span class="dfh-muted">Pairs</span>
+            @for (var i = 0; i < numbers.Count; i++)
             {
-                <nav class="dfh-segmented dfh-diff-layout" aria-label="Diff layout">
-                    <a class="dfh-segmented-item@(!Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "")" aria-current="@(!Model.Unified ? "true" : null)">Side by side</a>
-                    <a class="dfh-segmented-item@(Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "unified")" aria-current="@(Model.Unified ? "true" : null)">Unified</a>
-                </nav>
+                for (var j = i + 1; j < numbers.Count; j++)
+                {
+                    var (a, b) = (numbers[i], numbers[j]);
+                    var active = a == v.From.Number && b == v.To.Number;
+                    var ai = v.SavedPairs.Contains((a, b));
+                    <a class="dfh-pair-chip@(active ? " is-active" : "")" href="@DiffUrl(from: a, to: b)" aria-current="@(active ? "true" : null)"
+                       title="@(ai ? "Has a saved AI comparison" : null)">v@(a) ↔ v@(b)@if (ai) {<i class="bi bi-stars" aria-label="AI comparison"></i>}</a>
+                }
             }
-            <a class="btn btn-secondary btn-sm" href="@DiffUrl(ws: Model.IgnoreWhitespace ? "" : "ignore")" aria-pressed="@(Model.IgnoreWhitespace ? "true" : "false")" data-dfh-diff-ws>
-                <i class="bi bi-distribute-horizontal" aria-hidden="true"></i>Ignore whitespace
-            </a>
-            @if (diff.Status == VersionDiffStatus.Changed && (diff.FoldedLines > 0 || Model.ShowAll))
-            {
-                <a class="btn btn-secondary btn-sm" href="@DiffUrl(context: Model.ShowAll ? "" : "all")" aria-pressed="@(Model.ShowAll ? "true" : "false")" data-dfh-diff-all>
-                    <i class="bi bi-arrows-expand" aria-hidden="true"></i>Show all lines
-                </a>
-            }
-            <span class="dfh-spacer"></span>
-            @if (diff.Status == VersionDiffStatus.Changed)
-            {
-                <span class="dfh-diff-nav">
-                <span class="dfh-mono dfh-diff-count" data-dfh-diff-count data-changes="@diff.Changes">
-                    <span class="is-add" title="@Plural(diff.AddedLines, "line") added">+@diff.AddedLines</span>
-                    <span class="is-del" title="@Plural(diff.RemovedLines, "line") removed">−@diff.RemovedLines</span>
-                    <span aria-hidden="true">·</span>
-                    <span data-dfh-diff-pos>@Plural(diff.Changes, "change")</span>
-                </span>
-                <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-prev aria-label="Previous change" title="Previous change (P)" hidden><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-next aria-label="Next change" title="Next change (N)" hidden><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
-                </span>
-            }
-        </div>
+        </nav>
     }
+
+    @* Diff toolbar (S21-6, S22-4): every control is a plain link; compare.js adds the change counter and jumps. *@
+    <div class="dfh-diff-bar">
+        @if (diff.Status == VersionDiffStatus.Changed)
+        {
+            <nav class="dfh-segmented dfh-diff-layout" aria-label="Diff layout">
+                <a class="dfh-segmented-item@(!Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "")" aria-current="@(!Model.Unified ? "true" : null)">Side by side</a>
+                <a class="dfh-segmented-item@(Model.Unified ? " is-active" : "")" href="@DiffUrl(view: "unified")" aria-current="@(Model.Unified ? "true" : null)">Unified</a>
+            </nav>
+        }
+        @if (diff.Status == VersionDiffStatus.Changed || Model.IgnoreWhitespace)
+        {
+        <a class="btn btn-secondary btn-sm" href="@DiffUrl(ws: Model.IgnoreWhitespace ? "" : "ignore")" aria-pressed="@(Model.IgnoreWhitespace ? "true" : "false")" data-dfh-diff-ws>
+            <i class="bi bi-distribute-horizontal" aria-hidden="true"></i>Ignore whitespace
+        </a>
+        }
+        @if (diff.Status == VersionDiffStatus.Changed && (diff.FoldedLines > 0 || Model.ShowAll))
+        {
+            <a class="btn btn-secondary btn-sm" href="@DiffUrl(context: Model.ShowAll ? "" : "all")" aria-pressed="@(Model.ShowAll ? "true" : "false")" data-dfh-diff-all>
+                <i class="bi bi-arrows-expand" aria-hidden="true"></i>Show all lines
+            </a>
+        }
+        <span class="dfh-spacer"></span>
+        @if (Model.CanRestore)
+        {
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#dfh-compare-restore-modal" data-dfh-compare-restore>
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore v@(v.From.Number)
+            </button>
+        }
+        else
+        {
+            <span class="dfh-btn-disabled-wrap" tabindex="0" title="@Model.RestoreTip">
+                <button type="button" class="btn btn-secondary btn-sm" disabled data-dfh-compare-restore><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore v@(v.From.Number)</button>
+            </span>
+        }
+        @if (diff.Status == VersionDiffStatus.Changed)
+        {
+            <span class="dfh-diff-nav">
+            <span class="dfh-mono dfh-diff-count" data-dfh-diff-count data-changes="@diff.Changes">
+                <span class="is-add" title="@Plural(diff.AddedLines, "line") added">+@diff.AddedLines</span>
+                <span class="is-del" title="@Plural(diff.RemovedLines, "line") removed">−@diff.RemovedLines</span>
+                <span aria-hidden="true">·</span>
+                <span data-dfh-diff-pos>@Plural(diff.Changes, "change")</span>
+            </span>
+            <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-prev aria-label="Previous change" title="Previous change (P)" hidden><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-ghost btn-sm btn-icon" data-dfh-diff-next aria-label="Next change" title="Next change (N)" hidden><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+            </span>
+        }
+    </div>
 
     @if (diff.Status == VersionDiffStatus.Changed)
     {
@@ -218,6 +250,33 @@
         </div>
     }
 </div>
+
+@if (Model.CanRestore)
+{
+    var next = v.Versions[0].Number + 1;
+    <div class="modal" id="dfh-compare-restore-modal" tabindex="-1" aria-labelledby="dfh-compare-restore-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" method="post" asp-page="/Documents/Details" asp-page-handler="RestoreVersion" asp-route-id="@v.DocumentId" data-dfh-busy="Restoring…">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="dfh-compare-restore-title">Restore v@(v.From.Number) as v@(next)?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body dfh-modal-stack">
+                    <p class="m-0">The file of v@(v.From.Number) becomes v@(next), the new current version. Nothing is overwritten: every version stays.</p>
+                    <label class="dfh-field">
+                        <span class="dfh-field-label">Description <span class="dfh-muted">(optional)</span></span>
+                        <input type="text" name="message" class="form-control" maxlength="500" placeholder="Restored from v@(v.From.Number)" />
+                    </label>
+                    <input type="hidden" name="versionNumber" value="@v.From.Number" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore as v@(next)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
 
 @section Scripts {
     <script src="~/js/dfh/editor-tabs.js" asp-append-version="true"></script>

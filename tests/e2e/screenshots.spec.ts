@@ -191,6 +191,34 @@ test('compare diff screens', async ({ page }) => {
   await page.screenshot({ path: `${dir}/compare-diff-390.png`, fullPage: true });
 });
 
+// Sprint 22: the version pairs and the Versions tab picker.
+test('version screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents?sort=name');
+  const id = await page.locator('[data-dfh-doc-table] tbody tr', { has: page.locator('td', { hasText: /^v[3-6]$/ }) }).first().getAttribute('data-id');
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await page.screenshot({ path: `${dir}/compare-pairs.png` });
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await page.locator('.dfh-version-pick[value="1"]').check();
+  await page.locator('.dfh-version-pick[value="3"]').check();
+  await page.screenshot({ path: `${dir}/versions-pick.png` });
+});
+
+// Sprint 23: the upload screen with its AI panel, the checks for a file, and an image (no summary).
+test('upload screens', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents/Upload');
+  await page.screenshot({ path: `${dir}/upload-empty.png` });
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'q3-financial-report.txt', mimeType: 'text/plain', buffer: Buffer.from('Quarterly report. '.repeat(400)) });
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await page.screenshot({ path: `${dir}/upload-file.png` });
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'team-photo.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a', 'hex') });
+  await page.screenshot({ path: `${dir}/upload-image.png` });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/Documents/Upload');
+  await page.screenshot({ path: `${dir}/upload-390.png`, fullPage: true });
+});
+
 // PDF pages draw after load (Sprint 19): wait for the first page and the thumbnails in view.
 async function settlePdf(page: Page) {
   if (!(await page.locator('[data-dfh-pdf]').count())) return;

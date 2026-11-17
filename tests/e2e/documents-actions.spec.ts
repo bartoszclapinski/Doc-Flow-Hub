@@ -342,3 +342,89 @@ test('compare shows the exact added, removed and changed lines of two versions',
   await page.goto(`/Documents/Details/${id}`);
   await deleteOpenDocument(page, 'e2e-diff');
 });
+
+// Sprint 22: restoring an older version adds it on top.
+test('restoring v1 adds it as v3 with the v1 file', async ({ page }) => {
+  await uploadFile(page, { name: 'e2e-restore.txt', mimeType: 'text/plain', buffer: Buffer.from('First version text\n') });
+  const id = /\/Documents\/Details\/(\d+)/.exec(page.url())![1];
+  await page.locator('a', { hasText: 'New version' }).click();
+  await page.locator('#new-version [data-dfh-file]').setInputFiles({ name: 'e2e-restore.txt', mimeType: 'text/plain', buffer: Buffer.from('Second version text\n') });
+  await page.locator('#ChangeSummary').fill('Second draft');
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded v2');
+
+  await page.goto(`/Documents/Details/${id}?tab=versions`);
+  await page.locator('[data-dfh-version-restore="1"]').click();
+  const modal = page.locator('#dfh-version-restore-modal');
+  await expect(modal.locator('.modal-title')).toHaveText('Restore v1 as v3?');
+  await expect(modal.locator('[data-dfh-restore-message]')).toHaveAttribute('placeholder', 'Restored from v1');
+  await modal.locator('button[type="submit"]').click();
+
+  await expect(page.locator('.dfh-toast')).toContainText('Restored v1 as v3');
+  await expect(page.locator('#panel-versions .dfh-version-row')).toHaveCount(3);
+  await expect(page.locator('#panel-versions .dfh-version-row.is-current')).toContainText('Restored from v1');
+  await expect(page.locator('.dfh-code-line').first()).toHaveText('First version text');
+
+  // The diff of v1 and v3 is empty; v2 and v3 differ.
+  await page.goto(`/Documents/Compare/${id}?from=1&to=3`);
+  await expect(page.locator('.dfh-empty-title')).toHaveText('No text differences');
+  await page.goto(`/Documents/Compare/${id}?from=2&to=3`);
+  await expect(page.locator('.dfh-diff-count .is-add')).toHaveText('+1');
+
+  // The Compare page offers to restore the older side too, here as v4 with the user's own description.
+  await page.locator('[data-dfh-compare-restore]').click();
+  const compareModal = page.locator('#dfh-compare-restore-modal');
+  await expect(compareModal.locator('.modal-title')).toHaveText('Restore v2 as v4?');
+  await compareModal.locator('input[name="message"]').fill('Back to the second draft');
+  await compareModal.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(new RegExp(`/Documents/Details/${id}`));
+  await expect(page.locator('.dfh-toast')).toContainText('Restored v2 as v4');
+  await expect(page.locator('#panel-versions .dfh-version-row.is-current')).toContainText('Back to the second draft');
+
+  await deleteOpenDocument(page, 'e2e-restore');
+});
+
+// Sprint 23: the upload screen's AI choices and its progress upload.
+test('upload: the AI choices can be remembered as the defaults', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  await page.locator('[data-dfh-ai-on]').uncheck();
+  await page.locator('[data-dfh-ai-model]').selectOption('ClaudeSonnet5');
+  await page.locator('.dfh-choice', { hasText: 'Detailed' }).click();
+  await page.locator('[data-dfh-ai-remember]').check();
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-remember.txt', mimeType: 'text/plain', buffer: Buffer.from('Remember me\n') });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page).toHaveURL(/\/Documents\/Details\/\d+/);
+  await expect(page.locator('.dfh-toast')).toContainText('Uploaded "e2e-remember"');
+  const id = /\/Documents\/Details\/(\d+)/.exec(page.url())![1];
+
+  await page.goto('/Documents/Upload');
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeSonnet5');
+  await expect(page.locator('input[name="SummaryDetail"][value="Detailed"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-on]')).not.toBeChecked();
+
+  // Back to the defaults, so the other tests start as before.
+  await page.goto('/Settings/AI');
+  await page.locator('button', { hasText: 'Reset to defaults' }).click();
+  await expect(page.locator('.dfh-toast')).toContainText('reset to the defaults');
+  await page.goto('/Documents/Upload');
+  await expect(page.locator('[data-dfh-ai-model]')).toHaveValue('ClaudeHaiku45');
+  await expect(page.locator('input[name="SummaryDetail"][value="Standard"]')).toBeChecked();
+  await expect(page.locator('[data-dfh-ai-on]')).toBeChecked();
+
+  await page.goto(`/Documents/Details/${id}`);
+  await deleteOpenDocument(page, 'e2e-remember');
+});
+
+test('upload: a rejected file shows the error on the form without leaving it', async ({ page }) => {
+  await page.goto('/Documents/Upload');
+  // A .png whose bytes are not a PNG: the server's content check refuses it.
+  await page.locator('[data-dfh-file]').setInputFiles({ name: 'e2e-fake.png', mimeType: 'image/png', buffer: Buffer.from('not really an image') });
+  await page.locator('[data-dfh-project]').selectOption({ index: 1 });
+  await page.locator('[data-dfh-upload-submit]').click();
+  await expect(page.locator('.dfh-upload-error')).toContainText('does not match');
+  await expect(page).toHaveURL(/\/Documents\/Upload/);
+  await expect(page.locator('[data-dfh-progress]')).toBeHidden();
+  await expect(page.locator('[data-dfh-upload-submit]')).toBeEnabled();
+  await expect(page.locator('#Title')).toHaveValue('e2e-fake');
+});
