@@ -5,6 +5,7 @@ using DocFlowHub.Core.Models.AI;
 using DocFlowHub.Core.Models.Documents;
 using DocFlowHub.Core.Models.Projects;
 using DocFlowHub.Core.Services.Interfaces;
+using DocFlowHub.Infrastructure.Data.Demo;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,12 +13,11 @@ using Microsoft.Extensions.Logging;
 namespace DocFlowHub.Infrastructure.Data;
 
 /// <summary>
-/// Seeds a large, realistic, time-distributed dataset for the public read-only demo:
-/// two demo accounts, categories, teams, projects/folders, ~50 documents (with
-/// versions + static AI summaries), and a few hundred AI-usage log rows spread over
-/// time so the admin dashboards/charts look populated. Idempotent — only seeds when
-/// the demo user has no documents yet, so it is safe to run on every startup (F1 has
-/// no Always-On, so the seed runs on the first request).
+/// Seeds the public read-only demo (Sprint 24: from <see cref="DemoCatalog"/>): the two demo accounts and
+/// ten colleagues, six teams, ten projects with their own folder trees, about 130 documents with real
+/// structure and up to seven versions, AI summaries and comparisons that name the actual changes, and AI
+/// usage logs spread over 14 months for the admin charts. Idempotent — only seeds when the demo user has
+/// no documents yet, so it is safe to run on every startup.
 /// </summary>
 public static class DemoDataSeeder
 {
@@ -66,12 +66,18 @@ public static class DemoDataSeeder
 
         logger.LogInformation("Seeding demo data...");
 
-        var owners = new[] { demoUser.Id, demoAdmin.Id };
+        // ---- People: the two demo accounts and the colleagues (Sprint 24) ------
+        var people = new Dictionary<string, ApplicationUser> { [DemoCatalog.User] = demoUser, [DemoCatalog.Admin] = demoAdmin };
+        foreach (var colleague in DemoCatalog.Colleagues)
+        {
+            people[colleague.Key] = await EnsureColleagueAsync(userManager, colleague,
+                now.AddDays(-rng.Next(430, 720)), now.AddDays(-rng.Next(0, 20)).AddHours(-rng.Next(0, 24)));
+        }
+        string NameOf(string key) => DemoContent.NameOf(key);
 
         // ---- Categories ------------------------------------------------------
-        var categoryNames = new[] { "Reports", "Contracts", "Invoices", "Specifications", "Manuals", "Presentations", "Policies" };
-        var categories = new List<DocumentCategory>();
-        foreach (var name in categoryNames)
+        var categories = new Dictionary<string, DocumentCategory>();
+        foreach (var name in DemoCatalog.Categories)
         {
             var existing = await context.DocumentCategories.FirstOrDefaultAsync(c => c.Name == name);
             if (existing == null)
@@ -79,205 +85,155 @@ public static class DemoDataSeeder
                 existing = new DocumentCategory { Name = name, Description = $"{name} documents", CreatedAt = now.AddDays(-390), IsActive = true };
                 context.DocumentCategories.Add(existing);
             }
-            categories.Add(existing);
+            categories[name] = existing;
         }
         await context.SaveChangesAsync();
 
         // ---- Teams + members -------------------------------------------------
-        var teamNames = new[] { "Engineering", "Marketing", "Operations", "Finance" };
-        var teams = new List<Team>();
-        foreach (var name in teamNames)
+        var teams = new Dictionary<string, Team>();
+        foreach (var spec in DemoCatalog.Teams)
         {
-            var existing = await context.Teams.FirstOrDefaultAsync(t => t.Name == name);
+            var existing = await context.Teams.FirstOrDefaultAsync(t => t.Name == spec.Name);
             if (existing == null)
             {
+                var created = now.AddDays(-rng.Next(330, 400));
                 existing = new Team
                 {
-                    Name = name,
-                    Description = $"{name} team workspace",
-                    OwnerId = demoAdmin.Id,
-                    CreatedAt = now.AddDays(-rng.Next(300, 380)),
-                    Members = new List<TeamMember>
+                    Name = spec.Name,
+                    Description = spec.Description,
+                    OwnerId = people[spec.Members.First(m => m.Role == TeamRole.Admin).Person].Id,
+                    CreatedAt = created,
+                    Members = spec.Members.Select(m => new TeamMember
                     {
-                        new() { UserId = demoAdmin.Id, Role = TeamRole.Admin, JoinedAt = now.AddDays(-360) },
-                        new() { UserId = demoUser.Id, Role = TeamRole.Member, JoinedAt = now.AddDays(-350) },
-                    }
+                        UserId = people[m.Person].Id,
+                        Role = m.Role,
+                        JoinedAt = created.AddDays(rng.Next(0, 60)),
+                    }).ToList(),
                 };
                 context.Teams.Add(existing);
             }
-            teams.Add(existing);
+            teams[spec.Name] = existing;
         }
         await context.SaveChangesAsync();
 
-        // ---- Projects + folders ---------------------------------------------
-        var projectSpecs = new (string Name, string Color, string Icon)[]
+        // ---- Projects + folders (each project its own tree) -------------------
+        var projects = new Dictionary<string, Project>();
+        var folders = new Dictionary<(string Project, string Path), Folder>();
+        foreach (var spec in DemoCatalog.Projects)
         {
-            ("Website Redesign", "#0284c7", "bi-globe"),
-            ("Q3 Financials", "#059669", "bi-graph-up"),
-            ("Product Launch", "#7c3aed", "bi-rocket"),
-            ("Internal Tools", "#d97706", "bi-tools"),
-        };
-        var projects = new List<Project>();
-        var folders = new List<Folder>();
-        foreach (var (name, color, icon) in projectSpecs)
-        {
-            var existing = await context.Projects.FirstOrDefaultAsync(p => p.Name == name);
-            if (existing == null)
+            var oldest = DemoCatalog.Documents.Where(d => d.Project == spec.Name).Select(d => d.AgeDays).DefaultIfEmpty(200).Max();
+            var project = await context.Projects.FirstOrDefaultAsync(p => p.Name == spec.Name);
+            if (project == null)
             {
-                existing = new Project
+                project = new Project
                 {
-                    Name = name,
-                    Description = $"{name} project workspace",
-                    Color = color,
-                    Icon = icon,
-                    IsActive = true,
-                    OwnerId = owners[rng.Next(owners.Length)],
-                    CreatedAt = now.AddDays(-rng.Next(200, 340)),
+                    Name = spec.Name,
+                    Description = spec.Description,
+                    Color = spec.Color,
+                    Icon = spec.Icon,
+                    IsActive = !spec.Archived,
+                    OwnerId = people[spec.Owner].Id,
+                    CreatedAt = now.AddDays(-(oldest + rng.Next(5, 25))),
                 };
-                context.Projects.Add(existing);
+                if (spec.Archived) project.UpdatedAt = now.AddDays(-rng.Next(300, 330));
+                context.Projects.Add(project);
+                await context.SaveChangesAsync();
             }
-            projects.Add(existing);
-        }
-        await context.SaveChangesAsync();
+            projects[spec.Name] = project;
 
-        foreach (var project in projects)
-        {
-            if (await context.Folders.AnyAsync(f => f.ProjectId == project.Id))
+            foreach (var path in spec.Folders)
             {
-                folders.AddRange(await context.Folders.Where(f => f.ProjectId == project.Id).ToListAsync());
-                continue;
-            }
-
-            var rootNames = new[] { "Drafts", "Final", "Archive" };
-            foreach (var rootName in rootNames)
-            {
-                var root = new Folder
+                var slash = path.LastIndexOf('/');
+                var parent = slash < 0 ? null : folders[(spec.Name, path[..slash])];
+                var name = slash < 0 ? path : path[(slash + 1)..];
+                var folder = await context.Folders.FirstOrDefaultAsync(f => f.ProjectId == project.Id && f.Path == "/" + path);
+                if (folder == null)
                 {
-                    Name = rootName,
-                    Description = $"{rootName} in {project.Name}",
-                    ProjectId = project.Id,
-                    Level = 0,
-                    Path = $"/{rootName}", // same format as FolderService: the project is not part of the path
-                    CreatedByUserId = project.OwnerId,
-                    CreatedAt = project.CreatedAt.AddDays(rng.Next(1, 20)),
-                };
-                context.Folders.Add(root);
-                await context.SaveChangesAsync(); // need root.Id for child path/parent
-
-                // one nested subfolder under "Final"
-                if (rootName == "Final")
-                {
-                    var child = new Folder
+                    folder = new Folder
                     {
-                        Name = "Approved",
-                        Description = "Approved documents",
+                        Name = name,
+                        Description = $"{name} for {spec.Name}",
                         ProjectId = project.Id,
-                        ParentFolderId = root.Id,
-                        Level = 1,
-                        Path = $"{root.Path}/Approved",
+                        ParentFolderId = parent?.Id,
+                        Level = path.Count(c => c == '/'),
+                        Path = "/" + path, // same format as FolderService: the project is not part of the path
                         CreatedByUserId = project.OwnerId,
-                        CreatedAt = root.CreatedAt.AddDays(rng.Next(1, 15)),
+                        CreatedAt = (parent?.CreatedAt ?? project.CreatedAt).AddDays(rng.Next(1, 10)),
                     };
-                    context.Folders.Add(child);
-                    folders.Add(child);
+                    context.Folders.Add(folder);
+                    await context.SaveChangesAsync(); // a subfolder needs its parent's Id
                 }
-                folders.Add(root);
+                folders[(spec.Name, path)] = folder;
             }
         }
-        await context.SaveChangesAsync();
 
-        // ---- Documents + versions + summaries -------------------------------
-        var titleNouns = new[] { "Annual Report", "Service Agreement", "Budget Plan", "API Specification", "User Manual", "Roadmap", "Meeting Notes", "Release Notes", "Design Brief", "Security Review", "Onboarding Guide", "Invoice", "Proposal", "Retrospective", "Style Guide" };
-        // Only types the upload whitelist accepts, so every demo file is a valid upload.
-        var fileTypes = DemoFileFactory.SupportedTypes;
-        var summaryTemplates = new[]
-        {
-            "This document outlines the key objectives, scope, and deliverables. It summarizes the main findings and provides actionable recommendations for the team.",
-            "A concise overview covering background, current status, and next steps. Highlights risks, dependencies, and the proposed timeline for completion.",
-            "Details the requirements and acceptance criteria, along with supporting data. Concludes with a prioritized list of follow-up actions.",
-            "Captures the decisions made, rationale behind them, and assigned owners. Includes open questions to be resolved in the next review.",
-        };
-        var keyPointsTemplates = new[]
-        {
-            "• Clear objectives defined\n• Timeline on track\n• Two open risks identified",
-            "• Budget within target\n• Stakeholders aligned\n• Next review scheduled",
-            "• Requirements finalized\n• Dependencies mapped\n• Owners assigned",
-        };
-
+        // ---- Documents + versions from the catalogue ---------------------------
         var documents = new List<Document>();
-        const int documentCount = 52;
-        for (var i = 0; i < documentCount; i++)
+        var catalogue = new Dictionary<Document, DemoDoc>();
+        foreach (var spec in DemoCatalog.Documents)
         {
-            // Skewed towards recent dates so the dashboard's "last 7 days" has activity.
-            var ageDays = 1 + Math.Pow(rng.NextDouble(), 2) * 359;
-            var createdAt = now.AddDays(-ageDays).AddHours(-rng.Next(0, 24));
-            var ownerId = owners[rng.Next(owners.Length)];
-            var fileType = fileTypes[rng.Next(fileTypes.Length)];
-            var title = $"{titleNouns[rng.Next(titleNouns.Length)]} {2024 + rng.Next(0, 2)}-{rng.Next(1, 13):D2}";
-
-            // ~60% land in a project, ~half of those in a folder; ~35% shared with a team.
-            Project? project = rng.NextDouble() < 0.6 ? projects[rng.Next(projects.Count)] : null;
-            Folder? folder = project != null && rng.NextDouble() < 0.5
-                ? folders.Where(f => f.ProjectId == project.Id).OrderBy(_ => rng.Next()).FirstOrDefault()
-                : null;
-            Team? team = rng.NextDouble() < 0.35 ? teams[rng.Next(teams.Count)] : null;
-
-            // The app stores FileType as the dotted extension (Path.GetExtension), which the
-            // download handlers append to the file name and map to a content type.
-            var extension = "." + fileType;
+            var createdAt = Min(now.AddDays(-spec.AgeDays).AddHours(-rng.Next(0, 9)).AddMinutes(-rng.Next(0, 60)), now.AddHours(-2));
+            var team = spec.Team == null ? null : teams[spec.Team];
+            var authors = spec.Team == null
+                ? new[] { spec.Owner, spec.Owner, DemoCatalog.User }
+                : DemoCatalog.Teams.First(t => t.Name == spec.Team).Members.Select(m => m.Person).Prepend(spec.Owner).ToArray();
+            var extension = "." + spec.Type;
 
             var doc = new Document
             {
-                Title = title,
-                Description = $"Demo {fileType.ToUpper()} document — {title}.",
+                Title = spec.Title,
+                Description = DemoContent.Description(spec),
                 FileType = extension,
-                FileSize = rng.Next(24_000, 5_000_000),
+                FileSize = 0, // the real size is stored with the file
                 FilePath = string.Empty, // set after Id is known
-                OwnerId = ownerId,
+                OwnerId = people[spec.Owner].Id,
                 TeamId = team?.Id,
-                ProjectId = project?.Id,
-                FolderId = folder?.Id,
+                ProjectId = spec.Project == null ? null : projects[spec.Project].Id,
+                FolderId = spec.Project == null || spec.Folder == null ? null : folders[(spec.Project, spec.Folder)].Id,
                 CreatedAt = createdAt,
                 UpdatedAt = createdAt,
                 IsDeleted = false,
             };
 
-            // 1–3 versions, dates increasing from the document's creation; none in the future.
-            var versionCount = rng.Next(1, 4);
-            var versionDate = createdAt;
-            for (var v = 1; v <= versionCount; v++)
+            // Versions spread from the first one to (almost) today; never in the future.
+            var date = createdAt;
+            var room = Math.Max(1.0, (now - createdAt).TotalDays - 1);
+            for (var v = 1; v <= spec.Versions; v++)
             {
-                if (versionDate > now) break;
-                doc.UpdatedAt = versionDate;
+                if (v > 1)
+                {
+                    date = Min(date.AddDays(rng.NextDouble() * room / spec.Versions + 0.2).AddHours(rng.Next(0, 8)), now.AddHours(-1));
+                }
+                var author = v == 1 ? spec.Owner : authors[rng.Next(authors.Length)];
+                doc.UpdatedAt = date;
                 doc.Versions.Add(new DocumentVersion
                 {
                     VersionNumber = v,
                     FileType = extension,
-                    FileSize = doc.FileSize + rng.Next(-5000, 20000),
+                    FileSize = 0,
                     FilePath = string.Empty,
                     StoragePath = string.Empty,
-                    CreatedAt = versionDate,
-                    UserId = ownerId,
-                    UserName = ownerId == demoUser.Id ? "Demo User" : "Demo Admin",
-                    ChangeSummary = v == 1 ? "Initial version" : $"Revision {v}",
-                    CreatedBy = ownerId,
-                    FileHash = Guid.NewGuid().ToString("N"),
+                    CreatedAt = date,
+                    UserId = people[author].Id,
+                    UserName = NameOf(author),
+                    ChangeSummary = DemoContent.ChangeSummary(spec, v),
+                    CreatedBy = people[author].Id,
+                    FileHash = string.Empty,
                 });
-                versionDate = versionDate.AddDays(rng.Next(1, 40)).AddHours(rng.Next(0, 24));
             }
 
-            // 2 distinct categories each (avoid a duplicate join row).
-            var c1 = rng.Next(categories.Count);
-            var c2 = (c1 + 1 + rng.Next(categories.Count - 1)) % categories.Count;
-            doc.Categories.Add(categories[c1]);
-            doc.Categories.Add(categories[c2]);
+            foreach (var category in spec.Categories.Distinct())
+            {
+                doc.Categories.Add(categories[category]);
+            }
 
             context.Documents.Add(doc);
             documents.Add(doc);
+            catalogue[doc] = spec;
         }
         await context.SaveChangesAsync();
 
-        // Set FilePath + CurrentVersionId now that Ids exist, and seed ~70% summaries.
+        // FilePath + CurrentVersionId now that Ids exist; AI summaries for about three quarters.
         foreach (var doc in documents)
         {
             var latest = doc.Versions.OrderByDescending(v => v.VersionNumber).First();
@@ -289,52 +245,47 @@ public static class DemoDataSeeder
             doc.FilePath = latest.FilePath;
             doc.CurrentVersionId = latest.Id;
 
-            if (rng.NextDouble() < 0.7)
+            if (rng.NextDouble() < 0.75)
             {
+                var (summary, keyPoints) = DemoContent.AiSummary(catalogue[doc]);
                 context.DocumentSummaries.Add(new DocumentSummary
                 {
                     DocumentId = doc.Id,
-                    Summary = summaryTemplates[rng.Next(summaryTemplates.Length)],
-                    KeyPoints = keyPointsTemplates[rng.Next(keyPointsTemplates.Length)],
-                    AIModel = "claude-haiku-4-5",
-                    ConfidenceScore = Math.Round(0.75 + rng.NextDouble() * 0.2, 2),
-                    GeneratedAt = Min(doc.CreatedAt.AddHours(rng.Next(1, 48)), now),
+                    Summary = summary,
+                    KeyPoints = keyPoints,
+                    AIModel = rng.NextDouble() < 0.7 ? "claude-haiku-4-5" : "claude-sonnet-5",
+                    ConfidenceScore = Math.Round(0.78 + rng.NextDouble() * 0.18, 2),
+                    GeneratedAt = Min(latest.CreatedAt.AddMinutes(rng.Next(1, 180)), now),
                 });
             }
         }
         await context.SaveChangesAsync();
 
-        // ---- Saved AI comparisons of consecutive versions (decision D4) -------
+        // ---- Saved AI comparisons of every pair of versions (S22-9) ---------------
         // The demo blocks POSTs, so the Compare page can only show comparisons that already exist.
-        var comparisonTemplates = new[]
-        {
-            ("Figures updated with the latest actuals; the conclusions are unchanged.",
-             "• Revenue table updated with final numbers\n• Totals in the appendix corrected\n• Wording of the summary tightened",
-             ChangeType.ContentModification, ChangeSignificance.Medium),
-            ("A new section was added and an outdated note removed.",
-             "• Added a section on regional results\n• Removed the note about pending estimates\n• Updated the table of contents",
-             ChangeType.ContentAddition | ChangeType.ContentDeletion, ChangeSignificance.High),
-            ("Formatting and structure changes only; the content is the same.",
-             "• Tables reformatted\n• Headings renumbered\n• Typos fixed",
-             ChangeType.StructuralChange, ChangeSignificance.Low),
-        };
+        // Each one lists exactly the changes made between the two versions.
         foreach (var doc in documents)
         {
-            // Every pair, not only neighbours, so v1 <-> v3 has an AI comparison in the demo too (S22-9).
+            var spec = catalogue[doc];
             var ordered = doc.Versions.OrderBy(v => v.VersionNumber).ToList();
             for (var i = 1; i < ordered.Count; i++)
             for (var j = 0; j < i; j++)
             {
-                var (summary, changes, type, significance) = comparisonTemplates[rng.Next(comparisonTemplates.Length)];
+                var changes = DemoContent.ChangesBetween(spec, ordered[j].VersionNumber, ordered[i].VersionNumber);
+                var type = spec.IsPicture ? ChangeType.StructuralChange
+                    : changes.Count == 1 ? ChangeType.ContentModification
+                    : ChangeType.ContentModification | ChangeType.ContentAddition;
                 context.VersionComparisons.Add(new VersionComparison
                 {
                     DocumentId = doc.Id,
                     FromVersionId = ordered[j].Id,
                     ToVersionId = ordered[i].Id,
-                    ChangeSummary = summary,
-                    DetailedChanges = changes,
+                    ChangeSummary = changes.Count == 1
+                        ? $"One change since v{ordered[j].VersionNumber}: {LowerFirst(changes[0])}."
+                        : $"{changes.Count} changes since v{ordered[j].VersionNumber}, from \"{LowerFirst(changes[0])}\" to \"{LowerFirst(changes[^1])}\".",
+                    DetailedChanges = string.Join("\n", changes.Select(c => "• " + c)),
                     ChangeType = type,
-                    Significance = significance,
+                    Significance = changes.Count >= 3 ? ChangeSignificance.High : changes.Count == 2 ? ChangeSignificance.Medium : ChangeSignificance.Low,
                     AIModel = "claude-haiku-4-5",
                     ConfidenceScore = Math.Round(0.8 + rng.NextDouble() * 0.15, 2),
                     TokensUsed = rng.Next(900, 2400),
@@ -345,29 +296,29 @@ public static class DemoDataSeeder
         }
         await context.SaveChangesAsync();
 
-        // ---- AI usage logs (time-distributed, for admin charts) --------------
+        // ---- AI usage logs (14 months, more recent, split between people) --------
         // Saved before the slow file uploads, so an interrupted upload can't lose them
         // (the next startup takes the "already seeded" path and only backfills files).
-        var operations = new[] { "Summarization", "VersionComparison" };
-        var models = new[] { "claude-haiku-4-5", "claude-sonnet-5", "gpt-4o-mini" };
+        var operations = new[] { "Summarization", "Summarization", "VersionComparison" };
+        var models = new[] { "claude-haiku-4-5", "claude-haiku-4-5", "claude-sonnet-5", "gpt-4o-mini" };
+        var userIds = people.Values.Select(u => u.Id).ToArray();
         var usageLogs = new List<AIUsageLog>();
-        const int usageLogCount = 320;
+        const int usageLogCount = 640;
         for (var i = 0; i < usageLogCount; i++)
         {
-            var createdAt = now.AddDays(-rng.Next(0, 90)).AddMinutes(-rng.Next(0, 1440));
+            var createdAt = now.AddDays(-Math.Pow(rng.NextDouble(), 1.8) * 420).AddMinutes(-rng.Next(0, 1440));
             var inputTokens = rng.Next(400, 6000);
             var outputTokens = rng.Next(80, 900);
-            var tokens = inputTokens + outputTokens;
             usageLogs.Add(new AIUsageLog
             {
-                UserId = owners[rng.Next(owners.Length)],
+                UserId = userIds[rng.Next(userIds.Length)],
                 OperationType = operations[rng.Next(operations.Length)],
                 AIModel = models[rng.Next(models.Length)],
-                TokensUsed = tokens,
+                TokensUsed = inputTokens + outputTokens,
                 EstimatedCost = Math.Round((decimal)(inputTokens * 0.000001 + outputTokens * 0.000005), 6),
                 ResponseTime = TimeSpan.FromMilliseconds(rng.Next(350, 4200)),
                 IsSuccess = rng.NextDouble() > 0.05,
-                CreatedAt = createdAt,
+                CreatedAt = Min(createdAt, now),
                 DocumentId = documents[rng.Next(documents.Count)].Id,
                 InputSize = inputTokens * 4,
                 OutputSize = outputTokens * 4,
@@ -542,16 +493,10 @@ public static class DemoDataSeeder
                 continue;
             }
 
-            var type = doc.FileType.TrimStart('.');
+            var type = doc.FileType.TrimStart('.').ToLowerInvariant();
             foreach (var version in doc.Versions.OrderBy(v => v.VersionNumber))
             {
-                var lines = type.ToLowerInvariant() switch
-                {
-                    "pdf" => BuildPdfLines(doc, version),
-                    "docx" => BuildDocxLines(doc, version),
-                    _ => BuildContentLines(doc, version),
-                };
-                var content = DemoFileFactory.Create(type, doc.Title, lines);
+                var content = BuildFile(doc, version);
                 var file = DemoFileFactory.ToFormFile(content, $"{doc.Title}.{type}", type);
                 var result = await storage.UploadDocumentAsync(file, doc.Id, version.VersionNumber);
                 if (!result.Succeeded)
@@ -604,6 +549,80 @@ public static class DemoDataSeeder
 
         logger.LogInformation("Demo files missing from storage — uploading them.");
         await UploadFilesAsync(context, storage, logger, demoDocs);
+    }
+
+    /// <summary>
+    /// The file of one version. A catalogue document (found by its title) is built from its template or
+    /// drawn as a picture; anything else (rows from an older seed) gets the generic text. Only stored
+    /// metadata is used, so the backfill can rebuild exactly the same file.
+    /// </summary>
+    internal static byte[] BuildFile(Document doc, DocumentVersion version)
+    {
+        var type = doc.FileType.TrimStart('.').ToLowerInvariant();
+        var spec = DemoCatalog.Find(doc.Title);
+        if (spec != null && spec.Type == type)
+        {
+            if (spec.IsPicture)
+            {
+                return DemoImageFactory.Create(Picture(spec.Kind), DemoContent.PictureSeed(spec), version.VersionNumber);
+            }
+            var history = doc.Versions
+                .OrderBy(v => v.VersionNumber)
+                .Select(v => new DemoVersionInfo(v.VersionNumber, v.UserName, v.CreatedAt, v.ChangeSummary))
+                .ToList();
+            return DemoFileFactory.Create(type, doc.Title, DemoContent.Lines(spec, version.VersionNumber, history));
+        }
+
+        var lines = type switch
+        {
+            "pdf" => BuildPdfLines(doc, version),
+            "docx" => BuildDocxLines(doc, version),
+            _ => BuildContentLines(doc, version),
+        };
+        return DemoFileFactory.Create(type, doc.Title, lines);
+    }
+
+    private static DemoPicture Picture(DemoKind kind) => kind switch
+    {
+        DemoKind.BarChart => DemoPicture.BarChart,
+        DemoKind.LineChart => DemoPicture.LineChart,
+        DemoKind.Wireframe => DemoPicture.Wireframe,
+        DemoKind.Diagram => DemoPicture.Diagram,
+        _ => DemoPicture.Donut,
+    };
+
+    private static string LowerFirst(string text) => text.Length == 0 ? text : char.ToLowerInvariant(text[0]) + text[1..];
+
+    /// <summary>
+    /// A colleague who appears in the demo (Sprint 24). They cannot sign in: the password is random and
+    /// never stored anywhere.
+    /// </summary>
+    private static async Task<ApplicationUser> EnsureColleagueAsync(UserManager<ApplicationUser> userManager, DemoPerson person, DateTime createdAt, DateTime lastLogin)
+    {
+        var user = await userManager.FindByEmailAsync(person.Email);
+        if (user != null) return user;
+
+        user = new ApplicationUser
+        {
+            UserName = person.Email,
+            Email = person.Email,
+            FirstName = person.FirstName,
+            LastName = person.LastName,
+            Bio = person.Title,
+            EmailConfirmed = true,
+            CreatedAt = createdAt,
+            LastLoginAt = lastLogin,
+            IsActive = true,
+        };
+        var password = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)) + "aA1!";
+        var result = await userManager.CreateAsync(user, password);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create demo colleague {person.Email}: {string.Join("; ", result.Errors.Select(e => e.Description))}");
+        }
+        await userManager.AddToRoleAsync(user, "User");
+        return user;
     }
 
     private static async Task<ApplicationUser> EnsureUserAsync(

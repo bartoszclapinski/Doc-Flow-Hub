@@ -89,7 +89,6 @@ public class DemoFileSeedingTests
 
     [Theory]
     [InlineData("txt")]
-    [InlineData("md")]
     [InlineData("docx")]
     public async Task OtherFormats_LeaveOutPdfPageBreaksAndHeadingMarkers(string type)
     {
@@ -97,6 +96,41 @@ public class DemoFileSeedingTests
         var bytes = DemoFileFactory.Create(type, "Report", lines);
         var text = (await CreateExtractor().ExtractTextAsync(bytes, $"doc.{type}", DemoFileFactory.GetContentType(type))).Data!;
         text.Should().Contain("Details").And.NotContain("\f").And.NotContain("# Details");
+    }
+
+    [Fact]
+    public void Markdown_HasRealHeadingsListsTablesAndCode()
+    {
+        var lines = new[]
+        {
+            "Intro with **bold** text.", DemoFileFactory.PageBreak,
+            DemoFileFactory.HeadingPrefix + "Details",
+            DemoFileFactory.BulletPrefix + "one", DemoFileFactory.BulletPrefix + "two",
+            DemoFileFactory.RowPrefix + "Name" + DemoFileFactory.CellSeparator + "Value",
+            DemoFileFactory.RowPrefix + "a" + DemoFileFactory.CellSeparator + "1",
+            DemoFileFactory.CodeFence, "dfh run", DemoFileFactory.CodeFence,
+        };
+
+        var md = System.Text.Encoding.UTF8.GetString(DemoFileFactory.Create("md", "Report", lines));
+
+        md.Should().Be("# Report\n\nIntro with **bold** text.\n\n## Details\n\n- one\n- two\n\n| Name | Value |\n| --- | --- |\n| a | 1 |\n\n```\ndfh run\n```\n");
+    }
+
+    [Fact]
+    public void Text_LinesUpTableColumnsAndIndentsCode()
+    {
+        var lines = new[]
+        {
+            DemoFileFactory.HeadingPrefix + "Fees",
+            DemoFileFactory.RowPrefix + "Item" + DemoFileFactory.CellSeparator + "Fee",
+            DemoFileFactory.RowPrefix + "Base service" + DemoFileFactory.CellSeparator + "$1,200",
+            DemoFileFactory.CodeFence, "dfh run", DemoFileFactory.CodeFence,
+            "*Signed.*",
+        };
+
+        var txt = System.Text.Encoding.UTF8.GetString(DemoFileFactory.Create("txt", "Deal", lines));
+
+        txt.Should().Be("Deal\n====\n\n\nFees\n----\nItem          Fee\n------------  ------\nBase service  $1,200\n    dfh run\nSigned.\n");
     }
 
     [Fact]

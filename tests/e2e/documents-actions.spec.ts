@@ -38,7 +38,7 @@ test('move puts a document into the chosen folder', async ({ page }) => {
   await page.locator('#dfh-inspector-body [data-dfh-action="move"]').click();
 
   const modal = page.locator('#dfh-move-modal');
-  await modal.locator('[data-dfh-move-filter]').fill('draft');
+  await modal.locator('[data-dfh-move-filter]').fill('interview');
   const target = modal.locator('.dfh-picker-row.is-selected');
   await expect(target).toHaveCount(1);
   const path = (await target.getAttribute('data-path'))!;
