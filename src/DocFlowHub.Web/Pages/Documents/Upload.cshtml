@@ -277,6 +277,7 @@
         <a class="btn btn-secondary" asp-page="/Documents/Index">Cancel</a>
         @if (DemoMode.IsEnabled)
         {
+            <span class="dfh-upload-demo-note" data-dfh-upload-demo-note><i class="bi bi-lock" aria-hidden="true"></i>Read-only demo: try every option, but the file is not sent.</span>
             <span class="dfh-btn-disabled-wrap" tabindex="0" title="Read-only demo — uploads are disabled">
                 <button type="button" class="btn btn-primary" disabled><i class="bi bi-upload" aria-hidden="true"></i>Upload</button>
             </span>

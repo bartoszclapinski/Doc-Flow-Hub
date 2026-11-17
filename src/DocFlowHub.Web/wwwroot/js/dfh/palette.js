@@ -16,7 +16,8 @@
 
     // Navigation and actions. "write" ones are left out in the read-only demo.
     const ACTIONS = [
-        { label: 'Upload a document', icon: 'bi-upload', url: '/Documents/Upload', key: 'U', write: true },
+        // The upload screen can be tried in the demo (only sending is off), so it is not a "write" action.
+        { label: 'Upload a document', icon: 'bi-upload', url: '/Documents/Upload', key: 'U' },
         { label: 'New project', icon: 'bi-kanban', url: '/Projects/Create', write: true },
         { label: 'New team', icon: 'bi-people', url: '/Teams/Create', write: true },
         { label: 'Go to Dashboard', icon: 'bi-grid-1x2', url: '/' },
@@ -138,7 +139,7 @@
         if (q) {
             addOption({ url: '/Documents?q=' + encodeURIComponent(q), lead: icon('bi-search'), text: 'Search all documents for “' + q + '”' }, []);
         }
-        if (top && !isDemo) {
+        if (top) {
             addOption({
                 url: '/Documents/Upload?projectId=' + top.projectId + (top.folderId ? '&folderId=' + top.folderId : ''),
                 lead: icon('bi-upload'),
@@ -323,11 +324,7 @@
             showShortcuts();
         } else if (e.key === 'u' || e.key === 'U') {
             e.preventDefault();
-            if (isDemo) {
-                D.showInfo('Read-only demo — uploads are disabled.');
-            } else {
-                window.location.href = '/Documents/Upload';
-            }
+            window.location.href = '/Documents/Upload';
         }
     });
 

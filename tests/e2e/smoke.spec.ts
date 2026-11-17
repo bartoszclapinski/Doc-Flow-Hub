@@ -542,6 +542,25 @@ test('upload: the AI panel shows the model, the detail and an estimate that foll
   expect(errors).toEqual([]);
 });
 
+test('demo: the upload screen opens from the title bar, a project page and the U key', async ({ page }) => {
+  await signIn(page, DEMO_USER);
+  await page.goto('/Documents');
+  await page.locator('.dfh-titlebar-upload').click();
+  await expect(page).toHaveURL(/\/Documents\/Upload$/);
+  await expect(page.locator('[data-dfh-ai-panel]')).toBeVisible();
+  await expect(page.locator('[data-dfh-upload-demo-note]')).toContainText('the file is not sent');
+
+  await page.goto('/Projects');
+  const project = await page.locator('a[href^="/Projects/"]').filter({ hasNotText: /New|Create/ }).first().getAttribute('href');
+  await page.goto(project!);
+  await page.locator('a', { hasText: 'Upload here' }).click();
+  await expect(page).toHaveURL(/\/Documents\/Upload\?projectId=\d+/);
+
+  await page.goto('/Documents');
+  await page.locator('body').press('u');
+  await expect(page).toHaveURL(/\/Documents\/Upload$/);
+});
+
 test('upload on a phone: the AI panel comes before the details, no sideways scroll', async ({ page }) => {
   await signIn(page, DEMO_USER);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -664,7 +683,8 @@ test('palette: the title-bar search opens it; actions and Esc work', async ({ pa
   await expect(palette).toBeVisible();
   await page.locator('#dfh-palette-q').fill('teams');
   await expect(palette.locator('.dfh-palette-row', { hasText: 'Go to Teams' })).toBeVisible();
-  await expect(palette.locator('.dfh-palette-row', { hasText: 'Upload a document' })).toHaveCount(0); // demo: no write actions
+  await expect(palette.locator('.dfh-palette-row', { hasText: 'New project' })).toHaveCount(0); // demo: no write actions
+  await expect(palette.locator('.dfh-palette-row', { hasText: 'Upload a document' })).toHaveCount(1); // the upload screen can be tried
   await page.keyboard.press('Escape');
   await expect(palette).toBeHidden();
   await page.keyboard.press('?');
